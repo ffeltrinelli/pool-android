@@ -1,6 +1,6 @@
 # Pool — solo practice
 
-A silent, offline 3D pool demo for Android, based on [MVP Design #1](https://github.com/ffeltrinelli/pool-android/issues/1). Aim and shoot with one continuous touch gesture. The round ends when the cue ball is pocketed or all 15 object balls are cleared; the eight ball has no special rule.
+An offline 3D pool demo for Android, based on [MVP Design #1](https://github.com/ffeltrinelli/pool-android/issues/1). Aim and shoot with one continuous touch gesture. The round ends when the cue ball is pocketed or all 15 object balls are cleared; the eight ball has no special rule.
 
 ## Build and run
 
@@ -24,7 +24,7 @@ For desktop development:
 ./gradlew :lwjgl3:run
 ```
 
-The Gradle task adds macOS's required `-XstartOnFirstThread`. Mouse dragging uses the same gesture interpreter as touch. Audio is disabled on both platforms.
+The Gradle task adds macOS's required `-XstartOnFirstThread`. Mouse dragging uses the same gesture interpreter as touch. Collision and cue sounds play on both platforms and follow the device media volume.
 
 ## Controls
 
@@ -33,6 +33,7 @@ The Gradle task adds macOS's required `-XstartOnFirstThread`. Mouse dragging use
 - Without lifting, push forward along the cue toward the ball. A faster push produces a stronger shot. Releasing before contact cancels the stroke.
 - Wait for all balls to settle before aiming again. Additional fingers are ignored.
 - Use **Restart** at any time, or **Play again** after a result.
+- Ball collisions click, cushions thud, and cue contact plays a separate strike. Stronger impacts are louder. There is no music or in-game volume control.
 
 The fixed portrait camera shows the whole table with gesture space around the rails. The cue can pass visually over rails and balls; there are no cue obstruction, spin, jump-shot, or eight-ball rule controls.
 
@@ -40,8 +41,8 @@ The fixed portrait camera shows the whole table with gesture space around the ra
 
 The scaffold comes from official **gdx-liftoff 1.14.2.3**, using its Kotlin template and Bullet extension. Build tools: Gradle 8.11.1, Android Gradle Plugin 8.10.1, Kotlin 2.2.21, libGDX/Bullet 1.14.2. All graphics use libGDX models, materials, lighting, textures, and text rendering; there is no custom renderer or collision solver.
 
-- `core`: `GameSession` owns round rules; `CueGesture` consumes timestamped table-space input and emits one `ShotCommand`; `PoolPhysics` owns Bullet bodies, sensors, fixed-step simulation and `PhysicsEvent` delivery; `PoolRenderer` draws the same scene on both platforms. `PoolGame` coordinates them.
-- `android`: immersive portrait launcher, safe cutout policy, disabled sensors/audio, and keep-screen-on while foregrounded.
+- `core`: `GameSession` owns round rules; `CueGesture` consumes timestamped table-space input and emits one `ShotCommand`; `PoolPhysics` owns Bullet bodies, sensors, fixed-step simulation and `PhysicsEvent` delivery; `PoolRenderer` draws the same scene on both platforms; `PoolAudio` owns preloaded impact effects. `PoolGame` coordinates them.
+- `android`: immersive portrait launcher, safe cutout policy, disabled motion sensors, and keep-screen-on while foregrounded.
 - `lwjgl3`: desktop launcher and separate test-only rendered fixtures. Fixtures do not introduce game debug controls.
 
 Physics units are metres and kilograms. The table is 1.12 × 2.24 m; ball radius is 28.575 mm and mass is 170 g. Ball movement is constrained to the table plane. Engine damping approximates cloth resistance, with Bullet handling ball/cushion collisions and pocket-sensor contacts. Pocketed bodies are removed after contact processing; sinking is a visual animation. Balls escaping the outer pocket jaws are also removed as a safety fallback.
@@ -52,6 +53,8 @@ Physics advances at 120 Hz with up to 100 ms / 12 steps of catch-up per render f
 
 Native bodies and graphics resources have explicit owners and disposal paths. A restart reuses shared collision shapes and models while replacing ball bodies. `AGENTS.md` contains the locally embedded clean-code instructions and screenshot requirements for PR descriptions.
 
+`AudioTuning` centralizes minimum impulse (0.002 N·s), full-volume impulse (1.15 N·s), maximum gain (0.45), eight concurrent voices, and summed gain budget (1.0). Bullet impact events are separate from session rules, aggregate contact-point impulses per pair per step, and suppress repeated contact until separation. The cue effect is emitted only when the shot impulse is applied. Stronger pending hits take priority, and stronger new hits can replace quieter active voices. Sounds are stopped on pause/restart and disposed on shutdown. Audio failures are logged without stopping play.
+
 ## Automated verification
 
 ```sh
@@ -60,6 +63,11 @@ Native bodies and graphics resources have explicit owners and disposal paths. A 
 
 # Production renderer at 1080 × 2400, writing PNGs and HTML
 ./gradlew :lwjgl3:visualTest
+
+# Real OpenAL decoding/source allocation; requires graphics and audio output
+./gradlew :lwjgl3:audioTest
+# On headless Linux, use OpenAL Soft's null output:
+# ALSOFT_DRIVERS=null xvfb-run -a ./gradlew :lwjgl3:audioTest
 
 # Android static checks and APK
 ./gradlew :android:lintDebug :android:assembleDebug
@@ -74,8 +82,11 @@ Reports:
 - `core/build/reports/tests/test/index.html`: JUnit and Bullet results.
 - `build/reports/visual/index.html`: scenario results, screenshots, viewport/backend, and failure details. Failed rendering scenarios preserve their last frame when capture remains possible.
 - `android/build/reports/lint-results-debug.html`: Android lint.
+- `build/reports/audio/results.txt`: real desktop audio decoding, source allocation, and lifecycle smoke results.
 
-Visual tests need a working OpenGL context and fail if one cannot be created. On Linux CI they run under Xvfb with Mesa software rendering. `.github/workflows/verify.yml` uploads APK, screenshots, HTML, JUnit XML, and lint reports. Relevant screenshots should be attached or linked in PR descriptions with short captions; use before/after images when practical. Local paths cannot serve as GitHub images.
+Visual tests need a working OpenGL context and fail if one cannot be created. On Linux CI they run under Xvfb with Mesa software rendering. Audio unit tests use a fake player to verify volume, prioritization, concurrency, gain headroom and lifecycle cleanup. Native Bullet tests cover impact classification/strength, repeated collisions, cue delivery, and silent pocket sensors. The separate audio smoke suite checks all bundled WAVs and production playback through OpenAL; CI uses the null output driver, which verifies decoding and source allocation rather than speaker output. Rendered tests remain audio-disabled.
+
+`.github/workflows/verify.yml` runs on PR updates and manual dispatch, and uploads APK, screenshots, HTML, JUnit XML, lint and audio reports. Relevant screenshots should be attached or linked in PR descriptions with short captions; use before/after images when practical. Local paths cannot serve as GitHub images.
 
 ## OnePlus 8T validation
 
@@ -91,4 +102,4 @@ It writes screenshots and `soak.json` under `build/reports/device/`. Performance
 
 ## Assets and attribution
 
-Table/cue models, sphere textures, HUD, and the eight-ball vector icon are built from engine primitives and repository source, without paid or downloaded art. The bundled default bitmap font is supplied by libGDX. The clean-code rules in `AGENTS.md` are attributed to [ciembor/agent-rules-books](https://github.com/ciembor/agent-rules-books/blob/main/clean-code/clean-code.nano.md).
+Table/cue models, sphere textures, HUD, and the eight-ball vector icon are built from engine primitives and repository source, without paid or downloaded visual art. The CC0 recorded sound effects, original sources, edits and license notices are documented in [audio credits](assets/audio/README.md). The bundled default bitmap font is supplied by libGDX. The clean-code rules in `AGENTS.md` are attributed to [ciembor/agent-rules-books](https://github.com/ciembor/agent-rules-books/blob/main/clean-code/clean-code.nano.md).

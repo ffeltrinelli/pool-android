@@ -28,6 +28,12 @@ jobs:
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
         run: xvfb-run -a ./gradlew :lwjgl3:visualTest --console=plain
+      - name: Verify audio decoding and playback
+        if: always()
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          ALSOFT_DRIVERS: 'null'
+        run: xvfb-run -a ./gradlew :lwjgl3:audioTest --console=plain
       - name: Upload APK and reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -39,4 +45,5 @@ jobs:
             core/build/reports/tests/test/
             core/build/test-results/test/
             build/reports/visual/
+            build/reports/audio/
           if-no-files-found: error

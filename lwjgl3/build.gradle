@@ -22,3 +22,15 @@ tasks.register('visualTest', JavaExec) {
     if (System.getProperty('os.name').toLowerCase().contains('mac')) jvmArgs '-XstartOnFirstThread'
     outputs.upToDateWhen { false }
 }
+
+tasks.register('audioTest', JavaExec) {
+    group = 'verification'
+    description = 'Decode bundled effects and verify production OpenAL playback (requires OpenGL and an audio output or OpenAL null driver).'
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'io.github.ffeltrinelli.pool.lwjgl3.AudioSmoke'
+    args rootProject.file('build/reports/audio/results.txt').absolutePath
+    workingDir rootProject.file('assets')
+    if (System.getProperty('os.name').toLowerCase().contains('mac')) jvmArgs '-XstartOnFirstThread'
+    outputs.upToDateWhen { false }
+}
