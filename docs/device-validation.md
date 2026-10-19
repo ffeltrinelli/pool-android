@@ -1,0 +1,27 @@
+# Device validation — 19 October 2026
+
+Device: OnePlus 8T (KB2003), API 34, ARM64, physical resolution 1080 × 2400.
+App: io.github.ffeltrinelli.pool 0.1.0; minimum API 26, target API 34, compile API 36.
+
+## Observed
+
+- Debug APK installs and cold-launches on the physical device. Android reported a cold-launch total time of 1,091 ms on the first installation.
+- Portrait, immersive rendering, the complete table, numbered rack, cue, short aiming line, count and restart control are visible in a device screenshot.
+- A real Android touch swipe produces a break shot, scatters the rack, and disables aiming while the balls move. The post-shot screenshot was visually inspected.
+- Home then activity resume preserved the game process and rendered the scene again.
+- Physical-device soak completed in **601.3 seconds**, with **20 scripted restart/break cycles**, **58 frame sampling windows**, and no detected process restart or script error.
+- Median sampled rate: **59.80 FPS**. The initial window, immediately after Home/resume and initial capture, measured **37.32 FPS**; the next measured 57.09 FPS.
+- Excluding the first 20 seconds as a descriptive warm-up analysis, the 56 remaining windows ranged from **59.30 to 60.28 FPS**, with a median of **59.80 FPS**. Their maximum sampled p95 frame interval was **16.94 ms**.
+- These are short presentation-time windows sampled every ten seconds, not a continuous trace or proof of a strict uninterrupted 60 FPS floor. Raw samples and initial outliers remain in `build/reports/device/soak.json`.
+- The final branding update changes icon resources only; gameplay code matches the soak-tested build. The final APK was rebuilt and reinstalled afterward.
+
+Local evidence is generated under `build/reports/device/`. Screenshots are evidence of the current run, not reference baselines. Device screenshots include the Android cutout area; desktop fixture screenshots cover the game framebuffer only.
+
+## Remaining hands-on acceptance
+
+- Judge continuous circling-to-stroke comfort with an actual finger.
+- Compare deliberate slow, medium, and fast strokes and tune thresholds if needed.
+- Aim from every side, particularly when the cue ball rests beside rails or pockets.
+- Play through scratch and full-clear outcomes naturally. Automated session/physics tests and rendered result fixtures cover their logic and appearance.
+
+A scripted soak supplements these checks; it does not establish subjective gesture quality or performance under every gameplay configuration.

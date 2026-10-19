@@ -1,0 +1,24 @@
+apply plugin: 'application'
+application { mainClass = 'io.github.ffeltrinelli.pool.lwjgl3.Lwjgl3Launcher' }
+sourceSets.main.resources.srcDirs += [rootProject.file('assets').path]
+dependencies {
+    implementation project(':core')
+    implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+    implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+    implementation "com.badlogicgames.gdx:gdx-bullet-platform:$gdxVersion:natives-desktop"
+}
+run {
+    workingDir rootProject.file('assets')
+    if (System.getProperty('os.name').toLowerCase().contains('mac')) jvmArgs '-XstartOnFirstThread'
+}
+tasks.register('visualTest', JavaExec) {
+    group = 'verification'
+    description = 'Render deterministic game scenarios and write an HTML screenshot report (requires OpenGL).'
+    dependsOn testClasses, ':core:test'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'io.github.ffeltrinelli.pool.lwjgl3.VisualSmoke'
+    args rootProject.file('build/reports/visual').absolutePath
+    workingDir rootProject.projectDir
+    if (System.getProperty('os.name').toLowerCase().contains('mac')) jvmArgs '-XstartOnFirstThread'
+    outputs.upToDateWhen { false }
+}
