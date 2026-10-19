@@ -1,0 +1,2 @@
+rootProject.name = 'pool-android'
+include 'core', 'android', 'lwjgl3'

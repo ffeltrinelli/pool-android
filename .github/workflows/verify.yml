@@ -1,0 +1,42 @@
+name: Verify game
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-36 build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install rendering dependencies
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri
+      - name: Unit tests, Bullet integration, Android lint and APK
+        run: ./gradlew :core:test :android:lintDebug :android:assembleDebug --console=plain
+      - name: Render game screenshots
+        if: always()
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: xvfb-run -a ./gradlew :lwjgl3:visualTest --console=plain
+      - name: Upload APK and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pool-apk-and-reports
+          path: |
+            android/build/outputs/apk/debug/*.apk
+            android/build/reports/lint-results-debug.*
+            core/build/reports/tests/test/
+            core/build/test-results/test/
+            build/reports/visual/
+          if-no-files-found: error
