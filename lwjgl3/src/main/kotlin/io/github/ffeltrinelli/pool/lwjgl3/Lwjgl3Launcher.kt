@@ -12,7 +12,6 @@ fun main() {
         setWindowedMode(450, 1000)
         useVsync(true)
         setForegroundFPS(60)
-        disableAudio(true)
         setBackBufferConfig(8, 8, 8, 8, 24, 0, 4)
     })
 }

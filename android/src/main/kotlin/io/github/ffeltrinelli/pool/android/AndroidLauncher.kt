@@ -19,7 +19,6 @@ class AndroidLauncher : AndroidApplication() {
         }
         initialize(PoolGame(), AndroidApplicationConfiguration().apply {
             useImmersiveMode = true
-            disableAudio = true
             useAccelerometer = false
             useCompass = false
             useGyroscope = false

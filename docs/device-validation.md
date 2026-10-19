@@ -25,3 +25,16 @@ Local evidence is generated under `build/reports/device/`. Screenshots are evide
 - Play through scratch and full-clear outcomes naturally. Automated session/physics tests and rendered result fixtures cover their logic and appearance.
 
 A scripted soak supplements these checks; it does not establish subjective gesture quality or performance under every gameplay configuration.
+
+## Collision sound update — 19 October 2026
+
+- The sound-enabled debug APK was built and installed successfully on the same OnePlus 8T/API 34.
+- An immediate background/resume during startup exposed Android calling `pause()` before `create()`. The audio lifecycle now checks resource initialization, with a JVM regression test covering pause/resume/dispose before creation.
+- After rebuilding and reinstalling the fix, the first retry retained the process but stopped before touch input because the screen was off. Once the user foregrounded the game, a fresh check completed **35.4 seconds**, **two scripted restart/break cycles**, and Home/resume in the same process with **no script errors**. The post-shot screenshot shows the rack scattered; the app-specific log contains no audio-loading/playback or fatal error diagnostics.
+- Four short frame samples measured 53.46, 59.78, 59.77 and 55.00 FPS (median **57.39 FPS**). The first and final windows overlap scripted interaction/capture. This short check is not a ten-minute sound-enabled performance acceptance run.
+- Local evidence is in `build/reports/device-audio/soak.json`, its screenshots and `app-log.txt`. The earlier ten-minute MVP soak above predates sound playback and does not establish performance of this update.
+- Desktop verification passes all 38 JUnit/native Bullet tests, ten rendered scenarios, Android lint/APK, and real OpenAL decoding/source allocation for all three effects. The audio smoke also passes with `ALSOFT_DRIVERS=null`, as used in CI.
+
+The user listened on the OnePlus and reported that sounds felt OK, but preferred a different ball-to-ball effect. They selected **A — “billiard ball clack” by Za-Games** from four playable alternatives. The exact auditioned clip now replaces `ball.wav`; the scripted device results above used the earlier ball recording.
+
+Remaining device acceptance: check the selected replacement in gameplay, immediate cue contact, quieter soft shots, and a busy break without crackling or resting-contact buzz. The scripted check covers repeated restart and Home/resume, but backgrounding during an audible effect still needs a listening check. Sound-enabled long-duration performance acceptance remains pending.

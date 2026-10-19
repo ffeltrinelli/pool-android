@@ -21,7 +21,10 @@ class Ball internal constructor(val id: Int, val body: btRigidBody) {
 }
 
 /** Owns every Bullet allocation. All calls and event delivery happen on the game thread. */
-class PoolPhysics(private val events: (PhysicsEvent) -> Unit = {}) : Disposable {
+class PoolPhysics(
+    private val events: (PhysicsEvent) -> Unit = {},
+    private val impacts: (Impact) -> Unit = {}
+) : Disposable {
     private val configuration: btDefaultCollisionConfiguration
     private val dispatcher: btCollisionDispatcher
     private val broadphase: btDbvtBroadphase
@@ -32,6 +35,7 @@ class PoolPhysics(private val events: (PhysicsEvent) -> Unit = {}) : Disposable 
     private val fixedBodies = mutableListOf<btRigidBody>()
     private val sensors = mutableListOf<btCollisionObject>()
     val balls = mutableListOf<Ball>()
+    private val contactImpacts = ContactImpacts(impacts)
     private val transform = Matrix4()
     private val velocity = Vector3()
     private var accumulator = 0f
@@ -48,13 +52,13 @@ class PoolPhysics(private val events: (PhysicsEvent) -> Unit = {}) : Disposable 
         solver = btSequentialImpulseConstraintSolver()
         world = btDiscreteDynamicsWorld(dispatcher, broadphase, solver, configuration)
         world.gravity = Vector3.Zero
-        TableGeometry.rails.forEach { rail ->
+        TableGeometry.rails.forEachIndexed { index, rail ->
             val shape = btBoxShape(Vector3(rail.halfWidth, 0.07f, rail.halfLength))
             shapes.add(shape)
             val body = rigidBody(shape, 0f, rail.center)
             body.restitution = 0.78f
             body.friction = 0.16f
-            body.userValue = -1
+            body.userValue = -1 - index
             fixedBodies.add(body)
             world.addRigidBody(body)
         }
@@ -85,6 +89,7 @@ class PoolPhysics(private val events: (PhysicsEvent) -> Unit = {}) : Disposable 
     }
 
     fun reset(layout: List<Pair<Int, Point>> = TableGeometry.rack()) {
+        contactImpacts.reset()
         balls.forEach { if (!it.pocketed) world.removeRigidBody(it.body); it.body.dispose() }
         balls.clear()
         layout.forEach { (id, point) ->
@@ -108,12 +113,14 @@ class PoolPhysics(private val events: (PhysicsEvent) -> Unit = {}) : Disposable 
     }
 
     fun strike(shot: ShotCommand) {
+        if (!shot.impulse.isFinite() || shot.impulse <= 0f || shot.direction == Point(0f, 0f)) return
         val cue = balls.firstOrNull { it.id == 0 && !it.pocketed } ?: return
         cue.body.activate()
         val direction = shot.direction.normalized()
         cue.body.applyCentralImpulse(Vector3(direction.x * shot.impulse, 0f, direction.z * shot.impulse))
         quietSeconds = 0f
         wasSettled = false
+        impacts(Impact(ImpactKind.CUE, shot.impulse))
     }
 
     fun advance(delta: Float) {
@@ -129,6 +136,7 @@ class PoolPhysics(private val events: (PhysicsEvent) -> Unit = {}) : Disposable 
     fun step() {
         balls.forEach { it.previousPosition.set(it.position); it.previousRotation.set(it.rotation) }
         world.stepSimulation(STEP, 0)
+        collectImpactContacts()
         capturePocketContacts()
         var moving = false
         balls.forEach { ball ->
@@ -151,6 +159,22 @@ class PoolPhysics(private val events: (PhysicsEvent) -> Unit = {}) : Disposable 
             wasSettled = true
             events(PhysicsEvent.Settled)
         }
+    }
+
+    private fun collectImpactContacts() {
+        for (index in 0 until dispatcher.numManifolds) {
+            val manifold = dispatcher.getManifoldByIndexInternal(index)
+            val first = manifold.body0.userValue
+            val second = manifold.body1.userValue
+            for (contactIndex in 0 until manifold.numContacts) {
+                val point = manifold.getContactPoint(contactIndex)
+                // CCD can resolve an impact while a small positive separation remains.
+                if (point.distance <= 0f || point.appliedImpulse > 0f) {
+                    contactImpacts.contact(first, second, point.appliedImpulse)
+                }
+            }
+        }
+        contactImpacts.finishStep()
     }
 
     private fun capturePocketContacts() {
