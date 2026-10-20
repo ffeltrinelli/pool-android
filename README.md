@@ -30,7 +30,8 @@ The Gradle task adds macOS's required `-XstartOnFirstThread`. Mouse dragging use
 
 - Touch behind the cue ball, away from its immediate center. The cue lies between your finger and the ball.
 - Circle your finger around the cue ball to aim. A short direction line shows the initial shot direction.
-- Without lifting, push forward along the cue toward the ball. A faster push produces a stronger shot. Releasing before contact cancels the stroke.
+- Drag backward to withdraw the cue and forward to advance it. You can make repeated practice strokes without lifting. A deliberate axial movement locks the aiming direction until release; lift your finger to re-aim.
+- The forward-moving tip strikes on contact; pulling back first is optional. A faster push produces a stronger shot. Releasing before contact cancels the stroke.
 - Wait for all balls to settle before aiming again. Additional fingers are ignored.
 - Use **Restart** at any time, or **Play again** after a result.
 - Ball collisions click, cushions thud, and cue contact plays a separate strike. Stronger impacts are louder. There is no music or in-game volume control.
@@ -47,7 +48,7 @@ The scaffold comes from official **gdx-liftoff 1.14.2.3**, using its Kotlin temp
 
 Physics units are metres and kilograms. The table is 1.12 × 2.24 m; ball radius is 28.575 mm and mass is 170 g. Gravity and a static cloth support surface give Bullet real ball/cloth contact. Sliding friction turns a centre-struck ball from sliding into rolling; rolling and spinning friction bring it to rest without linear or angular damping. Bullet handles ball/cushion collisions and pocket-sensor contacts. Shot distances differ from the earlier damping-based model. Pocketed bodies are removed after contact processing; sinking is a visual animation. Balls escaping the outer pocket jaws are also removed as a safety fallback.
 
-`TableGeometry` owns rack, cushion, and pocket dimensions. `GestureTuning` centralizes dead zone, stroke threshold, lateral tolerance, velocity window, and power cap. Input is unprojected to the fixed table size, so power does not depend on screen resolution. Forward velocity comes from a recent 75 ms event window; distance controls cue contact, not power. Direction locks after at least two aligned forward samples and 14 mm of travel; contact is at 32 mm. Impulse is capped at 1.15 N·s.
+`TableGeometry` owns rack, cushion, and pocket dimensions. `GestureTuning` centralizes dead zone, stroke threshold, lateral tolerance, velocity window, and power cap. Input is unprojected to the fixed table size, so power does not depend on screen resolution. Forward velocity comes from up to the latest 75 ms of the current forward movement, with interpolation at the window boundary and history cleared on reversal or a stationary sample; distance controls cue contact, not power. Direction locks after at least two aligned samples in either direction and 14 mm of travel. Aligned movement previews immediately before locking; circling clears that preview. The tip starts 32 mm behind the ball and follows axial displacement one-to-one, up to a 250 mm gap. Excess withdrawal is discarded so reversal responds immediately. Impulse is capped at 1.15 N·s.
 
 Physics advances at 120 Hz with up to 100 ms / 12 steps of catch-up per render frame. Rendering interpolates the previous and current poses. Both linear and angular movement must remain below the settling thresholds for 300 ms before input unlocks. Backgrounding freezes simulation and cancels gestures; resume drops its first delta to prevent catch-up. Process death starts a new rack.
 
@@ -79,7 +80,7 @@ Native bodies and graphics resources have explicit owners and disposal paths. A 
 
 JUnit tests cover continuous aiming/stroking, cancellation, noisy and multi-pointer input, power scaling/capping, exactly one impulse, settling, game outcomes, restart, native collisions, six pocket sensors, high-speed cushion hits, rack integrity, fixed-step consistency, stable cloth support, sliding-to-rolling slip, energy loss, angular settling, and pose reset. Physics assertions use tolerances rather than exact trajectories.
 
-Rendered smoke tests capture fifteen deterministic scenarios: initial rack, cue/aim, six pocket approaches, scratch result, cleared result, and five stages of rolling solid/striped balls (0, 12, 18, 24 and 48 simulation steps). Surface-detail crops accompany the rolling fixtures. Captures run on the graphics thread into a fixed-size framebuffer after fixture setup or a fixed simulation pre-roll. No timing sleeps or image baselines are used. Assertions check fixture state; screenshots support human visual review rather than automatic appearance approval.
+Rendered smoke tests capture eighteen deterministic scenarios: initial rack, cue/aim, three bidirectional cue positions (initial, withdrawn, forward return), six pocket approaches, scratch result, cleared result, and five stages of rolling solid/striped balls (0, 12, 18, 24 and 48 simulation steps). Surface-detail crops accompany the rolling fixtures. Captures run on the graphics thread into a fixed-size framebuffer after fixture setup or a fixed simulation pre-roll. No timing sleeps or image baselines are used. Assertions check fixture state; screenshots support human visual review rather than automatic appearance approval.
 
 Reports:
 

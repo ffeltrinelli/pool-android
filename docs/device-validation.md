@@ -55,3 +55,13 @@ Remaining hands-on acceptance: deliberate soft and strong shots, controlled cush
 ### Reduced glare follow-up
 
 After user feedback that reflections obscured the numbers, ball specular intensity was reduced from 1.0 to 0.08 (via an initial 0.15 adjustment) while keeping the light setup and shininess unchanged. All 43 unit/native tests and 15 rendered scenarios pass, and the debug APK builds. Updated initial-rack and rolling-stage screenshots show clearer numbers. The ten-minute measurements above predate this material-only adjustment; physics is unchanged.
+
+
+## Bidirectional cue strokes — 20 October 2026
+
+- The cue now follows backward and forward finger displacement, with direction locking after two aligned samples and 14 mm in either direction. Repeated practice strokes retain the locked aim; lifting cancels and resets the 32 mm tip gap. Maximum withdrawal is 250 mm and contact fires once.
+- Local verification passes **52 JUnit/native tests**, **18 rendered scenarios** at 1080 × 2400, OpenAL null-driver asset/lifecycle verification, Android lint, and debug APK assembly. New tests cover preview/reset, locks from both directions, reversals, withdrawal clamping, cancellation, velocity-window interpolation, and power independent of backswing distance and pause.
+- The APK installed and cold-launched on the OnePlus 8T (KB2003), Android 14 / API 34, in **1,242 ms**. Scripted touch input exercised withdrawal, forward return, repeated reversals, release before contact, a forward-only shot, withdrawal toward the lower rail, background/resume during a held gesture, and backswing-to-contact. The game process survived background/resume. Device screenshots show the cue withdrawn and then returned, and the cue ball moving after both shot styles.
+- Screenshots and the app-specific log are under `build/reports/device-cue/`. The Android `screenrecord` utility exited with status 139 and produced no video; this was a recording-tool failure, not a game-process crash. Deterministic desktop screenshots are preserved in [the cue review images](images/bidirectional-cue/).
+
+Remaining hands-on acceptance: judge practice-stroke comfort, contact timing, and soft/strong shot power with an actual finger, including cue-ball positions adjacent to each rail. The scripted near-rail check withdraws the cue toward the lower rail from the opening cue-ball position; it does not cover every rail-adjacent ball position. No new long-duration performance run was performed for this input-only change.

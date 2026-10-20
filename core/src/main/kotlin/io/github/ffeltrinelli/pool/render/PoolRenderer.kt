@@ -178,12 +178,12 @@ class PoolRenderer : Disposable {
         text("%02d / 15 LEFT".format(session.remaining), 29f, uiHeight - 86f, 0.85f, "d5e5dd")
         button(306f, uiHeight - 90f, 94f, 38f, "RESTART")
         val status = when (session.state) {
-            RoundState.READY -> "Circle to aim. Push forward to strike."
+            RoundState.READY -> "Circle to aim. Pull back, push to strike."
             RoundState.MOVING -> "Let the table settle."
             else -> ""
         }
         text(status, 210f, 90f, 0.84f, "e5dcc8", true)
-        text("FASTER PUSH  /  STRONGER SHOT", 210f, 65f, 0.60f, "78979b", true)
+        text("LIFT TO RE-AIM  /  FASTER PUSH, MORE POWER", 210f, 65f, 0.60f, "78979b", true)
         if (session.finished) {
             rectangle(0f, 0f, 420f, uiHeight, Color(0.02f, 0.055f, 0.07f, 0.86f))
             rectangle(30f, uiHeight / 2 - 112f, 360f, 225f, Color.valueOf("163039"))
