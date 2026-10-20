@@ -31,10 +31,11 @@ class ContactImpactsTest {
         assertEquals(3, events.size)
     }
 
-    @Test fun `pocket sensors and negligible impacts are silent`() {
+    @Test fun `pocket sensors cloth unknown bodies and negligible impacts are silent`() {
         val events = mutableListOf<Impact>()
         val contacts = ContactImpacts(events::add)
         contacts.contact(100, 0, 2f); contacts.contact(1, 101, 2f)
+        contacts.contact(200, 0, 2f); contacts.contact(-99, 1, 2f)
         contacts.contact(0, 1, 0.0001f); contacts.finishStep()
         assertTrue(events.isEmpty())
     }

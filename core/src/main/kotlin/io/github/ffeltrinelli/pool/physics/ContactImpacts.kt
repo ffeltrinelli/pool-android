@@ -11,8 +11,8 @@ internal class ContactImpacts(private val emit: (Impact) -> Unit) {
 
     fun contact(first: Int, second: Int, impulse: Float) {
         val pair = PairId(minOf(first, second), maxOf(first, second))
-        // Balls use 0..15, cushions negative IDs, and pocket sensors 100+.
-        if (pair.first >= 100 || pair.second >= 100 || pair.second !in 0..15) return
+        if (pair.second !in CollisionIds.BALLS ||
+            (pair.first !in CollisionIds.BALLS && pair.first !in CollisionIds.CUSHIONS)) return
         current[pair] = (current[pair] ?: 0f) + impulse.coerceAtLeast(0f)
     }
 
