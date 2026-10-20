@@ -6,6 +6,8 @@ import com.badlogic.gdx.graphics.PixmapIO
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.backends.lwjgl3.*
 import com.badlogic.gdx.files.FileHandle
+import com.badlogic.gdx.math.Vector3
+import kotlin.math.abs
 import io.github.ffeltrinelli.pool.input.*
 import io.github.ffeltrinelli.pool.model.*
 import io.github.ffeltrinelli.pool.physics.PoolPhysics
@@ -40,7 +42,7 @@ object VisualSmoke {
         private lateinit var framebuffer: FrameBuffer
         private val session = GameSession()
         private val gesture = CueGesture()
-        private val scenarios = listOf("initial-rack", "cue-and-aim") + (1..6).map { "pocket-$it" } + listOf("scratch-result", "cleared-result")
+        private val scenarios = listOf("initial-rack", "cue-and-aim") + (1..6).map { "pocket-$it" } + listOf("scratch-result", "cleared-result") + listOf(0, 12, 18, 24, 48).map { "rolling-markings-$it" }
         private var index = 0
         override fun create() {
             renderer = PoolRenderer()
@@ -57,6 +59,7 @@ object VisualSmoke {
                 framebuffer.begin(); bound = true
                 renderer.render(physics, session, gesture, 1080, 2400)
                 capture(name)
+                if (name.startsWith("rolling-markings-")) captureDetail(name)
                 report.record(name, null)
             } catch (failure: Throwable) {
                 if (bound) runCatching { capture("$name-failure") }
@@ -76,6 +79,21 @@ object VisualSmoke {
                     val cue = physics.balls.first { it.id == 0 }.point
                     gesture.begin(PointerSample(0, cue + Point(0.19f, 0.25f), 0.0), cue)
                     check(gesture.phase == CuePhase.AIMING)
+                }
+                name.startsWith("rolling-markings-") -> {
+                    val steps = name.substringAfterLast('-').toInt()
+                    physics.reset(listOf(1 to Point(-0.16f, 0.35f), 9 to Point(0.16f, 0.35f)))
+                    val initial = physics.balls.first().rotation.cpy()
+                    session.beginShot()
+                    physics.balls.forEach { it.body.applyCentralImpulse(Vector3(0f, 0f, -0.136f)) }
+                    repeat(steps) { physics.step() }
+                    check(physics.balls.none { it.pocketed })
+                    if (steps > 0) {
+                        check(physics.balls.all { abs(it.rotation.dot(initial)) < 0.999f })
+                    }
+                    if (steps == 18) {
+                        check(physics.balls.all { abs(Vector3(0f, 0f, 1f).mul(it.rotation).y) < 0.4f })
+                    }
                 }
                 name.startsWith("pocket-") -> {
                     val pocket = TableGeometry.pockets[name.substringAfter('-').toInt() - 1]
@@ -100,6 +118,12 @@ object VisualSmoke {
                     check(session.state == RoundState.CLEARED)
                 }
             }
+        }
+        private fun captureDetail(name: String) {
+            // A crop of the production framebuffer makes the surface markings easy to inspect.
+            val pixels = Pixmap.createFromFrameBuffer(390, 900, 300, 600)
+            try { PixmapIO.writePNG(FileHandle(File(report.directory, "$name-detail.png")), pixels, -1, true) }
+            finally { pixels.dispose() }
         }
         private fun capture(name: String) {
             val pixels = Pixmap.createFromFrameBuffer(0, 0, 1080, 2400)
@@ -129,6 +153,7 @@ private class VisualReport(val directory: File) {
             <p><a href="../../../core/build/reports/tests/test/index.html">JUnit and native Bullet results (local checkout)</a></p>
             ${results.entries.joinToString("\n") { (name, failure) -> "<section><h2>${escape(name)}</h2><p>${if (failure == null) "PASS" else "FAIL"}</p>" +
                 (if (File(directory, "$name.png").exists()) "<a href=\"$name.png\"><img src=\"$name.png\" alt=\"${escape(name)}\"></a>" else "") +
+                (if (File(directory, "$name-detail.png").exists()) "<p><a href=\"$name-detail.png\">Surface detail crop</a></p>" else "") +
                 (if (failure != null) "<pre>${escape(failure)}</pre>" else "") +
                 (if (File(directory, "$name-failure.png").exists()) "<a href=\"$name-failure.png\">Last frame at failure</a>" else "") + "</section>" }}
             </html>

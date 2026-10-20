@@ -51,13 +51,24 @@ class PoolPhysics(
         broadphase = btDbvtBroadphase()
         solver = btSequentialImpulseConstraintSolver()
         world = btDiscreteDynamicsWorld(dispatcher, broadphase, solver, configuration)
-        world.gravity = Vector3.Zero
+        world.solverInfo.numIterations = PhysicsTuning.SOLVER_ITERATIONS
+        world.gravity = Vector3(0f, -PhysicsTuning.GRAVITY, 0f)
+        // Support extends beyond pocket mouths; sensors remove balls before visual sinking.
+        val clothShape = btBoxShape(Vector3(0.82f, 0.05f, 1.38f))
+        shapes.add(clothShape)
+        val cloth = rigidBody(clothShape, 0f, Point(0f, 0f))
+        cloth.worldTransform = Matrix4().setToTranslation(0f, -0.05f, 0f)
+        cloth.userValue = CollisionIds.CLOTH
+        cloth.friction = PhysicsTuning.CLOTH_FRICTION
+        cloth.restitution = 0f
+        fixedBodies.add(cloth)
+        world.addRigidBody(cloth)
         TableGeometry.rails.forEachIndexed { index, rail ->
             val shape = btBoxShape(Vector3(rail.halfWidth, 0.07f, rail.halfLength))
             shapes.add(shape)
             val body = rigidBody(shape, 0f, rail.center)
-            body.restitution = 0.78f
-            body.friction = 0.16f
+            body.restitution = PhysicsTuning.CUSHION_RESTITUTION
+            body.friction = PhysicsTuning.CUSHION_FRICTION
             body.userValue = -1 - index
             fixedBodies.add(body)
             world.addRigidBody(body)
@@ -94,13 +105,15 @@ class PoolPhysics(
         balls.clear()
         layout.forEach { (id, point) ->
             val body = rigidBody(ballShape, TableGeometry.BALL_MASS, point)
+            // Texture stamps lie on local ±Z, away from sphere UV poles. Face +Z upward.
+            body.worldTransform = Matrix4().setToTranslation(point.x, TableGeometry.BALL_RADIUS, point.z).rotate(Vector3.X, -90f)
             body.userValue = id
-            body.linearFactor = Vector3(1f, 0f, 1f)
-            body.restitution = 0.94f
-            body.friction = 0.08f
-            body.rollingFriction = 0.015f
-            body.setDamping(0.48f, 0.55f)
-            body.setSleepingThresholds(0.012f, 0.08f)
+            body.restitution = PhysicsTuning.BALL_RESTITUTION
+            body.friction = PhysicsTuning.BALL_FRICTION
+            body.rollingFriction = PhysicsTuning.ROLLING_FRICTION
+            body.spinningFriction = PhysicsTuning.SPINNING_FRICTION
+            body.setDamping(0f, 0f)
+            body.setSleepingThresholds(PhysicsTuning.LINEAR_SLEEP_SPEED, PhysicsTuning.ANGULAR_SLEEP_SPEED)
             body.ccdMotionThreshold = TableGeometry.BALL_RADIUS * 0.5f
             body.ccdSweptSphereRadius = TableGeometry.BALL_RADIUS * 0.8f
             world.addRigidBody(body)
@@ -145,13 +158,14 @@ class PoolPhysics(
             } else {
                 readTransform(ball)
                 velocity.set(ball.body.linearVelocity)
-                if (velocity.len2() > 0.000144f) moving = true
+                if (velocity.len2() > PhysicsTuning.LINEAR_SLEEP_SPEED * PhysicsTuning.LINEAR_SLEEP_SPEED ||
+                    ball.body.angularVelocity.len2() > PhysicsTuning.ANGULAR_SLEEP_SPEED * PhysicsTuning.ANGULAR_SLEEP_SPEED) moving = true
                 // A safety net for rare escapes through pocket jaws; normal capture uses engine contacts.
                 if (kotlin.math.abs(ball.position.x) > 0.76f || kotlin.math.abs(ball.position.z) > 1.32f) capture(ball)
             }
         }
         quietSeconds = if (moving) 0f else quietSeconds + STEP
-        if (!wasSettled && quietSeconds >= 0.30f) {
+        if (!wasSettled && quietSeconds >= PhysicsTuning.SETTLED_SECONDS) {
             balls.filter { !it.pocketed }.forEach {
                 it.body.linearVelocity = Vector3.Zero
                 it.body.angularVelocity = Vector3.Zero
@@ -184,8 +198,8 @@ class PoolPhysics(
             val first = manifold.body0.userValue
             val second = manifold.body1.userValue
             val ballId = when {
-                first >= 100 && second in 0..15 -> second
-                second >= 100 && first in 0..15 -> first
+                first in CollisionIds.POCKETS && second in 0..15 -> second
+                second in CollisionIds.POCKETS && first in 0..15 -> first
                 else -> continue
             }
             if ((0 until manifold.numContacts).any { manifold.getContactPoint(it).distance <= 0f }) capturedIds.add(ballId)

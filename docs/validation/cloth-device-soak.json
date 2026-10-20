@@ -1,0 +1,361 @@
+{
+  "model": "KB2003",
+  "api": 34,
+  "elapsed_seconds": 600.8,
+  "scripted_breaks": 20,
+  "background_resume_same_process": true,
+  "sampling": "SurfaceFlinger presented timestamps: short windows sampled every 10s, not a continuous frame trace",
+  "median_sample_fps": 59.772431182607605,
+  "minimum_sample_fps": 55.840045420541124,
+  "errors": [],
+  "samples": [
+    {
+      "elapsed_seconds": 0.0,
+      "frames": 127,
+      "fps": 57.71943392341321,
+      "p95_frame_ms": 16.678906
+    },
+    {
+      "elapsed_seconds": 10.6,
+      "frames": 127,
+      "fps": 59.31356613275362,
+      "p95_frame_ms": 16.902812
+    },
+    {
+      "elapsed_seconds": 21.1,
+      "frames": 127,
+      "fps": 59.77990411396371,
+      "p95_frame_ms": 16.884011
+    },
+    {
+      "elapsed_seconds": 32.5,
+      "frames": 127,
+      "fps": 55.840045420541124,
+      "p95_frame_ms": 17.010104
+    },
+    {
+      "elapsed_seconds": 42.8,
+      "frames": 127,
+      "fps": 59.775378303638924,
+      "p95_frame_ms": 16.847031
+    },
+    {
+      "elapsed_seconds": 53.2,
+      "frames": 126,
+      "fps": 58.846910992600904,
+      "p95_frame_ms": 16.904427
+    },
+    {
+      "elapsed_seconds": 63.5,
+      "frames": 127,
+      "fps": 56.64418070866953,
+      "p95_frame_ms": 17.041875
+    },
+    {
+      "elapsed_seconds": 73.9,
+      "frames": 126,
+      "fps": 59.78280460390286,
+      "p95_frame_ms": 16.770886
+    },
+    {
+      "elapsed_seconds": 84.3,
+      "frames": 127,
+      "fps": 59.77331652830259,
+      "p95_frame_ms": 16.796458
+    },
+    {
+      "elapsed_seconds": 94.7,
+      "frames": 127,
+      "fps": 58.40077335676034,
+      "p95_frame_ms": 16.932604
+    },
+    {
+      "elapsed_seconds": 105.2,
+      "frames": 127,
+      "fps": 59.79326541124625,
+      "p95_frame_ms": 16.71526
+    },
+    {
+      "elapsed_seconds": 115.6,
+      "frames": 127,
+      "fps": 60.26468634790092,
+      "p95_frame_ms": 16.897344
+    },
+    {
+      "elapsed_seconds": 126.1,
+      "frames": 126,
+      "fps": 59.7941556438389,
+      "p95_frame_ms": 16.718073
+    },
+    {
+      "elapsed_seconds": 136.4,
+      "frames": 127,
+      "fps": 59.789581330631485,
+      "p95_frame_ms": 16.75698
+    },
+    {
+      "elapsed_seconds": 146.8,
+      "frames": 126,
+      "fps": 59.78467505677016,
+      "p95_frame_ms": 16.9075
+    },
+    {
+      "elapsed_seconds": 157.1,
+      "frames": 127,
+      "fps": 58.864938890139214,
+      "p95_frame_ms": 16.710156
+    },
+    {
+      "elapsed_seconds": 167.6,
+      "frames": 127,
+      "fps": 59.78915871352385,
+      "p95_frame_ms": 16.656719
+    },
+    {
+      "elapsed_seconds": 178.0,
+      "frames": 127,
+      "fps": 59.767013921033914,
+      "p95_frame_ms": 16.649948
+    },
+    {
+      "elapsed_seconds": 188.5,
+      "frames": 127,
+      "fps": 59.31178471579283,
+      "p95_frame_ms": 16.805312
+    },
+    {
+      "elapsed_seconds": 199.0,
+      "frames": 127,
+      "fps": 59.77499873550971,
+      "p95_frame_ms": 16.869167
+    },
+    {
+      "elapsed_seconds": 209.4,
+      "frames": 127,
+      "fps": 59.781905786378196,
+      "p95_frame_ms": 16.929166
+    },
+    {
+      "elapsed_seconds": 219.9,
+      "frames": 127,
+      "fps": 59.78777123456719,
+      "p95_frame_ms": 16.659688
+    },
+    {
+      "elapsed_seconds": 230.2,
+      "frames": 127,
+      "fps": 59.78472309801372,
+      "p95_frame_ms": 16.691771
+    },
+    {
+      "elapsed_seconds": 240.6,
+      "frames": 127,
+      "fps": 59.31685143749767,
+      "p95_frame_ms": 16.743438
+    },
+    {
+      "elapsed_seconds": 251.0,
+      "frames": 126,
+      "fps": 59.30253696101305,
+      "p95_frame_ms": 16.675365
+    },
+    {
+      "elapsed_seconds": 261.4,
+      "frames": 126,
+      "fps": 59.78257675616073,
+      "p95_frame_ms": 16.7225
+    },
+    {
+      "elapsed_seconds": 271.8,
+      "frames": 127,
+      "fps": 60.264171439170546,
+      "p95_frame_ms": 16.887291
+    },
+    {
+      "elapsed_seconds": 282.4,
+      "frames": 127,
+      "fps": 59.78596269486413,
+      "p95_frame_ms": 16.988177
+    },
+    {
+      "elapsed_seconds": 292.8,
+      "frames": 126,
+      "fps": 60.25823215138968,
+      "p95_frame_ms": 16.98151
+    },
+    {
+      "elapsed_seconds": 303.1,
+      "frames": 127,
+      "fps": 59.788771594006136,
+      "p95_frame_ms": 16.817188
+    },
+    {
+      "elapsed_seconds": 313.7,
+      "frames": 126,
+      "fps": 59.77071063144609,
+      "p95_frame_ms": 16.677916
+    },
+    {
+      "elapsed_seconds": 324.1,
+      "frames": 127,
+      "fps": 59.771545836912615,
+      "p95_frame_ms": 16.816354
+    },
+    {
+      "elapsed_seconds": 334.5,
+      "frames": 127,
+      "fps": 60.235406623663536,
+      "p95_frame_ms": 16.652604
+    },
+    {
+      "elapsed_seconds": 344.9,
+      "frames": 127,
+      "fps": 59.75387835618156,
+      "p95_frame_ms": 16.654375
+    },
+    {
+      "elapsed_seconds": 355.3,
+      "frames": 127,
+      "fps": 59.76902947326966,
+      "p95_frame_ms": 16.703021
+    },
+    {
+      "elapsed_seconds": 365.7,
+      "frames": 127,
+      "fps": 59.77368870242913,
+      "p95_frame_ms": 16.656562
+    },
+    {
+      "elapsed_seconds": 376.1,
+      "frames": 126,
+      "fps": 60.243576858872714,
+      "p95_frame_ms": 16.775677
+    },
+    {
+      "elapsed_seconds": 386.5,
+      "frames": 127,
+      "fps": 60.23862838456064,
+      "p95_frame_ms": 16.67125
+    },
+    {
+      "elapsed_seconds": 396.9,
+      "frames": 127,
+      "fps": 59.77938562912081,
+      "p95_frame_ms": 16.683802
+    },
+    {
+      "elapsed_seconds": 407.2,
+      "frames": 127,
+      "fps": 59.31312548015093,
+      "p95_frame_ms": 16.677031
+    },
+    {
+      "elapsed_seconds": 417.7,
+      "frames": 127,
+      "fps": 59.76235278440827,
+      "p95_frame_ms": 16.677292
+    },
+    {
+      "elapsed_seconds": 428.1,
+      "frames": 126,
+      "fps": 60.24920127139831,
+      "p95_frame_ms": 16.929427
+    },
+    {
+      "elapsed_seconds": 438.6,
+      "frames": 127,
+      "fps": 59.774938192215785,
+      "p95_frame_ms": 16.819218
+    },
+    {
+      "elapsed_seconds": 448.9,
+      "frames": 127,
+      "fps": 59.75410565219596,
+      "p95_frame_ms": 16.687865
+    },
+    {
+      "elapsed_seconds": 459.4,
+      "frames": 127,
+      "fps": 59.74616035776312,
+      "p95_frame_ms": 16.818802
+    },
+    {
+      "elapsed_seconds": 469.8,
+      "frames": 127,
+      "fps": 59.765013217376556,
+      "p95_frame_ms": 16.863542
+    },
+    {
+      "elapsed_seconds": 480.2,
+      "frames": 127,
+      "fps": 59.76147734504076,
+      "p95_frame_ms": 16.69052
+    },
+    {
+      "elapsed_seconds": 490.7,
+      "frames": 127,
+      "fps": 59.76739928463204,
+      "p95_frame_ms": 16.713281
+    },
+    {
+      "elapsed_seconds": 501.0,
+      "frames": 127,
+      "fps": 59.77086503035277,
+      "p95_frame_ms": 16.912448
+    },
+    {
+      "elapsed_seconds": 511.5,
+      "frames": 126,
+      "fps": 59.763820857619955,
+      "p95_frame_ms": 16.682187
+    },
+    {
+      "elapsed_seconds": 521.9,
+      "frames": 127,
+      "fps": 59.31743609882668,
+      "p95_frame_ms": 16.916093
+    },
+    {
+      "elapsed_seconds": 532.5,
+      "frames": 126,
+      "fps": 60.244597606314514,
+      "p95_frame_ms": 16.792396
+    },
+    {
+      "elapsed_seconds": 542.9,
+      "frames": 127,
+      "fps": 59.77863079184918,
+      "p95_frame_ms": 16.670469
+    },
+    {
+      "elapsed_seconds": 553.4,
+      "frames": 127,
+      "fps": 57.08253728790351,
+      "p95_frame_ms": 16.958282
+    },
+    {
+      "elapsed_seconds": 563.7,
+      "frames": 126,
+      "fps": 59.307166291339364,
+      "p95_frame_ms": 16.797343
+    },
+    {
+      "elapsed_seconds": 574.1,
+      "frames": 126,
+      "fps": 59.3012680174758,
+      "p95_frame_ms": 16.903281
+    },
+    {
+      "elapsed_seconds": 585.5,
+      "frames": 126,
+      "fps": 57.48526680089851,
+      "p95_frame_ms": 16.955781
+    },
+    {
+      "elapsed_seconds": 596.0,
+      "frames": 126,
+      "fps": 59.77682624154353,
+      "p95_frame_ms": 16.729895
+    }
+  ]
+}

@@ -45,11 +45,15 @@ The scaffold comes from official **gdx-liftoff 1.14.2.3**, using its Kotlin temp
 - `android`: immersive portrait launcher, safe cutout policy, disabled motion sensors, and keep-screen-on while foregrounded.
 - `lwjgl3`: desktop launcher and separate test-only rendered fixtures. Fixtures do not introduce game debug controls.
 
-Physics units are metres and kilograms. The table is 1.12 × 2.24 m; ball radius is 28.575 mm and mass is 170 g. Ball movement is constrained to the table plane. Engine damping approximates cloth resistance, with Bullet handling ball/cushion collisions and pocket-sensor contacts. Pocketed bodies are removed after contact processing; sinking is a visual animation. Balls escaping the outer pocket jaws are also removed as a safety fallback.
+Physics units are metres and kilograms. The table is 1.12 × 2.24 m; ball radius is 28.575 mm and mass is 170 g. Gravity and a static cloth support surface give Bullet real ball/cloth contact. Sliding friction turns a centre-struck ball from sliding into rolling; rolling and spinning friction bring it to rest without linear or angular damping. Bullet handles ball/cushion collisions and pocket-sensor contacts. Shot distances differ from the earlier damping-based model. Pocketed bodies are removed after contact processing; sinking is a visual animation. Balls escaping the outer pocket jaws are also removed as a safety fallback.
 
 `TableGeometry` owns rack, cushion, and pocket dimensions. `GestureTuning` centralizes dead zone, stroke threshold, lateral tolerance, velocity window, and power cap. Input is unprojected to the fixed table size, so power does not depend on screen resolution. Forward velocity comes from a recent 75 ms event window; distance controls cue contact, not power. Direction locks after at least two aligned forward samples and 14 mm of travel; contact is at 32 mm. Impulse is capped at 1.15 N·s.
 
-Physics advances at 120 Hz with up to 100 ms / 12 steps of catch-up per render frame. Rendering interpolates the previous and current poses. Movement must remain below the settling threshold for 300 ms before input unlocks. Backgrounding freezes simulation and cancels gestures; resume drops its first delta to prevent catch-up. Process death starts a new rack.
+Physics advances at 120 Hz with up to 100 ms / 12 steps of catch-up per render frame. Rendering interpolates the previous and current poses. Both linear and angular movement must remain below the settling thresholds for 300 ms before input unlocks. Backgrounding freezes simulation and cancels gestures; resume drops its first delta to prevent catch-up. Process death starts a new rack.
+
+Object-ball numbers are baked into two opposite circular patches on each sphere's texture. Numbers and stripes follow the same interpolated Bullet orientation; markings can rotate out of view. A restart faces one number upward. There is no separate visual rolling calculation.
+
+`PhysicsTuning` centralizes solver iterations (10, Bullet’s default), gravity (9.81 m/s²), cloth friction (0.8), ball friction (0.25), ball rolling friction (0.00035), ball spinning friction (0.001), linear sleep/settling speed (0.012 m/s), angular sleep/settling speed (0.3 rad/s), and the 0.3 s quiet interval. Bullet combines the contacting materials' coefficients; these are engine settings, not measured cloth specifications. Cloth restitution is zero; balls retain restitution 0.94 and cushions 0.78. Cloth contacts never trigger sounds or pocket capture. The rigid support extends beyond pocket mouths; sensors remove captured balls before their visual sink. No fabric deformation, cloth-direction effects, physical pocket interiors, or spin controls are simulated.
 
 Native bodies and graphics resources have explicit owners and disposal paths. A restart reuses shared collision shapes and models while replacing ball bodies. `AGENTS.md` contains the locally embedded clean-code instructions and screenshot requirements for PR descriptions.
 
@@ -73,9 +77,9 @@ Native bodies and graphics resources have explicit owners and disposal paths. A 
 ./gradlew :android:lintDebug :android:assembleDebug
 ```
 
-JUnit tests cover continuous aiming/stroking, cancellation, noisy and multi-pointer input, power scaling/capping, exactly one impulse, settling, game outcomes, restart, native collisions, six pocket sensors, high-speed cushion hits, rack integrity, and fixed-step consistency. Physics assertions use tolerances rather than exact trajectories.
+JUnit tests cover continuous aiming/stroking, cancellation, noisy and multi-pointer input, power scaling/capping, exactly one impulse, settling, game outcomes, restart, native collisions, six pocket sensors, high-speed cushion hits, rack integrity, fixed-step consistency, stable cloth support, sliding-to-rolling slip, energy loss, angular settling, and pose reset. Physics assertions use tolerances rather than exact trajectories.
 
-Rendered smoke tests capture ten deterministic scenarios: initial rack, cue/aim, six pocket approaches, scratch result, and cleared result. Captures run on the graphics thread into a fixed-size framebuffer after fixture setup or a fixed simulation pre-roll. No timing sleeps or image baselines are used. Assertions check fixture state; screenshots support human visual review rather than automatic appearance approval.
+Rendered smoke tests capture fifteen deterministic scenarios: initial rack, cue/aim, six pocket approaches, scratch result, cleared result, and five stages of rolling solid/striped balls (0, 12, 18, 24 and 48 simulation steps). Surface-detail crops accompany the rolling fixtures. Captures run on the graphics thread into a fixed-size framebuffer after fixture setup or a fixed simulation pre-roll. No timing sleeps or image baselines are used. Assertions check fixture state; screenshots support human visual review rather than automatic appearance approval.
 
 Reports:
 

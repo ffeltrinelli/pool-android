@@ -30,7 +30,6 @@ class PoolRenderer : Disposable {
         set(ColorAttribute(ColorAttribute.AmbientLight, 0.60f, 0.65f, 0.68f, 1f))
         add(DirectionalLight().set(0.95f, 0.94f, 0.86f, -0.4f, -1f, -0.3f))
     }
-    private val ballColors = listOf("f8f7ed", "efbc35", "397dc1", "ce5246", "8e5bb6", "df8737", "379d81", "9c3e4c", "252d36")
     private val ballModels: List<Model>
     private val ballInstances: List<ModelInstance>
     private val shadowInstances: List<ModelInstance>
@@ -42,7 +41,6 @@ class PoolRenderer : Disposable {
     private val cueTip: Model
     private val guide: Model
     private val white: Texture
-    private val disc: Texture
     private val position = Vector3()
     private val rotation = Quaternion()
     var uiHeight = 933f
@@ -51,8 +49,7 @@ class PoolRenderer : Disposable {
     private var height = 933
 
     init {
-        white = texture(false)
-        disc = texture(true)
+        white = whiteTexture()
         val wood = material("664533")
         box(0f, -0.065f, 0f, 1.46f, 0.12f, 2.58f, wood)
         box(0f, -0.018f, 0f, 1.16f, 0.035f, 2.28f, material("197765"))
@@ -73,18 +70,13 @@ class PoolRenderer : Disposable {
                 box(x, 0.001f, side * 1.22f, 0.018f, 0.008f, 0.012f, material("d9bd83"))
             }
         }
-        ballModels = (0..15).map { id ->
-            val colorIndex = if (id > 8) id - 8 else id
-            val color = Color.valueOf(ballColors[colorIndex])
-            val pixmap = Pixmap(64, 32, Pixmap.Format.RGBA8888)
-            pixmap.setColor(if (id > 8) Color.valueOf("f8f7ed") else color)
-            pixmap.fill()
-            if (id > 8) { pixmap.setColor(color); pixmap.fillRectangle(0, 10, 64, 12) }
-            val texture = Texture(pixmap)
-            pixmap.dispose()
-            textures.add(texture)
-            val mat = Material(TextureAttribute.createDiffuse(texture), ColorAttribute.createSpecular(Color.WHITE), FloatAttribute.createShininess(48f))
-            own(builder.createSphere(TableGeometry.BALL_RADIUS * 2, TableGeometry.BALL_RADIUS * 2, TableGeometry.BALL_RADIUS * 2, 24, 16, mat, attributes))
+        BallTextures(font).use { ballTextures ->
+            ballModels = (0..15).map { id ->
+                val texture = ballTextures.create(id)
+                textures.add(texture)
+                val mat = Material(TextureAttribute.createDiffuse(texture), ColorAttribute.createSpecular(Color.WHITE), FloatAttribute.createShininess(48f))
+                own(builder.createSphere(TableGeometry.BALL_RADIUS * 2, TableGeometry.BALL_RADIUS * 2, TableGeometry.BALL_RADIUS * 2, 32, 24, mat, attributes))
+            }
         }
         shadow = own(builder.createCylinder(0.067f, 0.001f, 0.067f, 24, material("125c50"), attributes))
         cue = own(builder.createCylinder(0.011f, 1f, 0.011f, 12, material("e6c28c"), attributes))
@@ -103,10 +95,10 @@ class PoolRenderer : Disposable {
     private fun box(x: Float, y: Float, z: Float, w: Float, h: Float, d: Float, material: Material) {
         scene.add(ModelInstance(own(builder.createBox(w, h, d, material, attributes))).apply { transform.setToTranslation(x, y, z) })
     }
-    private fun texture(circle: Boolean): Texture {
+    private fun whiteTexture(): Texture {
         val p = Pixmap(32, 32, Pixmap.Format.RGBA8888)
         p.setColor(Color.WHITE)
-        if (circle) p.fillCircle(16, 16, 15) else p.fill()
+        p.fill()
         val t = Texture(p)
         t.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
         p.dispose()
@@ -175,20 +167,12 @@ class PoolRenderer : Disposable {
             }, environment)
         }
         modelBatch.end()
-        drawHud(physics, session)
+        drawHud(session)
     }
 
-    private fun drawHud(physics: PoolPhysics, session: GameSession) {
+    private fun drawHud(session: GameSession) {
         sprites.projectionMatrix = uiCamera.combined
         sprites.begin()
-        physics.balls.filter { it.id > 0 && !it.pocketed }.forEach { ball ->
-            val projected = camera.project(Vector3(ball.previousPosition).lerp(ball.position, physics.interpolation).add(0f, 0.030f, 0f), 0f, 0f, width.toFloat(), height.toFloat())
-            val x = projected.x * 420 / width
-            val y = projected.y * uiHeight / height
-            sprites.color = Color.valueOf("fff9e7")
-            sprites.draw(disc, x - 4.3f, y - 4.3f, 8.6f, 8.6f)
-            text(ball.id.toString(), x, y + 3.5f, 0.52f, "172d34", true)
-        }
         text("POOL", 28f, uiHeight - 34f, 1.9f, "f2e5c8")
         text("SOLO PRACTICE", 29f, uiHeight - 57f, 0.65f, "8ba6a8")
         text("%02d / 15 LEFT".format(session.remaining), 29f, uiHeight - 86f, 0.85f, "d5e5dd")
