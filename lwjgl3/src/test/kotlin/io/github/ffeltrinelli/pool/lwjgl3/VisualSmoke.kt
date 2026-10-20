@@ -45,7 +45,7 @@ object VisualSmoke {
         private val gesture = CueGesture()
         private val scenarios = listOf("initial-rack", "cue-and-aim", "cue-stroke-initial", "cue-stroke-withdrawn", "cue-stroke-return") + (1..6).map { "pocket-$it" } + listOf("scratch-result", "cleared-result") + listOf(0, 12, 18, 24, 48).map { "rolling-markings-$it" }
         private val viewScenarios = listOf("settings-top", "player-initial", "player-right", "player-left", "player-reverse",
-            "player-withdrawn", "player-return", "settings-player", "player-shot-frozen", "player-scratch", "player-cleared") +
+            "player-withdrawn", "player-return", "settings-player", "player-shot-pullback", "player-shot-overview", "player-return-to-aim", "player-scratch", "player-cleared") +
             (1..6).map { "player-rail-$it" }
         private val allScenarios get() = scenarios + viewScenarios
         private var index = 0
@@ -84,6 +84,7 @@ object VisualSmoke {
         private fun fixture(name: String) {
             physics.reset(); session.restart(); gesture.cancel()
             renderer.views.select(ViewMode.TOP)
+            renderer.views.reset()
             renderer.settingsOpen = false
             if (name in viewScenarios) { viewFixture(name); return }
             when {
@@ -185,13 +186,18 @@ object VisualSmoke {
             }
             renderer.views.update(cue, direction, true)
             if (name == "settings-player") renderer.settingsOpen = true
-            if (name == "player-shot-frozen") {
-                val cameraPosition = view.camera.position.cpy()
+            if (name.startsWith("player-shot-") || name == "player-return-to-aim") {
                 session.beginShot()
                 physics.strike(ShotCommand(direction, 0.4f))
                 repeat(120) { physics.step() }
-                renderer.views.update(physics.balls.first { it.id == 0 }.point, direction, false)
-                check(cameraPosition == view.camera.position)
+                val duration = if (name == "player-shot-pullback") 0.325f else 0.65f
+                renderer.views.update(physics.balls.first { it.id == 0 }.point, direction, false, duration)
+                check(view.camera.position.y > 1f)
+                if (name == "player-return-to-aim") {
+                    repeat(6000) { if (!session.canShoot) physics.step() }
+                    check(session.canShoot)
+                    renderer.views.update(physics.balls.first { it.id == 0 }.point, direction, true, 0.225f)
+                }
             }
             if (name == "player-scratch" || name == "player-cleared") {
                 session.beginShot()
@@ -229,7 +235,7 @@ object VisualSmoke {
                 if (!session.canShoot) repeat(4) { physics.step() }
                 framebuffer.begin()
                 try {
-                    renderer.render(physics, session, gesture, 1080, 2400)
+                    renderer.render(physics, session, gesture, 1080, 2400, viewDelta = 1f / 30)
                     val pixels = Pixmap.createFromFrameBuffer(0, 0, 1080, 2400)
                     try { PixmapIO.writePNG(FileHandle(File(directory, "frame-%03d.png".format(frame))), pixels, -1, true) }
                     finally { pixels.dispose() }

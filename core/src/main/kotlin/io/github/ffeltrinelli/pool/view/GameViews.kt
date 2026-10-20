@@ -12,19 +12,22 @@ import kotlin.math.*
 enum class ViewMode { TOP, PLAYER }
 
 data class ViewTuning(
-    val elevationDegrees: Float = 30f,
+    val elevationDegrees: Float = 45f,
     val fieldOfView: Float = 60f,
     val distance: Float = 0.95f,
     val near: Float = 0.01f,
+    val overviewNear: Float = 0.25f,
     val far: Float = 20f,
-    val aimingRadius: Float = 0.30f
+    val aimingRadius: Float = 0.30f,
+    val pullbackSeconds: Float = 0.65f,
+    val returnSeconds: Float = 0.45f
 )
 
 /** Each view owns projection and screen-input interpretation; the stroke interpreter is shared. */
 interface GameView {
     val camera: Camera
     fun resize(width: Int, height: Int)
-    fun update(cueBall: Point?, direction: Point, canAim: Boolean)
+    fun update(cueBall: Point?, direction: Point, canAim: Boolean, deltaSeconds: Float = 0f)
     fun beginInput(x: Int, y: Int, cueBall: Point, direction: Point): Point
     fun moveInput(x: Int, y: Int, phase: CuePhase, direction: Point): Point
     fun cueLength(tip: Point, direction: Point): Float
@@ -50,7 +53,7 @@ class TopView : GameView {
         camera.update()
     }
 
-    override fun update(cueBall: Point?, direction: Point, canAim: Boolean) = Unit
+    override fun update(cueBall: Point?, direction: Point, canAim: Boolean, deltaSeconds: Float) = Unit
     override fun beginInput(x: Int, y: Int, cueBall: Point, direction: Point) = tablePoint(x, y)
     override fun moveInput(x: Int, y: Int, phase: CuePhase, direction: Point) = tablePoint(x, y)
 
@@ -72,6 +75,7 @@ class PlayerView(private val tuning: ViewTuning = ViewTuning()) : GameView {
     private var metresPerPixel = 1.92f / 420f
     private var target = Point(0f, 0.58f)
     private var heading = Point(0f, -1f)
+    private var overviewProgress = 0f
     private var lastX = 0
     private var lastY = 0
     private var inputOrigin = target
@@ -90,23 +94,52 @@ class PlayerView(private val tuning: ViewTuning = ViewTuning()) : GameView {
         placeCamera()
     }
 
-    override fun update(cueBall: Point?, direction: Point, canAim: Boolean) {
-        if (!canAim || cueBall == null) return
-        target = cueBall
-        heading = direction
+    override fun update(cueBall: Point?, direction: Point, canAim: Boolean, deltaSeconds: Float) {
+        if (canAim && cueBall != null) {
+            target = cueBall
+            heading = direction
+        }
+        val delta = if (deltaSeconds.isFinite()) deltaSeconds.coerceAtLeast(0f) else 0f
+        overviewProgress = if (canAim) (overviewProgress - delta / tuning.returnSeconds).coerceAtLeast(0f)
+            else (overviewProgress + delta / tuning.pullbackSeconds).coerceAtMost(1f)
         placeCamera()
     }
 
     private fun placeCamera() {
-        camera.position.set(target.x - heading.x * tuning.distance,
-            TableGeometry.BALL_RADIUS + tuning.distance * tan(Math.toRadians(tuning.elevationDegrees.toDouble())).toFloat(),
-            target.z - heading.z * tuning.distance)
+        val radians = Math.toRadians(tuning.elevationDegrees.toDouble())
+        val forward = Vector3(heading.x * cos(radians).toFloat(), -sin(radians).toFloat(), heading.z * cos(radians).toFloat())
+        val blend = overviewProgress * overviewProgress * (3f - 2f * overviewProgress)
+        val aimTarget = Vector3(target.x, TableGeometry.BALL_RADIUS, target.z)
+        val overviewTarget = Vector3(0f, TableGeometry.BALL_RADIUS, 0f)
+        val distance = (tuning.distance / cos(radians).toFloat()) * (1f - blend) + overviewDistance(forward) * blend
+        val lookAt = aimTarget.lerp(overviewTarget, blend)
+        camera.position.set(lookAt).mulAdd(forward, -distance)
+        camera.direction.set(forward)
         camera.up.set(Vector3.Y)
-        camera.lookAt(target.x, TableGeometry.BALL_RADIUS, target.z)
-        camera.near = tuning.near
+        camera.normalizeUp()
+        camera.near = tuning.near + (tuning.overviewNear - tuning.near) * blend
         camera.far = tuning.far
         camera.update()
     }
+
+    private fun overviewDistance(forward: Vector3): Float {
+        val right = forward.cpy().crs(Vector3.Y).nor()
+        val up = right.cpy().crs(forward).nor()
+        val verticalTangent = tan(Math.toRadians(tuning.fieldOfView.toDouble()) / 2).toFloat()
+        val horizontalTangent = verticalTangent * camera.viewportWidth / camera.viewportHeight
+        var distance = 0f
+        // Fit the full table body and balls, leaving room for the HUD above and a margin on every edge.
+        for (x in listOf(-0.76f, 0.76f)) for (z in listOf(-1.32f, 1.32f)) for (y in listOf(-0.13f, 0.06f)) {
+            val offset = Vector3(x, y - TableGeometry.BALL_RADIUS, z)
+            val depth = offset.dot(forward)
+            val vertical = offset.dot(up)
+            distance = max(distance, abs(offset.dot(right)) / (horizontalTangent * 0.88f) - depth)
+            distance = max(distance, abs(vertical) / (verticalTangent * if (vertical >= 0f) 0.70f else 0.84f) - depth)
+        }
+        return distance
+    }
+
+    fun reset() { overviewProgress = 0f; placeCamera() }
 
     override fun beginInput(x: Int, y: Int, cueBall: Point, direction: Point): Point {
         lastX = x
@@ -140,7 +173,7 @@ class PlayerView(private val tuning: ViewTuning = ViewTuning()) : GameView {
         val depth = Vector3(tip.x, TableGeometry.BALL_RADIUS, tip.z).sub(camera.position).dot(front)
         val rearwardDepth = direction.x * front.x + direction.z * front.z
         if (rearwardDepth <= 0.001f) return 0.65f
-        return ((depth - tuning.near - 0.02f) / rearwardDepth).coerceIn(0.04f, 0.65f)
+        return ((depth - camera.near - 0.02f) / rearwardDepth).coerceIn(0.04f, 0.65f)
     }
 }
 
@@ -152,7 +185,8 @@ class GameViews {
     val active: GameView get() = when (mode) { ViewMode.TOP -> top; ViewMode.PLAYER -> player }
 
     fun select(mode: ViewMode) { this.mode = mode }
+    fun reset() { player.reset() }
     fun resize(width: Int, height: Int) { top.resize(width, height); player.resize(width, height) }
     // Keep the last aiming pose even while top view is selected, so switching during a shot is stable.
-    fun update(cueBall: Point?, direction: Point, canAim: Boolean) { player.update(cueBall, direction, canAim) }
+    fun update(cueBall: Point?, direction: Point, canAim: Boolean, deltaSeconds: Float = 0f) { player.update(cueBall, direction, canAim, deltaSeconds) }
 }

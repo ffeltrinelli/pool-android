@@ -86,3 +86,12 @@ The user confirmed improved backswing startup but observed small forward/backwar
 - [Review images and a five-second motion recording](images/player-view/) use the production desktop renderer. The recording demonstrates aiming, withdrawal, forward return, contact, and subsequent motion. It is deterministic desktop evidence, not a recording of finger input or Android performance.
 
 Remaining hands-on acceptance: judge player-view camera framing and touch comfort, deliberate soft/strong strokes, and rail-adjacent shots on the phone. Automated screenshots establish camera coverage but do not establish subjective feel. No new ten-minute performance soak was performed for this change. The phone is left in Player view with a fresh rack ready for review.
+
+
+### Player-camera feedback: 45° aim, no guide, animated shot overview
+
+The user requested a steeper 45° aiming angle, complete removal of the aim aid in both modes, and a zoom-out after striking so the whole table is visible. The aiming-guide geometry and rendering have been removed. Player view now pulls back over 0.65 s from cue contact, keeping shot yaw and 45° elevation while recentering and fitting all table corners within the viewport below the HUD. It holds the overview during movement/results, then returns to the settled cue ball over 0.45 s. Settings/background suspension pauses animation; restart resets it. The near plane blends to 0.25 m during pullback to avoid depth artifacts on the table surface.
+
+Local verification passes **73 unit/native tests**, **37 rendered scenarios**, desktop audio verification, lint and APK assembly. Camera tests cover all 24 headings at three portrait viewports, smooth movement and return, equivalent frame partitions, pause, resize, and restart reset. Updated screenshots and the five-second recording include the pullback; there is no direction line in either mode.
+
+The revised APK installed and cold-launched on the OnePlus in **909 ms**. Scripted shots and inspected screenshots confirm the 45° aiming view, no aiming line in either mode, and the full table visible with moving balls after pullback. Two captures 0.5 s apart while settings was open remained byte-identical, including the paused camera. Home/resume preserved the process; restarting returned to close aim. The phone is left with a fresh Player-view rack. [Camera follow-up device summary](validation/player-view-camera-device.json) records these checks. Subjective angle, framing, and animation timing await user review.

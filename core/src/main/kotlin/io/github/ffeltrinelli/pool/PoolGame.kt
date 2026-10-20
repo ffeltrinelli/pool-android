@@ -89,17 +89,19 @@ class PoolGame : ApplicationAdapter() {
         audio.clear()
         physics.reset()
         session.restart()
+        renderer.views.reset()
         skipDelta = true
     }
 
     override fun render() {
+        val delta = if (controls.suspended || skipDelta) 0f else Gdx.graphics.deltaTime.coerceIn(0f, 0.1f)
         if (!controls.suspended) {
-            if (!skipDelta) physics.advance(Gdx.graphics.deltaTime)
-            audio.flush(Gdx.graphics.deltaTime)
+            physics.advance(delta)
+            audio.flush(delta)
             skipDelta = false
         }
         renderer.settingsOpen = controls.settingsOpen
-        renderer.render(physics, session, gesture)
+        renderer.render(physics, session, gesture, viewDelta = delta)
     }
 
     override fun resize(width: Int, height: Int) {

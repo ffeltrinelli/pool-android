@@ -12,7 +12,6 @@ import com.badlogic.gdx.utils.Disposable
 import io.github.ffeltrinelli.pool.input.CueGesture
 import io.github.ffeltrinelli.pool.model.*
 import io.github.ffeltrinelli.pool.physics.PoolPhysics
-import kotlin.math.*
 import io.github.ffeltrinelli.pool.view.GameViews
 import io.github.ffeltrinelli.pool.ui.GameHud
 
@@ -36,11 +35,9 @@ class PoolRenderer : Disposable {
     private val shadowInstances: List<ModelInstance>
     private val cueInstance: ModelInstance
     private val tipInstance: ModelInstance
-    private val guideInstance: ModelInstance
     private val shadow: Model
     private val cue: Model
     private val cueTip: Model
-    private val guide: Model
     private val position = Vector3()
     private val rotation = Quaternion()
 
@@ -76,12 +73,10 @@ class PoolRenderer : Disposable {
         shadow = own(builder.createCylinder(0.067f, 0.001f, 0.067f, 24, material("125c50"), attributes))
         cue = own(builder.createCylinder(0.011f, 1f, 0.011f, 12, material("e6c28c"), attributes))
         cueTip = own(builder.createSphere(0.012f, 0.012f, 0.012f, 12, 8, material("76c7cd"), attributes))
-        guide = own(builder.createBox(0.003f, 0.002f, 0.16f, material("a7c9b0"), attributes))
         ballInstances = ballModels.map(::ModelInstance)
         shadowInstances = (0..15).map { ModelInstance(shadow) }
         cueInstance = ModelInstance(cue)
         tipInstance = ModelInstance(cueTip)
-        guideInstance = ModelInstance(guide)
         resize(420, 933)
     }
 
@@ -95,12 +90,12 @@ class PoolRenderer : Disposable {
         hud.resize(width, height)
     }
 
-    fun render(physics: PoolPhysics, session: GameSession, gesture: CueGesture, pixelWidth: Int = Gdx.graphics.backBufferWidth, pixelHeight: Int = Gdx.graphics.backBufferHeight) {
+    fun render(physics: PoolPhysics, session: GameSession, gesture: CueGesture, pixelWidth: Int = Gdx.graphics.backBufferWidth, pixelHeight: Int = Gdx.graphics.backBufferHeight, viewDelta: Float = 0f) {
         Gdx.gl.glViewport(0, 0, pixelWidth, pixelHeight)
         Gdx.gl.glClearColor(0.035f, 0.075f, 0.095f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
         val cuePoint = physics.balls.firstOrNull { it.id == 0 && !it.pocketed }?.point
-        views.update(cuePoint, gesture.direction, session.canShoot)
+        views.update(cuePoint, gesture.direction, session.canShoot, viewDelta)
         modelBatch.begin(views.active.camera)
         modelBatch.render(scene, environment)
         physics.balls.forEach { ball ->
@@ -123,11 +118,7 @@ class PoolRenderer : Disposable {
                 transform.scale(1f, length, 1f)
             }, environment)
             modelBatch.render(tipInstance.apply { transform.setToTranslation(tip.x, TableGeometry.BALL_RADIUS, tip.z) }, environment)
-            val line = cueBall.point + d * 0.13f
-            modelBatch.render(guideInstance.apply {
-                transform.setToTranslation(line.x, 0.008f, line.z)
-                transform.rotate(Vector3.Y, (atan2(d.x, d.z) * 180f / PI).toFloat())
-            }, environment)
+
         }
         modelBatch.end()
         hud.render(session, settingsOpen, views.mode)

@@ -34,28 +34,76 @@ class GameViewsTest {
             val offset = Vector3(point.x, TableGeometry.BALL_RADIUS, point.z).sub(view.camera.position)
             assertEquals(0f, offset.nor().dst(view.camera.direction), 0.0001f)
             assertEquals(0.95f, hypot(view.camera.position.x - point.x, view.camera.position.z - point.z), 0.0001f)
-            assertEquals(-0.5f, view.camera.direction.y, 0.0001f)
+            assertEquals(-sqrt(0.5f), view.camera.direction.y, 0.0001f)
             assertTrue(view.cueLength(point - direction * 0.279f, direction) in 0.04f..0.65f)
         }
     }
 
-    @Test fun `player camera freezes through movement and result then follows settled ball`() {
+    @Test fun `player camera pulls back smoothly holds the shot yaw and returns after settling`() {
+        val view = PlayerView()
+        view.resize(1080, 2400)
+        view.update(cue, forward, true)
+        val aimingPosition = view.camera.position.cpy()
+        val direction = view.camera.direction.cpy()
+        view.update(Point(0.4f, -0.8f), Point(1f, 0f), false, 0f)
+        assertEquals(aimingPosition, view.camera.position)
+        view.update(Point(0.4f, -0.8f), Point(1f, 0f), false, 0.325f)
+        val halfway = view.camera.position.cpy()
+        assertTrue(halfway.y > aimingPosition.y)
+        view.update(null, Point(-1f, 0f), false, 0.325f)
+        val overview = view.camera.position.cpy()
+        assertTrue(overview.y > halfway.y)
+        assertEquals(direction, view.camera.direction)
+        view.update(null, forward, false, 1f)
+        assertEquals(overview, view.camera.position)
+        val settled = Point(0.4f, -0.8f)
+        view.update(settled, forward, true, 0.225f)
+        assertTrue(view.camera.position.y < overview.y)
+        view.update(settled, forward, true, 0.225f)
+        assertEquals(0.4f, view.camera.position.x, 0.0001f)
+        assertEquals(settled.z + 0.95f, view.camera.position.z, 0.0001f)
+    }
+
+    @Test fun `full table remains inside overview at every yaw and portrait viewport`() {
+        for ((width, height) in listOf(1080 to 2400, 1080 to 2297, 720 to 1600)) {
+            for (degrees in 0 until 360 step 15) {
+                val angle = Math.toRadians(degrees.toDouble())
+                val heading = Point(sin(angle).toFloat(), -cos(angle).toFloat())
+                val view = PlayerView().apply { resize(width, height); update(Point(0.5f, 1f), heading, true) }
+                view.update(null, heading, false, 0.65f)
+                for (x in listOf(-0.76f, 0.76f)) for (z in listOf(-1.32f, 1.32f)) for (y in listOf(-0.13f, 0.06f)) {
+                    val ndc = Vector3(x, y, z).prj(view.camera.combined)
+                    assertTrue("Table clipped at $degrees degrees: $ndc", abs(ndc.x) <= 0.881f && ndc.y in -0.841f..0.701f && ndc.z in -1f..1f)
+                }
+            }
+        }
+    }
+
+    @Test fun `camera animation is frame partition independent and freezes with zero delta`() {
+        fun view() = PlayerView().apply { resize(1080, 2400); update(cue, forward, true) }
+        val single = view()
+        val partitioned = view()
+        single.update(null, forward, false, 0.325f)
+        repeat(39) { partitioned.update(null, forward, false, 1f / 120) }
+        assertTrue(single.camera.position.epsilonEquals(partitioned.camera.position, 0.0001f))
+        val paused = single.camera.position.cpy()
+        repeat(60) { single.update(null, forward, false, 0f) }
+        assertEquals(paused, single.camera.position)
+        single.resize(720, 1600)
+        assertTrue(single.camera.position.epsilonEquals(paused, 0.0001f))
+    }
+
+    @Test fun `rack restart resets overview without changing the selected view`() {
         val views = GameViews()
         views.resize(1080, 2400)
         views.select(ViewMode.PLAYER)
         views.update(cue, forward, true)
-        val position = views.active.camera.position.cpy()
-        val direction = views.active.camera.direction.cpy()
-        views.update(Point(0.4f, -0.8f), Point(1f, 0f), false)
-        views.update(null, Point(-1f, 0f), false)
-        views.resize(720, 1600)
-        assertEquals(position, views.active.camera.position)
-        assertEquals(direction, views.active.camera.direction)
-        views.update(Point(0.4f, -0.8f), forward, true)
-        assertEquals(0.4f, views.active.camera.position.x, 0.0001f)
-        views.select(ViewMode.TOP)
-        views.select(ViewMode.PLAYER)
-        assertEquals(0.4f, views.active.camera.position.x, 0.0001f)
+        val aimPosition = views.active.camera.position.cpy()
+        views.update(null, forward, false, 0.65f)
+        assertTrue(views.active.camera.position.y > aimPosition.y)
+        views.reset()
+        assertEquals(ViewMode.PLAYER, views.mode)
+        assertEquals(aimPosition, views.active.camera.position)
     }
 
     private class Input(val view: PlayerView = PlayerView(), val gesture: CueGesture = CueGesture()) {
@@ -93,7 +141,7 @@ class GameViewsTest {
         }
         assertTrue(input.gesture.direction.x > 0.8f)
         val camera = input.view.camera.direction
-        assertEquals(input.gesture.direction.x, camera.x / cos(PI.toFloat() / 6), 0.001f)
+        assertEquals(input.gesture.direction.x, camera.x / cos(PI.toFloat() / 4), 0.001f)
     }
 
     @Test fun `practice strokes lock direction ignore sideways movement and strike exactly once`() {
