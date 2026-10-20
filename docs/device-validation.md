@@ -50,3 +50,8 @@ Remaining device acceptance: check the selected replacement in gameplay, immedia
 - The final APK was rebuilt and reinstalled after explicitly centralizing the unchanged default solver iteration count (10). The soak used the same physics and graphics settings.
 
 Remaining hands-on acceptance: deliberate soft and strong shots, controlled cushion/pocket approaches, and full rounds with the new travel distances. The scripted run exercises restart/break cycles and Home/resume, not all those gameplay situations. Current friction values prioritize plausible motion rather than matching the previous damping-based shot distances.
+
+
+### Reduced glare follow-up
+
+After user feedback that reflections obscured the numbers, ball specular intensity was reduced from 1.0 to 0.15 while keeping the light setup and shininess unchanged. All 43 unit/native tests and 15 rendered scenarios pass, and the debug APK builds. Updated initial-rack and rolling-stage screenshots show clearer numbers. The ten-minute measurements above predate this material-only adjustment; physics is unchanged.
