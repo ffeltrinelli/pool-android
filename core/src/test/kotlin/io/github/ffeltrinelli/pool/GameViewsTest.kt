@@ -53,6 +53,7 @@ class GameViewsTest {
         view.update(null, Point(-1f, 0f), false, 0.325f)
         val overview = view.camera.position.cpy()
         assertTrue(overview.y > halfway.y)
+        assertTrue("Overview should stay close enough to read the moving balls", overview.y < 2.9f)
         assertEquals(direction, view.camera.direction)
         view.update(null, forward, false, 1f)
         assertEquals(overview, view.camera.position)
@@ -73,7 +74,7 @@ class GameViewsTest {
                 view.update(null, heading, false, 0.65f)
                 for (x in listOf(-0.76f, 0.76f)) for (z in listOf(-1.32f, 1.32f)) for (y in listOf(-0.13f, 0.06f)) {
                     val ndc = Vector3(x, y, z).prj(view.camera.combined)
-                    assertTrue("Table clipped at $degrees degrees: $ndc", abs(ndc.x) <= 0.881f && ndc.y in -0.841f..0.701f && ndc.z in -1f..1f)
+                    assertTrue("Table clipped at $degrees degrees: $ndc", abs(ndc.x) <= 0.961f && ndc.y in -0.921f..0.761f && ndc.z in -1f..1f)
                 }
             }
         }

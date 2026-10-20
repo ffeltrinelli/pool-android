@@ -20,7 +20,10 @@ data class ViewTuning(
     val far: Float = 20f,
     val aimingRadius: Float = 0.30f,
     val pullbackSeconds: Float = 0.65f,
-    val returnSeconds: Float = 0.45f
+    val returnSeconds: Float = 0.45f,
+    val overviewHorizontalLimit: Float = 0.96f,
+    val overviewTopLimit: Float = 0.76f,
+    val overviewBottomLimit: Float = 0.92f
 )
 
 /** Each view owns projection and screen-input interpretation; the stroke interpreter is shared. */
@@ -133,8 +136,8 @@ class PlayerView(private val tuning: ViewTuning = ViewTuning()) : GameView {
             val offset = Vector3(x, y - TableGeometry.BALL_RADIUS, z)
             val depth = offset.dot(forward)
             val vertical = offset.dot(up)
-            distance = max(distance, abs(offset.dot(right)) / (horizontalTangent * 0.88f) - depth)
-            distance = max(distance, abs(vertical) / (verticalTangent * if (vertical >= 0f) 0.70f else 0.84f) - depth)
+            distance = max(distance, abs(offset.dot(right)) / (horizontalTangent * tuning.overviewHorizontalLimit) - depth)
+            distance = max(distance, abs(vertical) / (verticalTangent * if (vertical >= 0f) tuning.overviewTopLimit else tuning.overviewBottomLimit) - depth)
         }
         return distance
     }

@@ -7,5 +7,7 @@
   "background_resume_same_process": true,
   "restart_returns_to_aim": true,
   "aim_aid_removed_in_both_views": true,
-  "limitation": "Screenshots and scripted input; user should review camera angle and animation feel."
+  "limitation": "Screenshots and scripted input; user should review camera angle and animation feel.",
+  "overview_horizontal_limit": 0.96,
+  "closer_framing_cold_launch_ms": 1225
 }
