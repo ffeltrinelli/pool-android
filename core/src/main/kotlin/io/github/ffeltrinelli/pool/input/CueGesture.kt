@@ -54,34 +54,48 @@ class CueGesture(private val tuning: GestureTuning = GestureTuning()) {
         val delta = sample.position - last.position
         val forward = delta.dot(direction)
         val sideways = abs(delta.x * direction.z - delta.z * direction.x)
-        if (phase == CuePhase.AIMING) {
-            if (circling && abs(forward) >= sideways && forward != 0f) {
-                circling = false
-                aimAnchor = last.position
-            }
-            val offset = sample.position - aimAnchor
-            val axial = offset.dot(direction)
-            val lateral = abs(offset.x * direction.z - offset.z * direction.x)
-            if (circling || (lateral >= tuning.aimThreshold && lateral > abs(axial) * tuning.sideRatio)) {
-                resetStroke()
-                circling = true
-                if ((origin - sample.position).length() >= tuning.deadZone) {
-                    direction = (origin - sample.position).normalized()
-                }
-                aimAnchor = sample.position
-            } else {
-                advanceCue(last, sample, forward)
-                detectStroke(forward)
-            }
-        } else {
-            advanceCue(last, sample, forward)
-        }
+        if (phase == CuePhase.AIMING) updateAiming(last, sample, forward, sideways)
+        else advanceCue(last, sample, forward)
         previous = sample
         if (phase != CuePhase.STROKING || tipGap > 0f || forward <= 0f) return null
         val speed = forwardSpeed(sample)
         if (speed <= 0f) return null
         phase = CuePhase.FIRED
         return ShotCommand(direction, (speed * tuning.impulsePerSpeed).coerceAtMost(tuning.maximumImpulse))
+    }
+
+    private fun updateAiming(last: PointerSample, sample: PointerSample, forward: Float, sideways: Float) {
+        if (circling) {
+            if (forward != 0f && abs(forward) >= sideways) {
+                updateForwardHistory(last, sample, forward)
+                detectStroke(forward)
+                if (phase == CuePhase.STROKING) {
+                    tipGap = (tuning.initialTipGap - candidateTravel).coerceIn(0f, tuning.maximumTipGap)
+                }
+            } else {
+                resetStroke()
+                rotateAim(sample)
+            }
+            return
+        }
+        val offset = sample.position - aimAnchor
+        val axial = offset.dot(direction)
+        val lateral = abs(offset.x * direction.z - offset.z * direction.x)
+        if (lateral >= tuning.aimThreshold && lateral > abs(axial) * tuning.sideRatio) {
+            resetStroke()
+            circling = true
+            rotateAim(sample)
+        } else {
+            advanceCue(last, sample, forward)
+            detectStroke(forward)
+        }
+    }
+
+    private fun rotateAim(sample: PointerSample) {
+        if ((origin - sample.position).length() >= tuning.deadZone) {
+            direction = (origin - sample.position).normalized()
+        }
+        aimAnchor = sample.position
     }
 
     private fun advanceCue(last: PointerSample, sample: PointerSample, forward: Float) {

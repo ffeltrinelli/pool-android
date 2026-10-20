@@ -226,4 +226,30 @@ class CueGestureTest {
         assertEquals(direction, gesture.direction)
         assertEquals(CuePhase.STROKING, gesture.phase)
     }
+
+    @Test fun `small radial wobble during circling never moves the cue`() {
+        val gesture = aimedGesture()
+        gesture.move(sample(0.3f, 0f, 0.1))
+        val positions = listOf(Point(0.306f, 0.001f), Point(0.310f, 0.002f),
+            Point(0.304f, 0.003f), Point(0.300f, 0.004f), Point(0.300f, 0.040f))
+        positions.forEachIndexed { i, point ->
+            assertNull(gesture.move(PointerSample(0, point, 0.12 + i * 0.02)))
+            assertEquals(CuePhase.AIMING, gesture.phase)
+            assertEquals(0.032f, gesture.tipGap, 0.0001f)
+        }
+        assertTrue(gesture.direction.z < -0.1f)
+    }
+
+    @Test fun `circling requires a sustained axial movement before withdrawing`() {
+        val gesture = aimedGesture()
+        gesture.move(sample(0.3f, 0f, 0.1))
+        gesture.move(sample(0.308f, 0.001f, 0.12))
+        assertEquals(CuePhase.AIMING, gesture.phase)
+        assertEquals(0.032f, gesture.tipGap, 0.0001f)
+        gesture.move(sample(0.320f, 0.002f, 0.14))
+        assertEquals(CuePhase.STROKING, gesture.phase)
+        assertEquals(0.052f, gesture.tipGap, 0.0001f)
+        gesture.move(sample(0.310f, 0.002f, 0.16))
+        assertEquals(0.042f, gesture.tipGap, 0.0001f)
+    }
 }
