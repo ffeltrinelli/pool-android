@@ -110,9 +110,9 @@ object VisualSmoke {
                         }
                     }
                     val expectedGap = when (name) {
-                        "cue-stroke-withdrawn" -> 0.132f
-                        "cue-stroke-return" -> 0.012f
-                        else -> 0.032f
+                        "cue-stroke-withdrawn" -> 0.150f
+                        "cue-stroke-return" -> 0.030f
+                        else -> 0.050f
                     }
                     check(abs(gesture.tipGap - expectedGap) < 0.0001f)
                     check(gesture.direction == direction && session.canShoot)
@@ -181,7 +181,7 @@ object VisualSmoke {
                 if (name == "player-return") gesture.move(PointerSample(0, view.moveInput(540, 1489, gesture.phase, gesture.direction), 0.2))
                 check(gesture.phase == CuePhase.STROKING && session.canShoot)
                 check(abs(gesture.direction.x - direction.x) < 0.0001f)
-                val expected = if (name == "player-withdrawn") 0.032f + 56 * 1.92f / 1080 else 0.032f - 11 * 1.92f / 1080
+                val expected = if (name == "player-withdrawn") 0.050f + 56 * 1.92f / 1080 else 0.050f - 11 * 1.92f / 1080
                 check(abs(gesture.tipGap - expected) < 0.0001f)
             }
             renderer.views.update(cue, direction, true)

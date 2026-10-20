@@ -12,8 +12,21 @@ class CueGestureTest {
         gesture.begin(sample(0f, 0.3f, 0.0), Point(0f, 0f))
         assertNull(gesture.move(sample(0f, 0.29f, interval)))
         assertNull(gesture.move(sample(0f, 0.28f, interval * 2)))
-        return requireNotNull(gesture.move(sample(0f, 0.26f, interval * 3)))
+        return requireNotNull(gesture.move(sample(0f, 0.24f, interval * 3)))
     }
+    @Test fun `default resting gap requires fifty millimetres of advance before contact`() {
+        val gesture = CueGesture()
+        assertEquals(0.050f, gesture.tipGap, 0.0001f)
+        gesture.begin(sample(0f, 0.3f, 0.0), Point(0f, 0f))
+        assertNull(gesture.move(sample(0f, 0.28f, 0.02)))
+        assertNull(gesture.move(sample(0f, 0.26f, 0.04)))
+        assertEquals(0.010f, gesture.tipGap, 0.0001f)
+        assertNull(gesture.move(sample(0f, 0.251f, 0.049)))
+        assertNotNull(gesture.move(sample(0f, 0.249f, 0.051)))
+        gesture.cancel()
+        assertEquals(0.050f, gesture.tipGap, 0.0001f)
+    }
+
     @Test fun `forward speed determines power and power is capped`() {
         assertTrue(shoot(0.01).impulse > shoot(0.08).impulse)
         assertEquals(1.15f, shoot(0.001).impulse, 0.001f)
@@ -65,7 +78,7 @@ class CueGestureTest {
         gesture.move(sample(0.3f, 0f, 0.1))
         assertNull(gesture.move(sample(0.29f, 0f, 0.12)))
         assertNull(gesture.move(sample(0.28f, 0f, 0.14)))
-        val shot = requireNotNull(gesture.move(sample(0.26f, 0f, 0.16)))
+        val shot = requireNotNull(gesture.move(sample(0.24f, 0f, 0.16)))
         assertEquals(-1f, shot.direction.x, 0.001f)
     }
 
@@ -76,10 +89,10 @@ class CueGestureTest {
     @Test fun `small aligned movement previews withdrawal before locking`() {
         val gesture = aimedGesture()
         assertNull(gesture.move(sample(0f, 0.305f, 0.01)))
-        assertEquals(0.037f, gesture.tipGap, 0.0001f)
+        assertEquals(0.055f, gesture.tipGap, 0.0001f)
         assertEquals(CuePhase.AIMING, gesture.phase)
         gesture.move(sample(0.03f, 0.30f, 0.02))
-        assertEquals(0.032f, gesture.tipGap, 0.0001f)
+        assertEquals(0.050f, gesture.tipGap, 0.0001f)
         assertTrue(gesture.direction.x < 0f)
     }
 
@@ -88,15 +101,15 @@ class CueGestureTest {
         gesture.move(sample(0f, 0.31f, 0.01))
         gesture.move(sample(0f, 0.32f, 0.02))
         assertEquals(CuePhase.STROKING, gesture.phase)
-        assertEquals(0.052f, gesture.tipGap, 0.0001f)
+        assertEquals(0.070f, gesture.tipGap, 0.0001f)
         assertNull(gesture.move(sample(0.2f, 0.30f, 0.03)))
         assertEquals(Point(0f, -1f), gesture.direction)
-        assertEquals(0.032f, gesture.tipGap, 0.0001f)
+        assertEquals(0.050f, gesture.tipGap, 0.0001f)
         assertNull(gesture.move(sample(0.2f, 0.34f, 0.04)))
-        assertEquals(0.072f, gesture.tipGap, 0.0001f)
+        assertEquals(0.090f, gesture.tipGap, 0.0001f)
         assertNull(gesture.move(sample(0.2f, 0.30f, 0.05)))
-        assertEquals(0.032f, gesture.tipGap, 0.0001f)
-        assertNotNull(gesture.move(sample(0.2f, 0.26f, 0.06)))
+        assertEquals(0.050f, gesture.tipGap, 0.0001f)
+        assertNotNull(gesture.move(sample(0.2f, 0.24f, 0.06)))
         assertNull(gesture.move(sample(0.2f, 0.20f, 0.07)))
     }
 
@@ -106,9 +119,9 @@ class CueGestureTest {
         gesture.move(sample(0f, 0.28f, 0.02))
         assertEquals(CuePhase.STROKING, gesture.phase)
         assertNull(gesture.move(sample(0.1f, 0.28f, 0.03)))
-        assertEquals(0.012f, gesture.tipGap, 0.0001f)
+        assertEquals(0.030f, gesture.tipGap, 0.0001f)
         assertNull(gesture.move(sample(0.1f, 0.33f, 0.04)))
-        assertEquals(0.062f, gesture.tipGap, 0.0001f)
+        assertEquals(0.080f, gesture.tipGap, 0.0001f)
         assertEquals(Point(0f, -1f), gesture.direction)
     }
 
@@ -130,12 +143,12 @@ class CueGestureTest {
         assertEquals(CuePhase.STROKING, gesture.phase)
         gesture.end(0)
         assertEquals(CuePhase.IDLE, gesture.phase)
-        assertEquals(0.032f, gesture.tipGap, 0.0001f)
+        assertEquals(0.050f, gesture.tipGap, 0.0001f)
         assertNull(gesture.move(sample(0f, 0.1f, 0.03)))
         gesture.begin(sample(0f, 0.3f, 0.04), Point(0f, 0f))
         gesture.move(sample(0f, 0.32f, 0.05))
         gesture.cancel()
-        assertEquals(0.032f, gesture.tipGap, 0.0001f)
+        assertEquals(0.050f, gesture.tipGap, 0.0001f)
         assertEquals(CuePhase.IDLE, gesture.phase)
     }
 
@@ -168,7 +181,7 @@ class CueGestureTest {
         gesture.move(sample(0f, 0.29f, 0.01))
         gesture.move(sample(0f, 0.28f, 0.02))
         gesture.move(sample(0f, 0.29f, 0.03))
-        val shot = requireNotNull(gesture.move(sample(0f, 0.26f, 0.09)))
+        val shot = requireNotNull(gesture.move(sample(0f, 0.24f, 0.13)))
         assertEquals(0.24f, shot.impulse, 0.0001f)
     }
 
@@ -182,7 +195,7 @@ class CueGestureTest {
         gesture.move(sample(0f, 0.30f, 1.08))
         gesture.move(sample(0f, 0.29f, 1.10))
         gesture.move(sample(0f, 0.28f, 1.12))
-        val shot = requireNotNull(gesture.move(sample(0f, 0.26f, 1.16)))
+        val shot = requireNotNull(gesture.move(sample(0f, 0.24f, 1.20)))
         assertEquals(0.24f, shot.impulse, 0.0001f)
     }
 
@@ -191,7 +204,7 @@ class CueGestureTest {
         gesture.move(sample(0f, 0.29f, 0.001))
         gesture.move(sample(0f, 0.28f, 0.002))
         gesture.move(sample(0f, 0.28f, 3.0))
-        val shot = requireNotNull(gesture.move(sample(0f, 0.26f, 3.1)))
+        val shot = requireNotNull(gesture.move(sample(0f, 0.24f, 3.2)))
         assertEquals(0.096f, shot.impulse, 0.0001f)
     }
 
@@ -200,12 +213,12 @@ class CueGestureTest {
         val direction = gesture.direction
         gesture.move(sample(0.004f, 0.303f, 0.01))
         assertEquals(direction, gesture.direction)
-        assertEquals(0.035f, gesture.tipGap, 0.0001f)
+        assertEquals(0.053f, gesture.tipGap, 0.0001f)
         gesture.move(sample(0.006f, 0.310f, 0.02))
         gesture.move(sample(0.007f, 0.320f, 0.03))
         assertEquals(CuePhase.STROKING, gesture.phase)
         assertEquals(direction, gesture.direction)
-        assertEquals(0.052f, gesture.tipGap, 0.0001f)
+        assertEquals(0.070f, gesture.tipGap, 0.0001f)
     }
 
     @Test fun `many small sideways samples accumulate into deliberate circling`() {
@@ -213,7 +226,7 @@ class CueGestureTest {
         for (i in 1..10) gesture.move(sample(i * 0.002f, 0.3f, i * 0.01))
         assertEquals(CuePhase.AIMING, gesture.phase)
         assertTrue(gesture.direction.x < -0.04f)
-        assertEquals(0.032f, gesture.tipGap, 0.0001f)
+        assertEquals(0.050f, gesture.tipGap, 0.0001f)
     }
 
     @Test fun `backswing after circling suppresses small sideways startup error`() {
@@ -235,7 +248,7 @@ class CueGestureTest {
         positions.forEachIndexed { i, point ->
             assertNull(gesture.move(PointerSample(0, point, 0.12 + i * 0.02)))
             assertEquals(CuePhase.AIMING, gesture.phase)
-            assertEquals(0.032f, gesture.tipGap, 0.0001f)
+            assertEquals(0.050f, gesture.tipGap, 0.0001f)
         }
         assertTrue(gesture.direction.z < -0.1f)
     }
@@ -245,11 +258,11 @@ class CueGestureTest {
         gesture.move(sample(0.3f, 0f, 0.1))
         gesture.move(sample(0.308f, 0.001f, 0.12))
         assertEquals(CuePhase.AIMING, gesture.phase)
-        assertEquals(0.032f, gesture.tipGap, 0.0001f)
+        assertEquals(0.050f, gesture.tipGap, 0.0001f)
         gesture.move(sample(0.320f, 0.002f, 0.14))
         assertEquals(CuePhase.STROKING, gesture.phase)
-        assertEquals(0.052f, gesture.tipGap, 0.0001f)
+        assertEquals(0.070f, gesture.tipGap, 0.0001f)
         gesture.move(sample(0.310f, 0.002f, 0.16))
-        assertEquals(0.042f, gesture.tipGap, 0.0001f)
+        assertEquals(0.060f, gesture.tipGap, 0.0001f)
     }
 }

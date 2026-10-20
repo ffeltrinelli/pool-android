@@ -146,7 +146,7 @@ class GameViewsTest {
         val input = Input()
         for (x in 550..800 step 10) {
             assertNull(input.move(x, 1400))
-            assertEquals(0.032f, input.gesture.tipGap, 0.0001f)
+            assertEquals(0.050f, input.gesture.tipGap, 0.0001f)
             assertEquals(CuePhase.AIMING, input.gesture.phase)
         }
         assertTrue(input.gesture.direction.x > 0.8f)
@@ -159,7 +159,7 @@ class GameViewsTest {
         input.move(540, 1420)
         input.move(540, 1450)
         assertEquals(CuePhase.STROKING, input.gesture.phase)
-        assertEquals(0.032f + 50 * 1.92f / 1080, input.gesture.tipGap, 0.0001f)
+        assertEquals(0.050f + 50 * 1.92f / 1080, input.gesture.tipGap, 0.0001f)
         input.move(740, 1450)
         assertEquals(Point(0f, -1f), input.gesture.direction)
         input.move(740, 1420)
@@ -176,7 +176,7 @@ class GameViewsTest {
         input.move(600, 1400)
         val heading = input.gesture.direction
         input.move(600, 1403)
-        assertEquals(0.032f, input.gesture.tipGap, 0.0001f)
+        assertEquals(0.050f, input.gesture.tipGap, 0.0001f)
         input.move(600, 1425)
         assertEquals(CuePhase.STROKING, input.gesture.phase)
         assertEquals(heading.x, input.gesture.direction.x, 0.0001f)
@@ -186,14 +186,16 @@ class GameViewsTest {
     @Test fun `equal forward speeds yield same power across view input mappings`() {
         val player = Input()
         player.move(540, 1390)
-        val actual = player.move(540, 1380)!!
+        player.move(540, 1380)
+        val actual = player.move(540, 1370)!!
         val gesture = CueGesture()
         val top = TopView().apply { resize(1080, 2400) }
         val start = top.beginInput(540, 1600, cue, forward)
         val ball = start + forward * 0.3f
         gesture.begin(PointerSample(0, start, 0.0), ball)
         gesture.move(PointerSample(0, top.moveInput(540, 1590, gesture.phase, gesture.direction), 0.05))
-        val expected = gesture.move(PointerSample(0, top.moveInput(540, 1580, gesture.phase, gesture.direction), 0.10))!!
+        gesture.move(PointerSample(0, top.moveInput(540, 1580, gesture.phase, gesture.direction), 0.10))
+        val expected = gesture.move(PointerSample(0, top.moveInput(540, 1570, gesture.phase, gesture.direction), 0.15))!!
         assertEquals(expected.impulse, actual.impulse, 0.0001f)
     }
 }
