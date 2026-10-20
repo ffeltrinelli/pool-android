@@ -55,3 +55,21 @@ Remaining hands-on acceptance: deliberate soft and strong shots, controlled cush
 ### Reduced glare follow-up
 
 After user feedback that reflections obscured the numbers, ball specular intensity was reduced from 1.0 to 0.08 (via an initial 0.15 adjustment) while keeping the light setup and shininess unchanged. All 43 unit/native tests and 15 rendered scenarios pass, and the debug APK builds. Updated initial-rack and rolling-stage screenshots show clearer numbers. The ten-minute measurements above predate this material-only adjustment; physics is unchanged.
+
+
+## Bidirectional cue strokes — 20 October 2026
+
+- The cue now follows backward and forward finger displacement, with direction locking after two aligned samples and 14 mm in either direction. Repeated practice strokes retain the locked aim; lifting cancels and resets the 32 mm tip gap. Maximum withdrawal is 250 mm and contact fires once.
+- Local verification passes **57 JUnit/native tests**, **18 rendered scenarios** at 1080 × 2400, OpenAL null-driver asset/lifecycle verification, Android lint, and debug APK assembly. New tests cover preview/reset, locks from both directions, reversals, withdrawal clamping, cancellation, velocity-window interpolation, and power independent of backswing distance and pause.
+- The APK installed and cold-launched on the OnePlus 8T (KB2003), Android 14 / API 34, in **1,242 ms**. Scripted touch input exercised withdrawal, forward return, repeated reversals, release before contact, a forward-only shot, withdrawal toward the lower rail, background/resume during a held gesture, and backswing-to-contact. The game process survived background/resume. Device screenshots show the cue withdrawn and then returned, and the cue ball moving after both shot styles.
+- Screenshots and the app-specific log are under `build/reports/device-cue/`. The Android `screenrecord` utility exited with status 139 and produced no video; this was a recording-tool failure, not a game-process crash. Deterministic desktop screenshots are preserved in [the cue review images](images/bidirectional-cue/).
+
+Hands-on confirmation: after the final adjustments, the user reported that both steady circling and the transition into a backswing feel right on the OnePlus 8T. Remaining hands-on acceptance: deliberate soft/strong power comparisons and cue-ball positions adjacent to each rail. The scripted near-rail check withdraws the cue toward the lower rail from the opening cue-ball position; it does not cover every rail-adjacent ball position. No new long-duration performance run was performed for this input-only change.
+
+### Backswing startup adjustment
+
+The user reported a small unwanted rotation when starting some backswings. A 14 mm accumulated lateral threshold now separates deliberate circling from startup sideways noise; sub-threshold axial displacement still moves the cue immediately. Once circling is established it tracks continuously, and mainly axial motion starts a stroke candidate. Three regression tests cover noisy backswing startup, small samples accumulating into a deliberate circle, and noisy backswing after circling. The rebuilt APK installed and cold-launched again in 945 ms. All 55 tests and the full local verification pass. The user reported improved backswing startup, then confirmed the final combined behavior below.
+
+### Stable cue distance during circling
+
+The user confirmed improved backswing startup but observed small forward/backward movements while circling. Established circling now holds the tip at its resting gap until a sustained axial stroke meets the two-sample / 14 mm threshold; radial wobble no longer previews cue travel. Two regression tests cover wobble without distance changes and the transition from circling to a deliberate backswing. All 57 unit/native tests, 18 rendered fixtures, audio verification, lint, and APK assembly pass locally. The final APK installed and cold-launched in 909 ms. The user tested it on the OnePlus 8T and confirmed that steady circling and the transition into a backswing both feel right.

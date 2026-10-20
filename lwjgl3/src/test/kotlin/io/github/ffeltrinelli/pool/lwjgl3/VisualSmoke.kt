@@ -42,7 +42,7 @@ object VisualSmoke {
         private lateinit var framebuffer: FrameBuffer
         private val session = GameSession()
         private val gesture = CueGesture()
-        private val scenarios = listOf("initial-rack", "cue-and-aim") + (1..6).map { "pocket-$it" } + listOf("scratch-result", "cleared-result") + listOf(0, 12, 18, 24, 48).map { "rolling-markings-$it" }
+        private val scenarios = listOf("initial-rack", "cue-and-aim", "cue-stroke-initial", "cue-stroke-withdrawn", "cue-stroke-return") + (1..6).map { "pocket-$it" } + listOf("scratch-result", "cleared-result") + listOf(0, 12, 18, 24, 48).map { "rolling-markings-$it" }
         private var index = 0
         override fun create() {
             renderer = PoolRenderer()
@@ -79,6 +79,27 @@ object VisualSmoke {
                     val cue = physics.balls.first { it.id == 0 }.point
                     gesture.begin(PointerSample(0, cue + Point(0.19f, 0.25f), 0.0), cue)
                     check(gesture.phase == CuePhase.AIMING)
+                }
+                name.startsWith("cue-stroke-") -> {
+                    val cue = physics.balls.first { it.id == 0 }.point
+                    val start = cue + Point(0.19f, 0.25f)
+                    gesture.begin(PointerSample(0, start, 0.0), cue)
+                    val direction = gesture.direction
+                    if (name != "cue-stroke-initial") {
+                        check(gesture.move(PointerSample(0, start - direction * 0.05f, 0.1)) == null)
+                        check(gesture.move(PointerSample(0, start - direction * 0.10f, 0.2)) == null)
+                        check(gesture.phase == CuePhase.STROKING)
+                        if (name == "cue-stroke-return") {
+                            check(gesture.move(PointerSample(0, start + direction * 0.02f, 0.4)) == null)
+                        }
+                    }
+                    val expectedGap = when (name) {
+                        "cue-stroke-withdrawn" -> 0.132f
+                        "cue-stroke-return" -> 0.012f
+                        else -> 0.032f
+                    }
+                    check(abs(gesture.tipGap - expectedGap) < 0.0001f)
+                    check(gesture.direction == direction && session.canShoot)
                 }
                 name.startsWith("rolling-markings-") -> {
                     val steps = name.substringAfterLast('-').toInt()
