@@ -16,6 +16,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--adb', default='adb')
     parser.add_argument('--seconds', type=int, default=600)
+    parser.add_argument('--view', choices=('top', 'player'), default='top', help='Selects and saves this in-game view for the run.')
     parser.add_argument('--output', type=Path, default=Path('build/reports/device'))
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
@@ -56,8 +57,12 @@ def main():
             if not any(PACKAGE in line for line in resumed):
                 errors.append('Game left the foreground; stopped before sending touch input.')
                 break
-            # Restart then shoot the opening rack with a real Android touch stream.
-            shell('input tap 920 280')
+            # OnePlus API 34 safe viewport starts at y=103; coordinates include that cutout inset.
+            # Back dismisses any open settings before opening a fresh modal.
+            shell('input keyevent KEYCODE_BACK')
+            shell('input tap 956 288')
+            shell('input tap ' + ('342' if args.view == 'top' else '738') + ' 1293')
+            shell('input tap 540 1036')
             time.sleep(0.3)
             shell('input touchscreen swipe 540 1850 540 1400 220')
             shot_count += 1
@@ -88,7 +93,7 @@ def main():
             next_sample = now + 10
         time.sleep(1)
     (args.output / 'oneplus-final.png').write_bytes(adb('exec-out', 'screencap', '-p'))
-    result = {'model': model, 'api': int(api), 'elapsed_seconds': round(time.monotonic()-start, 1),
+    result = {'model': model, 'view': args.view, 'api': int(api), 'elapsed_seconds': round(time.monotonic()-start, 1),
               'scripted_breaks': shot_count, 'background_resume_same_process': True,
               'sampling': 'SurfaceFlinger presented timestamps: short windows sampled every 10s, not a continuous frame trace',
               'median_sample_fps': statistics.median(s['fps'] for s in samples) if samples else None,

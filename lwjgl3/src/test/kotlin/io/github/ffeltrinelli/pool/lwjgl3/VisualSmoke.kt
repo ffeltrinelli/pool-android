@@ -13,6 +13,7 @@ import io.github.ffeltrinelli.pool.model.*
 import io.github.ffeltrinelli.pool.physics.PoolPhysics
 import io.github.ffeltrinelli.pool.render.PoolRenderer
 import java.io.File
+import io.github.ffeltrinelli.pool.view.ViewMode
 
 /** Test-only fixtures render through the same renderer as Android; no production test switches. */
 object VisualSmoke {
@@ -43,6 +44,10 @@ object VisualSmoke {
         private val session = GameSession()
         private val gesture = CueGesture()
         private val scenarios = listOf("initial-rack", "cue-and-aim", "cue-stroke-initial", "cue-stroke-withdrawn", "cue-stroke-return") + (1..6).map { "pocket-$it" } + listOf("scratch-result", "cleared-result") + listOf(0, 12, 18, 24, 48).map { "rolling-markings-$it" }
+        private val viewScenarios = listOf("settings-top", "player-initial", "player-right", "player-left", "player-reverse",
+            "player-withdrawn", "player-return", "settings-player", "player-shot-frozen", "player-scratch", "player-cleared") +
+            (1..6).map { "player-rail-$it" }
+        private val allScenarios get() = scenarios + viewScenarios
         private var index = 0
         override fun create() {
             renderer = PoolRenderer()
@@ -51,8 +56,15 @@ object VisualSmoke {
             framebuffer = FrameBuffer(Pixmap.Format.RGBA8888, 1080, 2400, true)
         }
         override fun render() {
-            if (index >= scenarios.size) { Gdx.app.exit(); return }
-            val name = scenarios[index++]
+            if (index >= allScenarios.size) {
+                if (System.getenv("POOL_RECORD_PLAYER_VIEW") == "1") {
+                    try { recordPlayerMotion() }
+                    catch (failure: Throwable) { report.record("player-motion-recording", failure.stackTraceToString()) }
+                }
+                Gdx.app.exit()
+                return
+            }
+            val name = allScenarios[index++]
             var bound = false
             try {
                 fixture(name)
@@ -71,6 +83,9 @@ object VisualSmoke {
         }
         private fun fixture(name: String) {
             physics.reset(); session.restart(); gesture.cancel()
+            renderer.views.select(ViewMode.TOP)
+            renderer.settingsOpen = false
+            if (name in viewScenarios) { viewFixture(name); return }
             when {
                 name == "initial-rack" -> {
                     check(physics.balls.size == 16 && session.canShoot)
@@ -138,6 +153,87 @@ object VisualSmoke {
                     session.accept(PhysicsEvent.Settled)
                     check(session.state == RoundState.CLEARED)
                 }
+            }
+        }
+        private fun viewFixture(name: String) {
+            if (name == "settings-top") { renderer.settingsOpen = true; return }
+            renderer.views.select(ViewMode.PLAYER)
+            val cue = if (name.startsWith("player-rail-")) {
+                val pocket = TableGeometry.pockets[name.substringAfterLast('-').toInt() - 1]
+                pocket * 0.85f
+            } else Point(0f, 0.58f)
+            if (name.startsWith("player-rail-")) physics.reset(listOf(0 to cue, 1 to Point(0f, 0f)))
+            val direction = when (name) {
+                "player-right" -> Point(1f, 0f)
+                "player-left" -> Point(-1f, 0f)
+                "player-reverse" -> Point(0f, 1f)
+                else -> if (name.startsWith("player-rail-")) (Point(0f, 0f) - cue).normalized() else Point(0f, -1f)
+            }
+            gesture.begin(PointerSample(0, cue - direction * 0.30f, 0.0), cue)
+            val view = renderer.views.active
+            val start = view.beginInput(540, 1500, cue, direction)
+            gesture.cancel()
+            gesture.begin(PointerSample(0, start, 0.0), cue)
+            if (name == "player-withdrawn" || name == "player-return") {
+                gesture.move(PointerSample(0, view.moveInput(540, 1520, gesture.phase, gesture.direction), 0.05))
+                gesture.move(PointerSample(0, view.moveInput(540, 1556, gesture.phase, gesture.direction), 0.1))
+                if (name == "player-return") gesture.move(PointerSample(0, view.moveInput(540, 1489, gesture.phase, gesture.direction), 0.2))
+                check(gesture.phase == CuePhase.STROKING && session.canShoot)
+                check(abs(gesture.direction.x - direction.x) < 0.0001f)
+                val expected = if (name == "player-withdrawn") 0.032f + 56 * 1.92f / 1080 else 0.032f - 11 * 1.92f / 1080
+                check(abs(gesture.tipGap - expected) < 0.0001f)
+            }
+            renderer.views.update(cue, direction, true)
+            if (name == "settings-player") renderer.settingsOpen = true
+            if (name == "player-shot-frozen") {
+                val cameraPosition = view.camera.position.cpy()
+                session.beginShot()
+                physics.strike(ShotCommand(direction, 0.4f))
+                repeat(120) { physics.step() }
+                renderer.views.update(physics.balls.first { it.id == 0 }.point, direction, false)
+                check(cameraPosition == view.camera.position)
+            }
+            if (name == "player-scratch" || name == "player-cleared") {
+                session.beginShot()
+                if (name == "player-scratch") session.accept(PhysicsEvent.Pocketed(0))
+                else (1..15).forEach { session.accept(PhysicsEvent.Pocketed(it)) }
+                session.accept(PhysicsEvent.Settled)
+                if (name == "player-scratch") physics.reset(TableGeometry.rack().filter { it.first != 0 })
+                else physics.reset(listOf(0 to cue))
+                check(session.finished)
+            }
+        }
+        /** Opt-in production-renderer frames for a short PR recording; never enables gameplay debug input. */
+        private fun recordPlayerMotion() {
+            val directory = File(report.directory, "player-motion-frames").apply { mkdirs() }
+            fixture("player-initial")
+            val view = renderer.views.active
+            val cue = physics.balls.first { it.id == 0 }.point
+            gesture.cancel()
+            gesture.begin(PointerSample(0, view.beginInput(540, 1500, cue, Point(0f, -1f)), 0.0), cue)
+            for (frame in 0 until 150) {
+                if (session.canShoot && frame > 0) {
+                    val x = if (frame < 40) 540 + (60 * kotlin.math.sin(Math.PI * frame / 40)).toInt() else 540
+                    val y = when {
+                        frame <= 40 -> 1500
+                        frame <= 60 -> 1500 + (frame - 40) * 5
+                        else -> 1600 - (frame - 60) * 12
+                    }
+                    val point = view.moveInput(x, y, gesture.phase, gesture.direction)
+                    gesture.move(PointerSample(0, point, frame / 30.0))?.let {
+                        renderer.views.update(cue, it.direction, true)
+                        session.beginShot()
+                        physics.strike(it)
+                    }
+                }
+                if (!session.canShoot) repeat(4) { physics.step() }
+                framebuffer.begin()
+                try {
+                    renderer.render(physics, session, gesture, 1080, 2400)
+                    val pixels = Pixmap.createFromFrameBuffer(0, 0, 1080, 2400)
+                    try { PixmapIO.writePNG(FileHandle(File(directory, "frame-%03d.png".format(frame))), pixels, -1, true) }
+                    finally { pixels.dispose() }
+                } finally { framebuffer.end() }
             }
         }
         private fun captureDetail(name: String) {
