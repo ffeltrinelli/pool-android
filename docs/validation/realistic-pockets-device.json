@@ -112,5 +112,6 @@
     "resume_comparison": "App pixels identical excluding x=0..19, where the OnePlus gaming overlay changed after Home/resume; full-screen changed rectangle x=0..19, y=300..659.",
     "corner_shot_scratch_observed": true
   },
-  "human_feedback": "Pending: pocket difficulty, feel and audible timing/volume have not been confirmed by the user."
+  "human_feedback": "On 2026-10-20, the user confirmed the smaller pockets, physical drops, and sound C timing/volume feel right in both views: \u201cYes, all good.\u201d",
+  "remaining_checks": "Exhaustive slow/strong entries at all six mouths and a new ten-minute soak were not individually confirmed."
 }

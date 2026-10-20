@@ -125,4 +125,4 @@ A scripted, unobstructed lower-right corner shot in Top view produced “Cue bal
 
 Raw automated results: [realistic-pockets-device.json](validation/realistic-pockets-device.json). Screenshots and full reports remain under `build/reports/device-pockets`, `build/reports/visual`, `build/reports/audio` and the module build reports.
 
-**Pending human acceptance:** subjective pocket difficulty/rattling, visual feel in both views, audible sound-C timing/volume and slow/strong pocket entries around all six mouths. A feedback request was sent after leaving the build ready. No new ten-minute soak was performed. Desktop OpenAL null output verifies decoding/allocation, not speaker playback.
+**Human acceptance:** On 2026-10-20, the user confirmed the smaller pockets, physical drops, and sound C timing/volume feel right in both views: “Yes, all good.” Exhaustive slow/strong entry checks around all six mouths and a new ten-minute soak were not individually confirmed. Desktop OpenAL null output verifies decoding/allocation; audible timing/volume were accepted by the user on the OnePlus.
