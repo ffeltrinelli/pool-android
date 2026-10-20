@@ -7,18 +7,18 @@ import org.junit.Test
 
 class ImpactAudioTest {
     private class Player : SoundPlayer {
-        data class Played(val sound: ImpactSound, val volume: Float, val id: Long)
+        data class Played(val sound: GameSound, val volume: Float, val id: Long)
         val played = mutableListOf<Played>()
         val stopped = mutableListOf<Long>()
         var disposed = false
         var available = true
-        override fun play(sound: ImpactSound, volume: Float): Long {
+        override fun play(sound: GameSound, volume: Float): Long {
             if (!available) return -1
             val id = played.size.toLong()
             played.add(Played(sound, volume, id))
             return id
         }
-        override fun stop(sound: ImpactSound, id: Long) { stopped.add(id) }
+        override fun stop(sound: GameSound, id: Long) { stopped.add(id) }
         override fun dispose() { disposed = true }
     }
 
@@ -37,7 +37,7 @@ class ImpactAudioTest {
         audio.queue(Impact(ImpactKind.CUSHION, 0.7f))
         audio.queue(Impact(ImpactKind.CUE, 1f))
         audio.flush(0f)
-        assertEquals(listOf(ImpactSound.CUE, ImpactSound.CUSHION), player.played.map { it.sound })
+        assertEquals(listOf(GameSound.CUE, GameSound.CUSHION), player.played.map { it.sound })
         audio.flush(0f)
         assertEquals(2, player.played.size)
     }
@@ -71,7 +71,7 @@ class ImpactAudioTest {
         audio.queue(Impact(ImpactKind.BALL, 0.4f)); audio.queue(Impact(ImpactKind.BALL, 0.4f)); audio.flush(0f)
         audio.queue(Impact(ImpactKind.CUE, 1.15f)); audio.flush(0f)
         assertEquals(2, player.stopped.size)
-        assertEquals(ImpactSound.CUE, player.played.last().sound)
+        assertEquals(GameSound.CUE, player.played.last().sound)
         assertEquals(0.8f, player.played.last().volume, 0f)
     }
 
@@ -108,4 +108,44 @@ class ImpactAudioTest {
         audio.queue(Impact(ImpactKind.CUE, 1f)); audio.flush(0f); audio.clear()
         assertTrue(player.stopped.isEmpty())
     }
+    @Test fun `pocket drops including scratches play once with fixed volume`() {
+        val player = Player()
+        val audio = PoolAudio(player)
+        audio.queue(PocketDrop(0, 2)); audio.queue(PocketDrop(0, 2))
+        audio.queue(PocketDrop(1, 2)); audio.flush(0f)
+        assertEquals(listOf(GameSound.POCKET, GameSound.POCKET), player.played.map { it.sound })
+        assertTrue(player.played.all { it.volume == AudioTuning().pocketVolume })
+        audio.queue(PocketDrop(0, 3)); audio.flush(1f)
+        assertEquals(2, player.played.size)
+    }
+
+    @Test fun `pocket sound takes priority over louder pending and active impacts`() {
+        val player = Player()
+        val audio = PoolAudio(player, AudioTuning(maximumVoices = 1))
+        audio.queue(Impact(ImpactKind.BALL, 1.15f)); audio.queue(PocketDrop(1, 0)); audio.flush(0f)
+        assertEquals(listOf(GameSound.POCKET), player.played.map { it.sound })
+        audio.queue(Impact(ImpactKind.BALL, 1.15f)); audio.flush(0f)
+        assertEquals(1, player.played.size)
+        audio.clear()
+        audio.queue(Impact(ImpactKind.CUSHION, 1.15f)); audio.flush(0f)
+        audio.queue(PocketDrop(2, 0)); audio.flush(0f)
+        assertEquals(GameSound.POCKET, player.played.last().sound)
+        assertEquals(2, player.stopped.size)
+    }
+
+    @Test fun `pause discards pocket sounds and restart resets duplicate suppression`() {
+        val player = Player()
+        val audio = PoolAudio(player)
+        audio.queue(PocketDrop(1, 0)); audio.flush(0f)
+        audio.queue(PocketDrop(2, 0)); audio.pause()
+        audio.queue(PocketDrop(3, 0)); audio.resume(); audio.flush(0f)
+        assertEquals(1, player.played.size)
+        audio.queue(PocketDrop(1, 0)); audio.flush(0f)
+        assertEquals(1, player.played.size)
+        audio.clear(); audio.queue(PocketDrop(1, 0)); audio.flush(0f)
+        assertEquals(2, player.played.size)
+        audio.dispose()
+        assertEquals(2, player.stopped.size)
+    }
+
 }

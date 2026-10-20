@@ -5,18 +5,18 @@ import com.badlogic.gdx.audio.Sound
 
 /** Owns preloaded native sound buffers; all calls happen on the game thread. */
 class LibGdxSoundPlayer : SoundPlayer {
-    private val sounds = mutableMapOf<ImpactSound, Sound>()
-    private val failed = mutableSetOf<ImpactSound>()
-    private val playbackWarnings = mutableSetOf<ImpactSound>()
+    private val sounds = mutableMapOf<GameSound, Sound>()
+    private val failed = mutableSetOf<GameSound>()
+    private val playbackWarnings = mutableSetOf<GameSound>()
 
     init {
-        ImpactSound.entries.forEach { clip ->
+        GameSound.entries.forEach { clip ->
             try { sounds[clip] = Gdx.audio.newSound(Gdx.files.internal(clip.path)) }
             catch (failure: RuntimeException) { unavailable(clip, failure) }
         }
     }
 
-    override fun play(sound: ImpactSound, volume: Float): Long {
+    override fun play(sound: GameSound, volume: Float): Long {
         if (sound in failed) return -1
         return try {
             val id = sounds[sound]?.play(volume) ?: -1
@@ -28,12 +28,12 @@ class LibGdxSoundPlayer : SoundPlayer {
         catch (failure: RuntimeException) { unavailable(sound, failure); -1 }
     }
 
-    override fun stop(sound: ImpactSound, id: Long) {
+    override fun stop(sound: GameSound, id: Long) {
         try { sounds[sound]?.stop(id) }
         catch (failure: RuntimeException) { unavailable(sound, failure) }
     }
 
-    private fun unavailable(sound: ImpactSound, failure: RuntimeException) {
+    private fun unavailable(sound: GameSound, failure: RuntimeException) {
         if (failed.add(sound)) Gdx.app.error("PoolAudio", "Sound unavailable: ${sound.path}; gameplay continues", failure)
     }
 

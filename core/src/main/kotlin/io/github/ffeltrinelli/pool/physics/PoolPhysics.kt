@@ -6,7 +6,6 @@ import com.badlogic.gdx.physics.bullet.collision.*
 import com.badlogic.gdx.physics.bullet.dynamics.*
 import com.badlogic.gdx.utils.Disposable
 import io.github.ffeltrinelli.pool.model.*
-import kotlin.math.min
 
 class Ball internal constructor(val id: Int, val body: btRigidBody) {
     val previousPosition = Vector3()
@@ -15,25 +14,22 @@ class Ball internal constructor(val id: Int, val body: btRigidBody) {
     val rotation = Quaternion()
     var pocketed = false
         internal set
-    var sinkSeconds = 0f
-        internal set
     val point: Point get() = Point(position.x, position.z)
 }
 
 /** Owns every Bullet allocation. All calls and event delivery happen on the game thread. */
 class PoolPhysics(
     private val events: (PhysicsEvent) -> Unit = {},
-    private val impacts: (Impact) -> Unit = {}
+    private val impacts: (Impact) -> Unit = {},
+    private val pocketDrops: (PocketDrop) -> Unit = {}
 ) : Disposable {
     private val configuration: btDefaultCollisionConfiguration
     private val dispatcher: btCollisionDispatcher
     private val broadphase: btDbvtBroadphase
     private val solver: btSequentialImpulseConstraintSolver
     private val world: btDiscreteDynamicsWorld
-    private val shapes = mutableListOf<btCollisionShape>()
     private val ballShape: btSphereShape
-    private val fixedBodies = mutableListOf<btRigidBody>()
-    private val sensors = mutableListOf<btCollisionObject>()
+    private val table: TablePhysics
     val balls = mutableListOf<Ball>()
     private val contactImpacts = ContactImpacts(impacts)
     private val transform = Matrix4()
@@ -53,39 +49,8 @@ class PoolPhysics(
         world = btDiscreteDynamicsWorld(dispatcher, broadphase, solver, configuration)
         world.solverInfo.numIterations = PhysicsTuning.SOLVER_ITERATIONS
         world.gravity = Vector3(0f, -PhysicsTuning.GRAVITY, 0f)
-        // Support extends beyond pocket mouths; sensors remove balls before visual sinking.
-        val clothShape = btBoxShape(Vector3(0.82f, 0.05f, 1.38f))
-        shapes.add(clothShape)
-        val cloth = rigidBody(clothShape, 0f, Point(0f, 0f))
-        cloth.worldTransform = Matrix4().setToTranslation(0f, -0.05f, 0f)
-        cloth.userValue = CollisionIds.CLOTH
-        cloth.friction = PhysicsTuning.CLOTH_FRICTION
-        cloth.restitution = 0f
-        fixedBodies.add(cloth)
-        world.addRigidBody(cloth)
-        TableGeometry.rails.forEachIndexed { index, rail ->
-            val shape = btBoxShape(Vector3(rail.halfWidth, 0.07f, rail.halfLength))
-            shapes.add(shape)
-            val body = rigidBody(shape, 0f, rail.center)
-            body.restitution = PhysicsTuning.CUSHION_RESTITUTION
-            body.friction = PhysicsTuning.CUSHION_FRICTION
-            body.userValue = -1 - index
-            fixedBodies.add(body)
-            world.addRigidBody(body)
-        }
-        TableGeometry.pockets.forEachIndexed { index, point ->
-            val shape = btSphereShape(TableGeometry.POCKET_RADIUS)
-            shapes.add(shape)
-            val sensor = btCollisionObject()
-            sensor.collisionShape = shape
-            sensor.worldTransform = Matrix4().setToTranslation(point.x, TableGeometry.BALL_RADIUS, point.z)
-            sensor.collisionFlags = sensor.collisionFlags or btCollisionObject.CollisionFlags.CF_NO_CONTACT_RESPONSE
-            sensor.userValue = 100 + index
-            sensors.add(sensor)
-            world.addCollisionObject(sensor)
-        }
+        table = TablePhysics(world)
         ballShape = btSphereShape(TableGeometry.BALL_RADIUS)
-        shapes.add(ballShape)
         reset()
     }
 
@@ -150,18 +115,21 @@ class PoolPhysics(
         balls.forEach { it.previousPosition.set(it.position); it.previousRotation.set(it.rotation) }
         world.stepSimulation(STEP, 0)
         collectImpactContacts()
-        capturePocketContacts()
         var moving = false
         balls.forEach { ball ->
-            if (ball.pocketed) {
-                ball.sinkSeconds = min(1f, ball.sinkSeconds + STEP)
-            } else {
+            if (!ball.pocketed) {
                 readTransform(ball)
                 velocity.set(ball.body.linearVelocity)
                 if (velocity.len2() > PhysicsTuning.LINEAR_SLEEP_SPEED * PhysicsTuning.LINEAR_SLEEP_SPEED ||
                     ball.body.angularVelocity.len2() > PhysicsTuning.ANGULAR_SLEEP_SPEED * PhysicsTuning.ANGULAR_SLEEP_SPEED) moving = true
-                // A safety net for rare escapes through pocket jaws; normal capture uses engine contacts.
-                if (kotlin.math.abs(ball.position.x) > 0.76f || kotlin.math.abs(ball.position.z) > 1.32f) capture(ball)
+                val pocket = PocketGeometry.pockets.firstOrNull { it.containsDrop(ball.point) }
+                if (ball.position.y < PocketGeometry.CAPTURE_DEPTH && pocket != null) {
+                    capture(ball)
+                    pocketDrops(PocketDrop(ball.id, pocket.id))
+                } else if (kotlin.math.abs(ball.position.x) > 0.80f || kotlin.math.abs(ball.position.z) > 1.36f || ball.position.y < -0.40f) {
+                    com.badlogic.gdx.Gdx.app?.error("PoolPhysics", "Ball ${ball.id} escaped table at ${ball.position}")
+                    capture(ball)
+                }
             }
         }
         quietSeconds = if (moving) 0f else quietSeconds + STEP
@@ -191,23 +159,6 @@ class PoolPhysics(
         contactImpacts.finishStep()
     }
 
-    private fun capturePocketContacts() {
-        val capturedIds = mutableSetOf<Int>()
-        for (index in 0 until dispatcher.numManifolds) {
-            val manifold = dispatcher.getManifoldByIndexInternal(index)
-            val first = manifold.body0.userValue
-            val second = manifold.body1.userValue
-            val ballId = when {
-                first in CollisionIds.POCKETS && second in 0..15 -> second
-                second in CollisionIds.POCKETS && first in 0..15 -> first
-                else -> continue
-            }
-            if ((0 until manifold.numContacts).any { manifold.getContactPoint(it).distance <= 0f }) capturedIds.add(ballId)
-        }
-        // Never remove bodies while iterating Bullet's contact manifolds.
-        balls.filter { it.id in capturedIds && !it.pocketed }.forEach(::capture)
-    }
-
     private fun capture(ball: Ball) {
         if (ball.pocketed) return
         ball.pocketed = true
@@ -223,9 +174,8 @@ class PoolPhysics(
 
     override fun dispose() {
         balls.forEach { if (!it.pocketed) world.removeRigidBody(it.body); it.body.dispose() }
-        sensors.forEach { world.removeCollisionObject(it); it.dispose() }
-        fixedBodies.forEach { world.removeRigidBody(it); it.dispose() }
-        shapes.forEach { it.dispose() }
+        ballShape.dispose()
+        table.dispose()
         world.dispose()
         solver.dispose()
         broadphase.dispose()

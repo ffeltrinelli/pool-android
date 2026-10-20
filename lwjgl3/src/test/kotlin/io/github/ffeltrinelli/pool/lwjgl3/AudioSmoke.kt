@@ -21,7 +21,7 @@ object AudioSmoke {
                 override fun create() {
                     try {
                         val backend = Gdx.audio as OpenALLwjgl3Audio
-                        ImpactSound.entries.forEach { clip ->
+                        GameSound.entries.forEach { clip ->
                             val decoded = backend.newSound(Gdx.files.internal(clip.path))
                             try {
                                 check(decoded.rate == 44100 && decoded.channels == 1) { "Unexpected PCM format: ${clip.path}" }
@@ -30,7 +30,7 @@ object AudioSmoke {
                         }
                         val player = LibGdxSoundPlayer()
                         try {
-                            ImpactSound.entries.forEach { clip ->
+                            GameSound.entries.forEach { clip ->
                                 val id = player.play(clip, 0f)
                                 check(id >= 0 && backend.getSourceId(id) > 0) { "No OpenAL source for ${clip.path}; audio device unavailable" }
                                 player.stop(clip, id)
@@ -40,6 +40,7 @@ object AudioSmoke {
                         val audio = PoolAudio(LibGdxSoundPlayer())
                         try {
                             ImpactKind.entries.forEach { audio.queue(Impact(it, 0.1f)) }
+                            audio.queue(PocketDrop(0, 0))
                             audio.flush(0f)
                             audio.pause(); audio.resume(); audio.flush(0f); audio.clear()
                         } finally { audio.dispose() }
