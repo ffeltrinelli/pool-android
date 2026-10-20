@@ -111,3 +111,18 @@ The 80%-distance build installed and cold-launched on the OnePlus in **1,145 ms*
 ### Resting cue gap increased to 50 mm
 
 The resting tip-gap setting is now **50 mm** in both modes, increased from 32 mm at user request. Withdrawal remains capped at 250 mm and contact still triggers the shot. Updated contact/power and reset tests, plus rendered cue-position fixtures, cover the new default. All **75 unit/native tests**, **37 rendered scenarios**, audio verification, Android lint, and APK assembly pass. The APK was installed on the OnePlus; a forward shot and restart were exercised, with local evidence in `build/reports/device-player-view/player-50mm-*.png`.
+
+
+## Realistic pockets and pocket-drop sound — 2026-10-20
+
+Implemented real cloth/table openings with connected rail caps and jaws, 114.3 mm corner / 127 mm side mouths, 30 / 5 mm shelves, 3 mm rounded lips and recessed liners. Balls retain Bullet translation and rotation throughout the fall. Capture occurs at a centre depth of 120 mm; selected sound C plays once then, including scratches. The 50 mm cue gap and camera/input tuning are unchanged.
+
+Local verification: **87 unit/native tests**, **65 rendered scenarios**, four WAV assets decoded and allocated through OpenAL null output, Android debug APK, and lint (**0 errors, 5 existing warnings**). Native tests include soft and angled entry into every pocket, shelf support, jaw deflection, maximum-power containment, falling rotation, simultaneous drops/scratch precedence, reset during a fall, quiet interiors, support seams and frame-partition consistency. The rendered report includes five physical drop stages per pocket type and view, plus shelf/jaw positions and detail crops. A four-second silent recording shows the corner drop in both views at half speed.
+
+OnePlus 8T KB2003, Android 14 / API 34, 1080 × 2400: installed final APK; measured cold launch 1,067 ms. Scripted top-view and player-view runs each completed about 61 seconds and two break/restart cycles, with unchanged process across background/resume and no script errors. Top-view sampling: median **59.79 FPS**, minimum **49.14 FPS**; player-view sampling: median **58.19 FPS**, minimum **53.82 FPS**. These are short SurfaceFlinger windows, including settings/restart transitions, not an uninterrupted trace or a ten-minute performance acceptance result. The top soak predates the final 1 mm cushion-margin removal; the final APK was also checked in Top view with the isolated corner shot below.
+
+A scripted, unobstructed lower-right corner shot in Top view produced “Cue ball pocketed.” Opening settings during a Player-view break froze the table/camera: captures 500 ms apart matched byte-for-byte. Home/resume retained the same process and open settings; app pixels matched, excluding the leftmost 20 columns where the OnePlus gaming overlay changed (observed difference bounds x=0..19, y=300..659). Back resumed motion and Restart restored a fresh rack. Final app-specific error log was empty for PoolPhysics, PoolAudio and AndroidRuntime. Left the final APK foregrounded on a fresh rack in Player view.
+
+Raw automated results: [realistic-pockets-device.json](validation/realistic-pockets-device.json). Screenshots and full reports remain under `build/reports/device-pockets`, `build/reports/visual`, `build/reports/audio` and the module build reports.
+
+**Pending human acceptance:** subjective pocket difficulty/rattling, visual feel in both views, audible sound-C timing/volume and slow/strong pocket entries around all six mouths. A feedback request was sent after leaving the build ready. No new ten-minute soak was performed. Desktop OpenAL null output verifies decoding/allocation, not speaker playback.

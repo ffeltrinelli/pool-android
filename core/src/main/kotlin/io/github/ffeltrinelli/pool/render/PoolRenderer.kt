@@ -42,24 +42,14 @@ class PoolRenderer : Disposable {
     private val rotation = Quaternion()
 
     init {
-        val wood = material("664533")
-        box(0f, -0.065f, 0f, 1.46f, 0.12f, 2.58f, wood)
-        box(0f, -0.018f, 0f, 1.16f, 0.035f, 2.28f, material("197765"))
-        TableGeometry.rails.forEach {
-            box(it.center.x, 0.015f, it.center.z, it.halfWidth * 2f, 0.055f, it.halfLength * 2f, material("10564e"))
-        }
-        // Dark pocket mouths sit above the cloth, behind the playable cushion openings.
-        TableGeometry.pockets.forEach {
-            val model = own(builder.createCylinder(0.14f, 0.012f, 0.14f, 32, material("091c22"), attributes))
-            scene.add(ModelInstance(model).apply { transform.setToTranslation(it.x, 0.006f, it.z) })
-        }
+        scene.add(ModelInstance(own(TableModel.create())))
         // Rail sights and fine inlay make the plain engine primitives read as a pool table.
         for (side in listOf(-1f, 1f)) {
             for (z in listOf(-0.84f, -0.56f, -0.28f, 0.28f, 0.56f, 0.84f)) {
-                box(side * 0.658f, 0.001f, z, 0.012f, 0.008f, 0.018f, material("d9bd83"))
+                box(side * 0.658f, 0.057f, z, 0.012f, 0.008f, 0.018f, material("d9bd83"))
             }
             for (x in listOf(-0.28f, 0f, 0.28f)) {
-                box(x, 0.001f, side * 1.22f, 0.018f, 0.008f, 0.012f, material("d9bd83"))
+                box(x, 0.057f, side * 1.22f, 0.018f, 0.008f, 0.012f, material("d9bd83"))
             }
         }
         BallTextures(font).use { ballTextures ->
@@ -99,11 +89,10 @@ class PoolRenderer : Disposable {
         modelBatch.begin(views.active.camera)
         modelBatch.render(scene, environment)
         physics.balls.forEach { ball ->
-            if (ball.pocketed && ball.sinkSeconds > 0.35f) return@forEach
+            if (ball.pocketed) return@forEach
             position.set(ball.previousPosition).lerp(ball.position, physics.interpolation)
             rotation.set(ball.previousRotation).slerp(ball.rotation, physics.interpolation)
-            if (ball.pocketed) position.y -= ball.sinkSeconds * 0.20f
-            else modelBatch.render(shadowInstances[ball.id].apply { transform.setToTranslation(position.x + 0.006f, 0.008f, position.z + 0.007f) }, environment)
+            if (position.y >= TableGeometry.BALL_RADIUS - 0.005f) modelBatch.render(shadowInstances[ball.id].apply { transform.setToTranslation(position.x + 0.006f, 0.008f, position.z + 0.007f) }, environment)
             modelBatch.render(ballInstances[ball.id].apply { transform.set(position, rotation) }, environment)
         }
         val cueBall = physics.balls.firstOrNull { it.id == 0 && !it.pocketed }

@@ -47,7 +47,11 @@ object VisualSmoke {
         private val viewScenarios = listOf("settings-top", "player-initial", "player-right", "player-left", "player-reverse",
             "player-withdrawn", "player-return", "settings-player", "player-shot-pullback", "player-shot-overview", "player-return-to-aim", "player-scratch", "player-cleared") +
             (1..6).map { "player-rail-$it" }
-        private val allScenarios get() = scenarios + viewScenarios
+        private val pocketScenarios = listOf("top", "player").flatMap { mode ->
+            listOf("corner", "side").flatMap { type -> listOf(0, 12, 24, 36, 60).map { "$mode-drop-$type-$it" } +
+                listOf("$mode-shelf-$type", "$mode-jaw-$type") }
+        }
+        private val allScenarios get() = scenarios + viewScenarios + pocketScenarios
         private var index = 0
         override fun create() {
             renderer = PoolRenderer()
@@ -57,6 +61,10 @@ object VisualSmoke {
         }
         override fun render() {
             if (index >= allScenarios.size) {
+                if (System.getenv("POOL_RECORD_POCKETS") == "1") {
+                    try { recordPocketMotion() }
+                    catch (failure: Throwable) { report.record("pocket-motion-recording", failure.stackTraceToString()) }
+                }
                 if (System.getenv("POOL_RECORD_PLAYER_VIEW") == "1") {
                     try { recordPlayerMotion() }
                     catch (failure: Throwable) { report.record("player-motion-recording", failure.stackTraceToString()) }
@@ -72,6 +80,7 @@ object VisualSmoke {
                 renderer.render(physics, session, gesture, 1080, 2400)
                 capture(name)
                 if (name.startsWith("rolling-markings-")) captureDetail(name)
+                if (name in pocketScenarios) capturePocketDetail(name)
                 report.record(name, null)
             } catch (failure: Throwable) {
                 if (bound) runCatching { capture("$name-failure") }
@@ -87,6 +96,7 @@ object VisualSmoke {
             renderer.views.reset()
             renderer.settingsOpen = false
             if (name in viewScenarios) { viewFixture(name); return }
+            if (name in pocketScenarios) { pocketFixture(name); return }
             when {
                 name == "initial-rack" -> {
                     check(physics.balls.size == 16 && session.canShoot)
@@ -156,6 +166,45 @@ object VisualSmoke {
                 }
             }
         }
+        private fun pocketFixture(name: String) {
+            val pocket = if ("corner" in name) PocketGeometry.pockets[3] else PocketGeometry.pockets[5]
+            val cue = pocket.mouthCenter - pocket.outward * 0.24f
+            val start = when {
+                "shelf" in name -> pocket.mouthCenter - pocket.outward * 0.004f
+                "jaw" in name -> pocket.mouth(1f) + pocket.lateral * 0.018f - pocket.outward * 0.12f
+                else -> pocket.mouthCenter - pocket.outward * 0.06f
+            }
+            physics.reset(listOf(0 to cue, 1 to start))
+            renderer.views.select(if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP)
+            gesture.begin(PointerSample(0, cue - pocket.outward * 0.3f, 0.0), cue)
+            renderer.views.update(cue, pocket.outward, true)
+            session.beginShot()
+            if ("drop" in name || "jaw" in name) {
+                val v = pocket.outward * 0.7f
+                val ball = physics.balls[1]
+                ball.body.linearVelocity = Vector3(v.x, 0f, v.z)
+                ball.body.angularVelocity = Vector3(v.z / TableGeometry.BALL_RADIUS, 0f, -v.x / TableGeometry.BALL_RADIUS)
+            }
+            val steps = if ("drop" in name) name.substringAfterLast('-').toInt() else if ("jaw" in name) 18 else 120
+            repeat(steps) { physics.step() }
+            val ball = physics.balls[1]
+            if ("shelf" in name) check(!ball.pocketed && abs(ball.position.y - TableGeometry.BALL_RADIUS) < 0.001f)
+            if ("drop" in name && steps == 60) check(ball.pocketed && ball.position.y < PocketGeometry.CAPTURE_DEPTH)
+            if ("drop" in name && steps == 0) check(!ball.pocketed && ball.position.y > 0f)
+            if ("drop" in name && steps == 24) check(!ball.pocketed && ball.position.y < TableGeometry.BALL_RADIUS)
+            check(abs(ball.position.x) < 0.8f && abs(ball.position.z) < 1.36f)
+        }
+
+        private fun capturePocketDetail(name: String) {
+            val pocket = if ("corner" in name) PocketGeometry.pockets[3] else PocketGeometry.pockets[5]
+            val projected = renderer.views.active.camera.project(Vector3(pocket.center.x, 0f, pocket.center.z), 0f, 0f, 1080f, 2400f)
+            val x = (projected.x.toInt() - 210).coerceIn(0, 660)
+            val y = (projected.y.toInt() - 210).coerceIn(0, 1980)
+            val pixels = Pixmap.createFromFrameBuffer(x, y, 420, 420)
+            try { PixmapIO.writePNG(FileHandle(File(report.directory, "$name-detail.png")), pixels, -1, true) }
+            finally { pixels.dispose() }
+        }
+
         private fun viewFixture(name: String) {
             if (name == "settings-top") { renderer.settingsOpen = true; return }
             renderer.views.select(ViewMode.PLAYER)
@@ -242,6 +291,22 @@ object VisualSmoke {
                 } finally { framebuffer.end() }
             }
         }
+        private fun recordPocketMotion() {
+            val directory = File(report.directory, "pocket-motion-frames").apply { mkdirs() }
+            for (frame in 0 until 120) {
+                val mode = if (frame < 60) "top" else "player"
+                if (frame % 60 == 0) fixture("$mode-drop-corner-0")
+                if (frame % 60 > 0) repeat(2) { physics.step() }
+                framebuffer.begin()
+                try {
+                    renderer.render(physics, session, gesture, 1080, 2400)
+                    val pixels = Pixmap.createFromFrameBuffer(0, 0, 1080, 2400)
+                    try { PixmapIO.writePNG(FileHandle(File(directory, "frame-%03d.png".format(frame))), pixels, -1, true) }
+                    finally { pixels.dispose() }
+                } finally { framebuffer.end() }
+            }
+        }
+
         private fun captureDetail(name: String) {
             // A crop of the production framebuffer makes the surface markings easy to inspect.
             val pixels = Pixmap.createFromFrameBuffer(390, 900, 300, 600)
@@ -276,7 +341,7 @@ private class VisualReport(val directory: File) {
             <p><a href="../../../core/build/reports/tests/test/index.html">JUnit and native Bullet results (local checkout)</a></p>
             ${results.entries.joinToString("\n") { (name, failure) -> "<section><h2>${escape(name)}</h2><p>${if (failure == null) "PASS" else "FAIL"}</p>" +
                 (if (File(directory, "$name.png").exists()) "<a href=\"$name.png\"><img src=\"$name.png\" alt=\"${escape(name)}\"></a>" else "") +
-                (if (File(directory, "$name-detail.png").exists()) "<p><a href=\"$name-detail.png\">Surface detail crop</a></p>" else "") +
+                (if (File(directory, "$name-detail.png").exists()) "<p><a href=\"$name-detail.png\">Detail crop</a></p>" else "") +
                 (if (failure != null) "<pre>${escape(failure)}</pre>" else "") +
                 (if (File(directory, "$name-failure.png").exists()) "<a href=\"$name-failure.png\">Last frame at failure</a>" else "") + "</section>" }}
             </html>

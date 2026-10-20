@@ -24,7 +24,7 @@ class PoolGame : ApplicationAdapter() {
 
     override fun create() {
         audio = PoolAudio(LibGdxSoundPlayer())
-        physics = PoolPhysics(session::accept, audio::queue)
+        physics = PoolPhysics(session::accept, audio::queue, audio::queue)
         renderer = PoolRenderer()
         controls = GameControls(SavedViewPreference(Gdx.app.getPreferences("pool-settings")), object : ControlEffects {
             override fun cancelGesture() = cancelInput()

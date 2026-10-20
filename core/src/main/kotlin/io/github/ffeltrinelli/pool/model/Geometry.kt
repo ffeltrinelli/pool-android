@@ -16,21 +16,7 @@ object TableGeometry {
     const val HALF_LENGTH = 1.12f
     const val BALL_RADIUS = 0.028575f
     const val BALL_MASS = 0.17f
-    const val POCKET_RADIUS = 0.065f
-    val pockets = listOf(
-        Point(-HALF_WIDTH, -HALF_LENGTH), Point(HALF_WIDTH, -HALF_LENGTH),
-        Point(-HALF_WIDTH - 0.02f, 0f), Point(HALF_WIDTH + 0.02f, 0f),
-        Point(-HALF_WIDTH, HALF_LENGTH), Point(HALF_WIDTH, HALF_LENGTH)
-    )
-    // Each rail stops short of the pocket mouth. All dimensions are in metres.
-    val rails = buildList {
-        for (side in listOf(-1f, 1f)) {
-            add(Rail(Point(0f, side * (HALF_LENGTH + 0.025f)), 0.45f, 0.025f))
-            for (end in listOf(-1f, 1f)) {
-                add(Rail(Point(side * (HALF_WIDTH + 0.025f), end * 0.56f), 0.025f, 0.455f))
-            }
-        }
-    }
+    val pockets get() = PocketGeometry.pockets.map { it.center }
     fun rack(): List<Pair<Int, Point>> = buildList {
         add(0 to Point(0f, 0.58f))
         val spacing = BALL_RADIUS * 2f + 0.0008f
@@ -41,4 +27,3 @@ object TableGeometry {
         }
     }
 }
-data class Rail(val center: Point, val halfWidth: Float, val halfLength: Float)

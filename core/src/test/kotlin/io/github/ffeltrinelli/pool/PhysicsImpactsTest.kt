@@ -52,7 +52,7 @@ class PhysicsImpactsTest {
         assertEquals(3, events.count { it.kind == ImpactKind.CUSHION })
     }
 
-    @Test fun `stationary rack and pocket sensors do not emit impact sounds`() = withPhysics { p, events ->
+    @Test fun `stationary rack and pocket drops do not emit impact sounds`() = withPhysics { p, events ->
         repeat(120) { p.step() }
         assertTrue(events.isEmpty())
         p.reset(listOf(0 to Point(TableGeometry.HALF_WIDTH + 0.02f, 0f)))

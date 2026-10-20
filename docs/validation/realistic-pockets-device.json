@@ -1,0 +1,116 @@
+{
+  "model": "OnePlus 8T / KB2003",
+  "android": "14",
+  "api": 34,
+  "viewport": "1080x2400",
+  "cold_start_ms": 1067,
+  "top": {
+    "model": "KB2003",
+    "view": "top",
+    "api": 34,
+    "elapsed_seconds": 61.3,
+    "scripted_breaks": 2,
+    "background_resume_same_process": true,
+    "sampling": "SurfaceFlinger presented timestamps: short windows sampled every 10s, not a continuous frame trace",
+    "median_sample_fps": 59.78574490315612,
+    "minimum_sample_fps": 49.14322049824602,
+    "errors": [],
+    "samples": [
+      {
+        "elapsed_seconds": 0.0,
+        "frames": 127,
+        "fps": 49.14322049824602,
+        "p95_frame_ms": 33.197448
+      },
+      {
+        "elapsed_seconds": 10.7,
+        "frames": 127,
+        "fps": 59.78837704649802,
+        "p95_frame_ms": 16.799479
+      },
+      {
+        "elapsed_seconds": 21.1,
+        "frames": 126,
+        "fps": 59.799960187100105,
+        "p95_frame_ms": 16.808073
+      },
+      {
+        "elapsed_seconds": 32.8,
+        "frames": 126,
+        "fps": 57.09023492673234,
+        "p95_frame_ms": 16.747656
+      },
+      {
+        "elapsed_seconds": 43.2,
+        "frames": 127,
+        "fps": 60.263300749218516,
+        "p95_frame_ms": 16.634427
+      },
+      {
+        "elapsed_seconds": 53.6,
+        "frames": 127,
+        "fps": 59.78311275981422,
+        "p95_frame_ms": 16.649792
+      }
+    ]
+  },
+  "player": {
+    "model": "KB2003",
+    "view": "player",
+    "api": 34,
+    "elapsed_seconds": 61.1,
+    "scripted_breaks": 2,
+    "background_resume_same_process": true,
+    "sampling": "SurfaceFlinger presented timestamps: short windows sampled every 10s, not a continuous frame trace",
+    "median_sample_fps": 58.19086252318187,
+    "minimum_sample_fps": 53.81754024812961,
+    "errors": [],
+    "samples": [
+      {
+        "elapsed_seconds": 0.0,
+        "frames": 101,
+        "fps": 53.81754024812961,
+        "p95_frame_ms": 33.160677
+      },
+      {
+        "elapsed_seconds": 10.3,
+        "frames": 127,
+        "fps": 55.82193838702107,
+        "p95_frame_ms": 33.163073
+      },
+      {
+        "elapsed_seconds": 20.7,
+        "frames": 127,
+        "fps": 59.30435056390975,
+        "p95_frame_ms": 16.976354
+      },
+      {
+        "elapsed_seconds": 32.5,
+        "frames": 126,
+        "fps": 57.07737448245399,
+        "p95_frame_ms": 16.774531
+      },
+      {
+        "elapsed_seconds": 43.0,
+        "frames": 126,
+        "fps": 59.7671710276701,
+        "p95_frame_ms": 16.756406
+      },
+      {
+        "elapsed_seconds": 53.4,
+        "frames": 127,
+        "fps": 60.25354159498159,
+        "p95_frame_ms": 16.815104
+      }
+    ]
+  },
+  "checks": {
+    "settings_freezes_motion": true,
+    "background_resume_same_process": true,
+    "settings_remains_paused_after_resume": true,
+    "log": "",
+    "resume_comparison": "App pixels identical excluding x=0..19, where the OnePlus gaming overlay changed after Home/resume; full-screen changed rectangle x=0..19, y=300..659.",
+    "corner_shot_scratch_observed": true
+  },
+  "human_feedback": "Pending: pocket difficulty, feel and audible timing/volume have not been confirmed by the user."
+}

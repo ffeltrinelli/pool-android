@@ -56,7 +56,7 @@ class PoolPhysicsTest {
         p.step()
         assertTrue(p.balls.first { it.id == 0 }.position.z < 0.58f)
     }
-    @Test fun `all six pocket sensors capture cue ball`() {
+    @Test fun `all six physical pockets capture cue ball`() {
         TableGeometry.pockets.forEach { pocket ->
             val events = mutableListOf<PhysicsEvent>()
             val p = PoolPhysics(events::add)
