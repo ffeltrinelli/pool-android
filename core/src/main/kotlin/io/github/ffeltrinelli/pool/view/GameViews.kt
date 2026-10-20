@@ -21,6 +21,7 @@ data class ViewTuning(
     val aimingRadius: Float = 0.30f,
     val pullbackSeconds: Float = 0.65f,
     val returnSeconds: Float = 0.45f,
+    val overviewDistanceScale: Float = 0.80f,
     val overviewHorizontalLimit: Float = 0.96f,
     val overviewTopLimit: Float = 0.76f,
     val overviewBottomLimit: Float = 0.92f
@@ -131,7 +132,7 @@ class PlayerView(private val tuning: ViewTuning = ViewTuning()) : GameView {
         val verticalTangent = tan(Math.toRadians(tuning.fieldOfView.toDouble()) / 2).toFloat()
         val horizontalTangent = verticalTangent * camera.viewportWidth / camera.viewportHeight
         var distance = 0f
-        // Fit the full table body and balls, leaving room for the HUD above and a margin on every edge.
+        // Start from a table-relative fit, then move closer for larger balls; outer edges may leave the screen.
         for (x in listOf(-0.76f, 0.76f)) for (z in listOf(-1.32f, 1.32f)) for (y in listOf(-0.13f, 0.06f)) {
             val offset = Vector3(x, y - TableGeometry.BALL_RADIUS, z)
             val depth = offset.dot(forward)
@@ -139,7 +140,7 @@ class PlayerView(private val tuning: ViewTuning = ViewTuning()) : GameView {
             distance = max(distance, abs(offset.dot(right)) / (horizontalTangent * tuning.overviewHorizontalLimit) - depth)
             distance = max(distance, abs(vertical) / (verticalTangent * if (vertical >= 0f) tuning.overviewTopLimit else tuning.overviewBottomLimit) - depth)
         }
-        return distance
+        return distance * tuning.overviewDistanceScale
     }
 
     fun reset() { overviewProgress = 0f; placeCamera() }

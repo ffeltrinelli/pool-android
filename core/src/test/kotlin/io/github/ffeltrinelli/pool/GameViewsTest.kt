@@ -53,7 +53,7 @@ class GameViewsTest {
         view.update(null, Point(-1f, 0f), false, 0.325f)
         val overview = view.camera.position.cpy()
         assertTrue(overview.y > halfway.y)
-        assertTrue("Overview should stay close enough to read the moving balls", overview.y < 2.9f)
+        assertTrue("Overview should stay close enough to read the moving balls", overview.y < 2.35f)
         assertEquals(direction, view.camera.direction)
         view.update(null, forward, false, 1f)
         assertEquals(overview, view.camera.position)
@@ -65,19 +65,28 @@ class GameViewsTest {
         assertEquals(settled.z + 0.95f, view.camera.position.z, 0.0001f)
     }
 
-    @Test fun `full table remains inside overview at every yaw and portrait viewport`() {
+    @Test fun `closer overview keeps central play visible at every yaw and portrait viewport`() {
         for ((width, height) in listOf(1080 to 2400, 1080 to 2297, 720 to 1600)) {
             for (degrees in 0 until 360 step 15) {
                 val angle = Math.toRadians(degrees.toDouble())
                 val heading = Point(sin(angle).toFloat(), -cos(angle).toFloat())
                 val view = PlayerView().apply { resize(width, height); update(Point(0.5f, 1f), heading, true) }
                 view.update(null, heading, false, 0.65f)
-                for (x in listOf(-0.76f, 0.76f)) for (z in listOf(-1.32f, 1.32f)) for (y in listOf(-0.13f, 0.06f)) {
+                for (x in listOf(-0.30f, 0.30f)) for (z in listOf(-0.55f, 0.55f)) for (y in listOf(0f, 0.06f)) {
                     val ndc = Vector3(x, y, z).prj(view.camera.combined)
-                    assertTrue("Table clipped at $degrees degrees: $ndc", abs(ndc.x) <= 0.961f && ndc.y in -0.921f..0.761f && ndc.z in -1f..1f)
+                    assertTrue("Central play clipped at $degrees degrees: $ndc", abs(ndc.x) <= 0.961f && ndc.y in -0.921f..0.761f && ndc.z in -1f..1f)
                 }
             }
         }
+    }
+
+    @Test fun `closer overview intentionally allows outer table edges offscreen`() {
+        val view = PlayerView().apply { resize(1080, 2400); update(cue, forward, true) }
+        view.update(null, forward, false, 0.65f)
+        assertEquals(-sqrt(0.5f), view.camera.direction.y, 0.0001f)
+        val railCorner = Vector3(0.73f, 0f, 1.29f).prj(view.camera.combined)
+        assertTrue("The closer overview must no longer be constrained by the outer rails", railCorner.x > 1f)
+        assertTrue(view.camera.position.y < 2.35f)
     }
 
     @Test fun `camera animation is frame partition independent and freezes with zero delta`() {

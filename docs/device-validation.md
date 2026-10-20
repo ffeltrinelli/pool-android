@@ -99,3 +99,11 @@ The revised APK installed and cold-launched on the OnePlus in **909 ms**. Script
 After trying the 45° build, the user requested slightly less zoom-out. The overview now uses tighter framing (96% of viewport width, with separate top/bottom margins) while retaining full-table and six-pocket coverage. The updated automated projection checks still cover every tested heading and viewport.
 
 The tighter-framing APK was reinstalled and the OnePlus shot/overview, paused animation, Home/resume, and restart checks passed again. Its cold launch took 1,225 ms. Screenshots still contain the complete table and all six pockets; the phone is ready in the revised Player view.
+
+### Closer 45° overview with permitted edge cropping
+
+The user requested less zoom-out again and explicitly chose to retain 45° while allowing table edges off-screen. The overview now stops at **80% of the full-table-fit camera distance**, providing a noticeably closer view of ball motion. Whole-table/six-pocket visibility is no longer a guarantee in Player view; Top view remains available for the complete overhead table. The 45° aiming angle, animation durations, and controls are unchanged.
+
+Updated verification passes **74 unit/native tests** and **37 rendered scenarios**, audio checks, lint, and APK assembly. Projection tests cover central play at 24 headings and three viewports; a regression test verifies that the outer rails may now intentionally extend beyond the viewport. Screenshots and the motion recording reflect the closer framing.
+
+The 80%-distance build installed and cold-launched on the OnePlus in **1,145 ms**. Scripted shots, pause/background-resume, and restart passed again. The revised framing is installed and ready for hands-on review.
