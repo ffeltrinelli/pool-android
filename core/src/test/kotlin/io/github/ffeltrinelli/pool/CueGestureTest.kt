@@ -194,4 +194,36 @@ class CueGestureTest {
         val shot = requireNotNull(gesture.move(sample(0f, 0.26f, 3.1)))
         assertEquals(0.096f, shot.impulse, 0.0001f)
     }
+
+    @Test fun `small sideways error at backswing start does not rotate the cue`() {
+        val gesture = aimedGesture()
+        val direction = gesture.direction
+        gesture.move(sample(0.004f, 0.303f, 0.01))
+        assertEquals(direction, gesture.direction)
+        assertEquals(0.035f, gesture.tipGap, 0.0001f)
+        gesture.move(sample(0.006f, 0.310f, 0.02))
+        gesture.move(sample(0.007f, 0.320f, 0.03))
+        assertEquals(CuePhase.STROKING, gesture.phase)
+        assertEquals(direction, gesture.direction)
+        assertEquals(0.052f, gesture.tipGap, 0.0001f)
+    }
+
+    @Test fun `many small sideways samples accumulate into deliberate circling`() {
+        val gesture = aimedGesture()
+        for (i in 1..10) gesture.move(sample(i * 0.002f, 0.3f, i * 0.01))
+        assertEquals(CuePhase.AIMING, gesture.phase)
+        assertTrue(gesture.direction.x < -0.04f)
+        assertEquals(0.032f, gesture.tipGap, 0.0001f)
+    }
+
+    @Test fun `backswing after circling suppresses small sideways startup error`() {
+        val gesture = aimedGesture()
+        gesture.move(sample(0.3f, 0f, 0.1))
+        val direction = gesture.direction
+        gesture.move(sample(0.306f, 0.004f, 0.12))
+        assertEquals(direction, gesture.direction)
+        gesture.move(sample(0.320f, 0.006f, 0.14))
+        assertEquals(direction, gesture.direction)
+        assertEquals(CuePhase.STROKING, gesture.phase)
+    }
 }
