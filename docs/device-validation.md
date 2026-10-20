@@ -73,3 +73,41 @@ The user reported a small unwanted rotation when starting some backswings. A 14 
 ### Stable cue distance during circling
 
 The user confirmed improved backswing startup but observed small forward/backward movements while circling. Established circling now holds the tip at its resting gap until a sustained axial stroke meets the two-sample / 14 mm threshold; radial wobble no longer previews cue travel. Two regression tests cover wobble without distance changes and the transition from circling to a deliberate backswing. All 57 unit/native tests, 18 rendered fixtures, audio verification, lint, and APK assembly pass locally. The final APK installed and cold-launched in 909 ms. The user tested it on the OnePlus 8T and confirmed that steady circling and the transition into a backswing both feel right.
+
+
+## Settings and player view — 20 October 2026
+
+- Removed the on-screen gesture/status instructions and replaced the in-game Restart button with a 48-logical-pixel gear target. Settings contains Restart, Top view / Player view selection, and Close. Results retain Play again; the gear remains accessible over results.
+- Top view retains its overhead projection and shared stroke behavior. Player view uses a 30° elevation, 60° vertical field of view, 0.95 m horizontal camera offset, 0.01 / 20 m clipping planes, and a 0.30 m virtual aiming radius. The camera follows aim, freezes at contact, and repositions only after settling. Both modes use the same stroke detection and power calculation.
+- Local verification passes **70 unit/native tests**, **35 deterministic rendered scenarios** at 1080 × 2400, desktop OpenAL null-driver verification, Android lint, and debug APK assembly. New coverage includes modal/background suspension, preference persistence, input barriers, camera poses and clipping, player circling without cue pumping, practice strokes, and equal-speed power across modes. Six rendered positions cover rail/pocket-adjacent cameras.
+- The APK installed and cold-launched on the OnePlus 8T, Android 14 / API 34, in **1,072 ms**. Scripted Android touch events exercised both view selectors, player aiming, withdrawal/return, release cancellation, forward-only shots, restart, and the original top-view stroke path.
+- Opening settings during a moving shot produced two **byte-identical screenshots** 0.5 seconds apart. A tap outside the panel left the frame unchanged. Home/resume retained the process and kept settings open; Android Back closed it. Player-view selection survived a force-stop and fresh process launch. The saved preference was checked through the debuggable app's own preferences file.
+- Local device screenshots, app log, and summary are in `build/reports/device-player-view/`. The summary is also preserved in [player-view-device.json](validation/player-view-device.json). No fatal game or audio-failure diagnostics were observed; the device log contains nonfatal vendor GC-reflection and swap-behavior warnings.
+- [Review images and a five-second motion recording](images/player-view/) use the production desktop renderer. The recording demonstrates aiming, withdrawal, forward return, contact, and subsequent motion. It is deterministic desktop evidence, not a recording of finger input or Android performance.
+
+Remaining hands-on acceptance: judge player-view camera framing and touch comfort, deliberate soft/strong strokes, and rail-adjacent shots on the phone. Automated screenshots establish camera coverage but do not establish subjective feel. No new ten-minute performance soak was performed for this change. The phone is left in Player view with a fresh rack ready for review.
+
+
+### Player-camera feedback: 45° aim, no guide, animated shot overview
+
+The user requested a steeper 45° aiming angle, complete removal of the aim aid in both modes, and a zoom-out after striking so the whole table is visible. The aiming-guide geometry and rendering have been removed. Player view now pulls back over 0.65 s from cue contact, keeping shot yaw and 45° elevation while recentering and fitting all table corners within the viewport below the HUD. It holds the overview during movement/results, then returns to the settled cue ball over 0.45 s. Settings/background suspension pauses animation; restart resets it. The near plane blends to 0.25 m during pullback to avoid depth artifacts on the table surface.
+
+Local verification passes **73 unit/native tests**, **37 rendered scenarios**, desktop audio verification, lint and APK assembly. Camera tests cover all 24 headings at three portrait viewports, smooth movement and return, equivalent frame partitions, pause, resize, and restart reset. Updated screenshots and the five-second recording include the pullback; there is no direction line in either mode.
+
+The revised APK installed and cold-launched on the OnePlus in **909 ms**. Scripted shots and inspected screenshots confirm the 45° aiming view, no aiming line in either mode, and the full table visible with moving balls after pullback. Two captures 0.5 s apart while settings was open remained byte-identical, including the paused camera. Home/resume preserved the process; restarting returned to close aim. The phone is left with a fresh Player-view rack. [Camera follow-up device summary](validation/player-view-camera-device.json) records these checks. Subjective angle, framing, and animation timing await user review.
+
+After trying the 45° build, the user requested slightly less zoom-out. The overview now uses tighter framing (96% of viewport width, with separate top/bottom margins) while retaining full-table and six-pocket coverage. The updated automated projection checks still cover every tested heading and viewport.
+
+The tighter-framing APK was reinstalled and the OnePlus shot/overview, paused animation, Home/resume, and restart checks passed again. Its cold launch took 1,225 ms. Screenshots still contain the complete table and all six pockets; the phone is ready in the revised Player view.
+
+### Closer 45° overview with permitted edge cropping
+
+The user requested less zoom-out again and explicitly chose to retain 45° while allowing table edges off-screen. The overview now stops at **80% of the full-table-fit camera distance**, providing a noticeably closer view of ball motion. Whole-table/six-pocket visibility is no longer a guarantee in Player view; Top view remains available for the complete overhead table. The 45° aiming angle, animation durations, and controls are unchanged.
+
+Updated verification passes **74 unit/native tests** and **37 rendered scenarios**, audio checks, lint, and APK assembly. Projection tests cover central play at 24 headings and three viewports; a regression test verifies that the outer rails may now intentionally extend beyond the viewport. Screenshots and the motion recording reflect the closer framing.
+
+The 80%-distance build installed and cold-launched on the OnePlus in **1,145 ms**. Scripted shots, pause/background-resume, and restart passed again. The revised framing is installed and ready for hands-on review.
+
+### Resting cue gap increased to 50 mm
+
+The resting tip-gap setting is now **50 mm** in both modes, increased from 32 mm at user request. Withdrawal remains capped at 250 mm and contact still triggers the shot. Updated contact/power and reset tests, plus rendered cue-position fixtures, cover the new default. All **75 unit/native tests**, **37 rendered scenarios**, audio verification, Android lint, and APK assembly pass. The APK was installed on the OnePlus; a forward shot and restart were exercised, with local evidence in `build/reports/device-player-view/player-50mm-*.png`.

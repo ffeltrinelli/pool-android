@@ -1,0 +1,27 @@
+{
+  "device": "OnePlus 8T KB2003",
+  "api": 34,
+  "cold_launch_ms": 1072,
+  "background_resume_same_process": true,
+  "settings_frozen_frames_identical": true,
+  "outside_modal_tap_blocked": true,
+  "player_preference_survived_process_restart": true,
+  "scripted_checks": [
+    "gear and both mode selectors",
+    "horizontal player turn",
+    "backward and forward practice stroke",
+    "release cancellation",
+    "restart retaining player mode",
+    "forward-only shot",
+    "settings during motion",
+    "Android Back closes settings",
+    "Home and resume with modal open",
+    "player preference after process restart",
+    "top-view withdrawal and shot"
+  ],
+  "limitations": [
+    "Scripted Android input; finger comfort needs human review",
+    "Rail-adjacent camera coverage supplied by deterministic desktop fixtures",
+    "No new ten-minute performance soak"
+  ]
+}

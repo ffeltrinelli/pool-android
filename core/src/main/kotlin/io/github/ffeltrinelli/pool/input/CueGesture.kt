@@ -9,7 +9,7 @@ data class PointerSample(val pointer: Int, val position: Point, val seconds: Dou
 data class GestureTuning(
     val deadZone: Float = 0.055f,
     val strokeThreshold: Float = 0.014f,
-    val initialTipGap: Float = 0.032f,
+    val initialTipGap: Float = 0.050f,
     val maximumTipGap: Float = 0.25f,
     val sideRatio: Float = 0.30f,
     val aimThreshold: Float = 0.014f,

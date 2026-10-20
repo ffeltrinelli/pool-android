@@ -1,0 +1,14 @@
+{
+  "device": "OnePlus 8T KB2003",
+  "api": 34,
+  "angle_degrees": 45,
+  "scripted_shot_overview": true,
+  "paused_animation_frames_identical": true,
+  "background_resume_same_process": true,
+  "restart_returns_to_aim": true,
+  "aim_aid_removed_in_both_views": true,
+  "limitation": "Screenshots and scripted input; user should review camera angle and animation feel.",
+  "overview_distance_scale": 0.8,
+  "outer_table_edge_cropping_allowed": true,
+  "cold_launch_ms": 1145
+}
