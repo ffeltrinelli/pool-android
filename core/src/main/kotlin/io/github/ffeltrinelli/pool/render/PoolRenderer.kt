@@ -74,7 +74,7 @@ class PoolRenderer : Disposable {
             ballModels = (0..15).map { id ->
                 val texture = ballTextures.create(id)
                 textures.add(texture)
-                val mat = Material(TextureAttribute.createDiffuse(texture), ColorAttribute.createSpecular(0.15f, 0.15f, 0.15f, 1f), FloatAttribute.createShininess(48f))
+                val mat = Material(TextureAttribute.createDiffuse(texture), ColorAttribute.createSpecular(0.08f, 0.08f, 0.08f, 1f), FloatAttribute.createShininess(48f))
                 own(builder.createSphere(TableGeometry.BALL_RADIUS * 2, TableGeometry.BALL_RADIUS * 2, TableGeometry.BALL_RADIUS * 2, 32, 24, mat, attributes))
             }
         }
