@@ -142,6 +142,11 @@ class CueGesture(private val tuning: GestureTuning = GestureTuning()) {
         forwardHistory.clear()
     }
 
+    fun resetForRack(cueBall: Point, apexBall: Point) {
+        cancel()
+        direction = (apexBall - cueBall).normalized()
+    }
+
     fun end(pointer: Int) {
         if (pointer == activePointer) cancel()
     }

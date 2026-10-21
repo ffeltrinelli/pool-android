@@ -8,11 +8,16 @@ import org.junit.Test
 import java.lang.reflect.Proxy
 
 class GameControlsTest {
-    private class Preference(var saved: ViewMode = ViewMode.TOP) : ViewPreference {
-        override fun load() = saved
-        override fun save(mode: ViewMode) { saved = mode }
+    private class Preference(var saved: ViewMode = ViewMode.TOP) : SettingsPreference {
+        var aided = true
+        override fun loadAidedAim() = aided
+        override fun saveAidedAim(enabled: Boolean) { aided = enabled }
+        override fun loadViewMode() = saved
+        override fun saveViewMode(mode: ViewMode) { saved = mode }
     }
     private class Effects : ControlEffects {
+        var exits = 0
+        override fun exitGame() { exits++ }
         var cancelled = 0
         var paused = false
         var restarts = 0
@@ -73,23 +78,56 @@ class GameControlsTest {
     }
 
     @Test fun `saved preference defaults to top tolerates unknown values and flushes selection`() {
-        val values = mutableMapOf<String, String>()
+        val values = mutableMapOf<String, Any>()
         var flushes = 0
         val preferences = Proxy.newProxyInstance(Preferences::class.java.classLoader, arrayOf(Preferences::class.java)) { proxy, method, args ->
             when (method.name) {
-                "getString" -> values[args[0]] ?: args[1]
-                "putString" -> { values[args[0] as String] = args[1] as String; proxy }
+                "getString", "getBoolean" -> values[args[0]] ?: args[1]
+                "putString", "putBoolean" -> { values[args[0] as String] = args[1]; proxy }
                 "flush" -> { flushes++; null }
                 else -> error("Unexpected preference call ${method.name}")
             }
         } as Preferences
-        val store = SavedViewPreference(preferences)
-        assertEquals(ViewMode.TOP, store.load())
+        val store = SavedSettingsPreference(preferences)
+        assertEquals(ViewMode.TOP, store.loadViewMode())
         values["view-mode"] = "obsolete"
-        assertEquals(ViewMode.TOP, store.load())
-        store.save(ViewMode.PLAYER)
-        assertEquals(ViewMode.PLAYER, SavedViewPreference(preferences).load())
-        assertEquals(1, flushes)
+        assertEquals(ViewMode.TOP, store.loadViewMode())
+        store.saveViewMode(ViewMode.PLAYER)
+        assertEquals(ViewMode.PLAYER, SavedSettingsPreference(preferences).loadViewMode())
+        assertTrue(store.loadAidedAim())
+        store.saveAidedAim(false)
+        assertFalse(SavedSettingsPreference(preferences).loadAidedAim())
+        assertEquals(ViewMode.PLAYER, store.loadViewMode())
+        assertEquals(2, flushes)
+    }
+
+    @Test fun `aided aim is enabled initially saved independently and retained by restart`() {
+        val preference = Preference()
+        val effects = Effects()
+        val controls = GameControls(preference, effects)
+        assertTrue(controls.aidedAim)
+        controls.handle(HudAction.SETTINGS)
+        controls.handle(HudAction.TOGGLE_AIM)
+        assertFalse(controls.aidedAim)
+        assertTrue(controls.suspended)
+        assertEquals(0, effects.restarts)
+        controls.handle(HudAction.PLAYER_VIEW)
+        controls.handle(HudAction.RESTART)
+        assertFalse(controls.aidedAim)
+        val relaunched = GameControls(preference, Effects())
+        assertFalse(relaunched.aidedAim)
+        assertEquals(ViewMode.PLAYER, relaunched.mode)
+    }
+
+    @Test fun `exit cancels input stops playback and requests one normal application exit`() {
+        val effects = Effects()
+        val controls = GameControls(Preference(), effects)
+        controls.handle(HudAction.SETTINGS)
+        controls.handle(HudAction.EXIT)
+        assertEquals(1, effects.exits)
+        assertTrue(effects.paused)
+        assertEquals(2, effects.cancelled)
+        assertEquals(0, effects.restarts)
     }
 
     @Test fun `HUD routes gear modes results and outside modal taps at multiple sizes`() {
@@ -104,6 +142,15 @@ class GameControlsTest {
             assertEquals(HudAction.TOP_VIEW, hit(layout.top, true))
             assertEquals(HudAction.PLAYER_VIEW, hit(layout.player, true))
             assertEquals(HudAction.CLOSE, hit(layout.close, true))
+            assertEquals(HudAction.TOGGLE_AIM, hit(layout.aidedAim, true))
+            assertEquals(HudAction.EXIT, hit(layout.exit, true))
+            assertTrue(layout.top.y > layout.aidedAim.y && layout.aidedAim.y > layout.restart.y && layout.restart.y > layout.exit.y)
+            assertTrue(layout.close.x > layout.panel.x + layout.panel.width / 2)
+            assertTrue(layout.close.y > layout.top.y)
+            for (rect in listOf(layout.close, layout.top, layout.player, layout.aidedAim, layout.restart, layout.exit)) {
+                assertTrue(rect.width >= 48f && rect.height >= 48f)
+                assertTrue(layout.panel.contains(rect))
+            }
             assertEquals(HudAction.RESTART, hit(layout.restart, true))
             assertEquals(HudAction.RESTART, hit(layout.playAgain, finished = true))
             assertEquals(HudAction.BLOCK, layout.hit(0, 0, true, false))

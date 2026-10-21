@@ -1,0 +1,29 @@
+{
+  "model": "KB2003",
+  "api": "34",
+  "initial_aided_aim_enabled": true,
+  "toggle_saved_false": true,
+  "view_and_aid_saved": true,
+  "restart_retains_aid_off": true,
+  "relaunch_retains_aid_off": true,
+  "exit_finishes_activity": true,
+  "exit_retains_preferences": true,
+  "error_log": "",
+  "settings_freeze_changed_channels_excluding_overlay": 0,
+  "settings_freeze_comparison": "RGB app pixels excluding leftmost 20 columns (OnePlus gaming overlay)",
+  "date": "2026-10-21",
+  "cold_launch_ms": 1343,
+  "inspection": {
+    "top_restart_points_at_apex": true,
+    "player_restart_aligns_camera_and_cue": true,
+    "x_dismisses_settings": true,
+    "back_dismisses_settings": true,
+    "guide_visible_in_both_modes": true,
+    "guide_hidden_when_disabled": true,
+    "settings_order": "View mode, Aided aim, Restart, Exit game; X at top right"
+  },
+  "limitations": [
+    "Subjective guide readability and stroke feel await user review.",
+    "No new ten-minute performance soak."
+  ]
+}

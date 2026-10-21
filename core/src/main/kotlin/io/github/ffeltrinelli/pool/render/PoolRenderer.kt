@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder
 import com.badlogic.gdx.math.*
 import com.badlogic.gdx.utils.Disposable
+import io.github.ffeltrinelli.pool.aim.*
 import io.github.ffeltrinelli.pool.input.CueGesture
 import io.github.ffeltrinelli.pool.model.*
 import io.github.ffeltrinelli.pool.physics.PoolPhysics
@@ -25,6 +26,9 @@ class PoolRenderer : Disposable {
     private val attributes = (VertexAttributes.Usage.Position or VertexAttributes.Usage.Normal or VertexAttributes.Usage.TextureCoordinates).toLong()
     val views = GameViews()
     val hud = GameHud()
+    var aidedAim = true
+    private val aimPredictor = AimPredictor()
+    private val aimGuide = AimGuideRenderer()
     var settingsOpen = false
     private val environment = Environment().apply {
         set(ColorAttribute(ColorAttribute.AmbientLight, 0.60f, 0.65f, 0.68f, 1f))
@@ -110,11 +114,19 @@ class PoolRenderer : Disposable {
 
         }
         modelBatch.end()
-        hud.render(session, settingsOpen, views.mode)
+        if (aidedAim && !settingsOpen && session.canShoot && cueBall != null) {
+            val path = aimPredictor.predict(cueBall.point, gesture.direction,
+                physics.balls.filter { !it.pocketed }.map { AimBall(it.id, it.point) })
+            val start = cueBall.point + gesture.direction * TableGeometry.BALL_RADIUS
+            if ((path.end - cueBall.point).dot(gesture.direction) > TableGeometry.BALL_RADIUS) {
+                aimGuide.render(views.active.camera, start, path.end)
+            }
+        }
+        hud.render(session, settingsOpen, views.mode, aidedAim)
     }
 
     override fun dispose() {
-        modelBatch.dispose(); font.dispose(); hud.dispose()
+        aimGuide.dispose(); modelBatch.dispose(); font.dispose(); hud.dispose()
         models.forEach { it.dispose() }
         textures.forEach { it.dispose() }
     }

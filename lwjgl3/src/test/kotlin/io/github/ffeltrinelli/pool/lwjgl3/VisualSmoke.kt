@@ -8,6 +8,7 @@ import com.badlogic.gdx.backends.lwjgl3.*
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.abs
+import io.github.ffeltrinelli.pool.aim.*
 import io.github.ffeltrinelli.pool.input.*
 import io.github.ffeltrinelli.pool.model.*
 import io.github.ffeltrinelli.pool.physics.PoolPhysics
@@ -51,7 +52,10 @@ object VisualSmoke {
             listOf("corner", "side").flatMap { type -> listOf(0, 12, 24, 36, 60).map { "$mode-drop-$type-$it" } +
                 listOf("$mode-shelf-$type", "$mode-jaw-$type") }
         }
-        private val allScenarios get() = scenarios + viewScenarios + pocketScenarios
+        private val aidScenarios = listOf("top", "player").flatMap { mode ->
+            listOf("enabled", "disabled", "glancing", "rail", "pocket", "blocked", "reset", "settings-off").map { "$mode-aid-$it" }
+        }
+        private val allScenarios get() = scenarios + viewScenarios + pocketScenarios + aidScenarios
         private var index = 0
         override fun create() {
             renderer = PoolRenderer()
@@ -91,10 +95,12 @@ object VisualSmoke {
             }
         }
         private fun fixture(name: String) {
-            physics.reset(); session.restart(); gesture.cancel()
+            physics.reset(); session.restart(); gesture.resetForRack(Point(0f, 0.58f), Point(0f, -0.38f))
             renderer.views.select(ViewMode.TOP)
             renderer.views.reset()
             renderer.settingsOpen = false
+            renderer.aidedAim = true
+            if (name in aidScenarios) { aidFixture(name); return }
             if (name in viewScenarios) { viewFixture(name); return }
             if (name in pocketScenarios) { pocketFixture(name); return }
             when {
@@ -203,6 +209,40 @@ object VisualSmoke {
             val pixels = Pixmap.createFromFrameBuffer(x, y, 420, 420)
             try { PixmapIO.writePNG(FileHandle(File(report.directory, "$name-detail.png")), pixels, -1, true) }
             finally { pixels.dispose() }
+        }
+
+        private fun aidFixture(name: String) {
+            val mode = if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP
+            renderer.views.select(mode)
+            renderer.aidedAim = !name.endsWith("disabled") && !name.endsWith("settings-off")
+            renderer.settingsOpen = name.endsWith("settings-off")
+            val cue = Point(0f, 0.58f)
+            val radius = TableGeometry.BALL_RADIUS
+            var direction = Point(0f, -1f)
+            when {
+                name.endsWith("glancing") -> physics.reset(listOf(0 to cue, 1 to Point(radius, 0f)))
+                name.endsWith("rail") -> physics.reset(listOf(0 to cue))
+                name.endsWith("pocket") -> {
+                    val pocket = PocketGeometry.pockets.last()
+                    direction = (pocket.mouthCenter - cue).normalized()
+                    physics.reset(listOf(0 to cue))
+                }
+                name.endsWith("blocked") -> physics.reset(listOf(0 to cue, 1 to Point(0f, -1.3f)))
+                name.endsWith("reset") -> {
+                    gesture.begin(PointerSample(0, cue + Point(0.3f, 0f), 0.0), cue)
+                    renderer.views.update(cue, gesture.direction, false, 0.65f)
+                    gesture.resetForRack(cue, Point(0f, -0.38f))
+                    renderer.views.reset()
+                    check(gesture.direction == direction && gesture.tipGap == 0.05f)
+                }
+            }
+            if (!name.endsWith("reset")) gesture.begin(PointerSample(0, cue - direction * 0.3f, 0.0), cue)
+            renderer.views.update(cue, gesture.direction, true)
+            val path = AimPredictor().predict(cue, direction, physics.balls.filter { !it.pocketed }.map { AimBall(it.id, it.point) })
+            if (name.endsWith("enabled") || name.endsWith("glancing") || name.endsWith("reset")) check(path.targetBallId == 1)
+            if (name.endsWith("rail") || name.endsWith("blocked") || name.endsWith("pocket")) check(path.targetBallId == null)
+            if (name.endsWith("rail") || name.endsWith("blocked")) check(abs(path.end.z + TableGeometry.HALF_LENGTH - radius) < 0.0001f)
+            if (mode == ViewMode.PLAYER) check(abs(renderer.views.active.camera.direction.x - direction.x * 0.70710677f) < 0.0001f)
         }
 
         private fun viewFixture(name: String) {
