@@ -15,17 +15,21 @@ class HudLayout(width: Int, height: Int) {
     private val height = height.coerceAtLeast(1)
     val uiHeight = 420f * this.height / this.width
     val gear = Rectangle(348f, uiHeight - 96f, 48f, 48f)
-    val panel = Rectangle(30f, uiHeight / 2 - 160f, 360f, 340f)
-    val restart = Rectangle(60f, uiHeight / 2 + 60f, 300f, 48f)
-    val top = Rectangle(60f, uiHeight / 2 - 40f, 146f, 48f)
-    val player = Rectangle(214f, uiHeight / 2 - 40f, 146f, 48f)
-    val close = Rectangle(60f, uiHeight / 2 - 125f, 300f, 48f)
+    val panel = Rectangle(30f, uiHeight / 2 - 220f, 360f, 440f)
+    val close = Rectangle(336f, panel.y + panel.height - 54f, 48f, 48f)
+    val top = Rectangle(60f, uiHeight / 2 + 80f, 146f, 48f)
+    val player = Rectangle(214f, uiHeight / 2 + 80f, 146f, 48f)
+    val aidedAim = Rectangle(60f, uiHeight / 2 - 10f, 300f, 48f)
+    val restart = Rectangle(60f, uiHeight / 2 - 100f, 300f, 48f)
+    val exit = Rectangle(60f, uiHeight / 2 - 170f, 300f, 48f)
     val playAgain = Rectangle(100f, uiHeight / 2 - 85f, 220f, 48f)
 
     fun hit(screenX: Int, screenY: Int, settingsOpen: Boolean, finished: Boolean): HudAction? {
         val x = screenX * 420f / width
         val y = uiHeight - screenY * uiHeight / height
         if (settingsOpen) return when {
+            aidedAim.contains(x, y) -> HudAction.TOGGLE_AIM
+            exit.contains(x, y) -> HudAction.EXIT
             restart.contains(x, y) -> HudAction.RESTART
             top.contains(x, y) -> HudAction.TOP_VIEW
             player.contains(x, y) -> HudAction.PLAYER_VIEW
@@ -72,7 +76,7 @@ class GameHud : Disposable {
         camera.setToOrtho(false, 420f, layout.uiHeight)
     }
 
-    fun render(session: GameSession, settingsOpen: Boolean, mode: ViewMode) {
+    fun render(session: GameSession, settingsOpen: Boolean, mode: ViewMode, aidedAim: Boolean = true) {
         val h = layout.uiHeight
         sprites.projectionMatrix = camera.combined
         sprites.begin()
@@ -81,7 +85,7 @@ class GameHud : Disposable {
         text("%02d / 15 LEFT".format(session.remaining), 29f, h - 86f, 0.85f, "d5e5dd")
         if (session.finished) drawResult(session)
         drawGear()
-        if (settingsOpen) drawSettings(mode)
+        if (settingsOpen) drawSettings(mode, aidedAim)
         sprites.end()
     }
 
@@ -91,15 +95,18 @@ class GameHud : Disposable {
         sprites.draw(gearIcon, layout.gear.x + 8f, layout.gear.y + 8f, 32f, 32f)
     }
 
-    private fun drawSettings(mode: ViewMode) {
+    private fun drawSettings(mode: ViewMode, aidedAim: Boolean) {
         shade()
         rectangle(layout.panel, "163039")
-        text("SETTINGS", 210f, layout.uiHeight / 2 + 140f, 1.35f, "f2e5c8", true)
-        button(layout.restart, "Restart")
-        text("View mode", 60f, layout.uiHeight / 2 + 30f, 0.92f, "b8ccca")
+        text("SETTINGS", 60f, layout.uiHeight / 2 + 185f, 1.35f, "f2e5c8")
+        button(layout.close, "X")
+        text("View mode", 60f, layout.uiHeight / 2 + 150f, 0.92f, "b8ccca")
         button(layout.top, "Top view", mode == ViewMode.TOP)
         button(layout.player, "Player view", mode == ViewMode.PLAYER)
-        button(layout.close, "Close")
+        text("Aided aim", 60f, layout.uiHeight / 2 + 55f, 0.92f, "b8ccca")
+        button(layout.aidedAim, if (aidedAim) "On" else "Off", aidedAim)
+        button(layout.restart, "Restart")
+        button(layout.exit, "Exit game")
     }
 
     private fun drawResult(session: GameSession) {

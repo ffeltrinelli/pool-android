@@ -6,6 +6,7 @@ import io.github.ffeltrinelli.pool.audio.*
 import io.github.ffeltrinelli.pool.model.GameSession
 import io.github.ffeltrinelli.pool.model.Point
 import io.github.ffeltrinelli.pool.model.ShotCommand
+import io.github.ffeltrinelli.pool.model.TableGeometry
 import io.github.ffeltrinelli.pool.physics.PoolPhysics
 import io.github.ffeltrinelli.pool.render.PoolRenderer
 import io.github.ffeltrinelli.pool.ui.*
@@ -26,11 +27,13 @@ class PoolGame : ApplicationAdapter() {
         audio = PoolAudio(LibGdxSoundPlayer())
         physics = PoolPhysics(session::accept, audio::queue, audio::queue)
         renderer = PoolRenderer()
-        controls = GameControls(SavedViewPreference(Gdx.app.getPreferences("pool-settings")), object : ControlEffects {
+        resetRackAim()
+        controls = GameControls(SavedSettingsPreference(Gdx.app.getPreferences("pool-settings")), object : ControlEffects {
             override fun cancelGesture() = cancelInput()
             override fun pauseGame() { audio.pause(); skipDelta = true }
             override fun resumeGame() { audio.resume(); skipDelta = true }
             override fun restartGame() = restart()
+            override fun exitGame() { Gdx.app.exit() }
             override fun selectView(mode: ViewMode) { renderer.views.select(mode) }
         })
         if (paused) controls.pause()
@@ -89,8 +92,16 @@ class PoolGame : ApplicationAdapter() {
         audio.clear()
         physics.reset()
         session.restart()
-        renderer.views.reset()
+        resetRackAim()
         skipDelta = true
+    }
+
+    private fun resetRackAim() {
+        gameplayPointer = null
+        val rack = TableGeometry.rack().toMap()
+        gesture.resetForRack(rack.getValue(0), rack.getValue(1))
+        renderer.views.reset()
+        renderer.views.update(rack.getValue(0), gesture.direction, true)
     }
 
     override fun render() {
@@ -101,6 +112,7 @@ class PoolGame : ApplicationAdapter() {
             skipDelta = false
         }
         renderer.settingsOpen = controls.settingsOpen
+        renderer.aidedAim = controls.aidedAim
         renderer.render(physics, session, gesture, viewDelta = delta)
     }
 

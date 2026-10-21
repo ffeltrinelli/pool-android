@@ -3,16 +3,20 @@ package io.github.ffeltrinelli.pool.ui
 import com.badlogic.gdx.Preferences
 import io.github.ffeltrinelli.pool.view.ViewMode
 
-enum class HudAction { SETTINGS, CLOSE, RESTART, TOP_VIEW, PLAYER_VIEW, BLOCK }
+enum class HudAction { SETTINGS, CLOSE, RESTART, TOP_VIEW, PLAYER_VIEW, TOGGLE_AIM, EXIT, BLOCK }
 
-interface ViewPreference {
-    fun load(): ViewMode
-    fun save(mode: ViewMode)
+interface SettingsPreference {
+    fun loadViewMode(): ViewMode
+    fun saveViewMode(mode: ViewMode)
+    fun loadAidedAim(): Boolean
+    fun saveAidedAim(enabled: Boolean)
 }
 
-class SavedViewPreference(private val preferences: Preferences) : ViewPreference {
-    override fun load() = ViewMode.entries.firstOrNull { it.name == preferences.getString("view-mode", ViewMode.TOP.name) } ?: ViewMode.TOP
-    override fun save(mode: ViewMode) { preferences.putString("view-mode", mode.name); preferences.flush() }
+class SavedSettingsPreference(private val preferences: Preferences) : SettingsPreference {
+    override fun loadAidedAim() = preferences.getBoolean("aided-aim", true)
+    override fun saveAidedAim(enabled: Boolean) { preferences.putBoolean("aided-aim", enabled); preferences.flush() }
+    override fun loadViewMode() = ViewMode.entries.firstOrNull { it.name == preferences.getString("view-mode", ViewMode.TOP.name) } ?: ViewMode.TOP
+    override fun saveViewMode(mode: ViewMode) { preferences.putString("view-mode", mode.name); preferences.flush() }
 }
 
 interface ControlEffects {
@@ -21,11 +25,14 @@ interface ControlEffects {
     fun resumeGame()
     fun restartGame()
     fun selectView(mode: ViewMode)
+    fun exitGame()
 }
 
 /** Settings and OS suspension are independent: closing one must not resume the other. */
-class GameControls(private val preference: ViewPreference, private val effects: ControlEffects) {
-    var mode = preference.load()
+class GameControls(private val preference: SettingsPreference, private val effects: ControlEffects) {
+    var mode = preference.loadViewMode()
+        private set
+    var aidedAim = preference.loadAidedAim()
         private set
     var settingsOpen = false
         private set
@@ -47,6 +54,8 @@ class GameControls(private val preference: ViewPreference, private val effects: 
             }
             HudAction.TOP_VIEW -> select(ViewMode.TOP)
             HudAction.PLAYER_VIEW -> select(ViewMode.PLAYER)
+            HudAction.TOGGLE_AIM -> { aidedAim = !aidedAim; preference.saveAidedAim(aidedAim) }
+            HudAction.EXIT -> { effects.cancelGesture(); effects.pauseGame(); effects.exitGame() }
             HudAction.BLOCK -> Unit
         }
     }
@@ -55,7 +64,7 @@ class GameControls(private val preference: ViewPreference, private val effects: 
         if (this.mode == mode) return
         effects.cancelGesture()
         this.mode = mode
-        preference.save(mode)
+        preference.saveViewMode(mode)
         effects.selectView(mode)
     }
 
