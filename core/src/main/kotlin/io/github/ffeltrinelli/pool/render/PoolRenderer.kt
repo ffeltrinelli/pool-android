@@ -119,7 +119,7 @@ class PoolRenderer : Disposable {
                 physics.balls.filter { !it.pocketed }.map { AimBall(it.id, it.point) })
             val start = cueBall.point + gesture.direction * TableGeometry.BALL_RADIUS
             if ((path.end - cueBall.point).dot(gesture.direction) > TableGeometry.BALL_RADIUS) {
-                aimGuide.render(views.active.camera, start, path.end)
+                aimGuide.render(views.active.camera, start, path.end, path.contactPoint)
             }
         }
         hud.render(session, settingsOpen, views.mode, aidedAim)

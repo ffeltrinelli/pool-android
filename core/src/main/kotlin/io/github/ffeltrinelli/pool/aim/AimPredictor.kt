@@ -4,7 +4,7 @@ import io.github.ffeltrinelli.pool.model.*
 import kotlin.math.*
 
 data class AimBall(val id: Int, val position: Point)
-data class AimPath(val end: Point, val targetBallId: Int?)
+data class AimPath(val end: Point, val targetBallId: Int?, val contactPoint: Point = end)
 
 /** Direct cue-centre travel, without advancing Bullet or predicting rebounds. */
 class AimPredictor {
@@ -13,14 +13,25 @@ class AimPredictor {
         val radius = TableGeometry.BALL_RADIUS
         var distance = Float.POSITIVE_INFINITY
         var target: Int? = null
+        var contactPoint = origin
         for (cushion in PocketGeometry.cushions) {
             val polygon = cushion.outline
             for (i in polygon.indices) {
-                distance = min(distance, capsuleContact(origin, forward, polygon[i], polygon[(i + 1) % polygon.size], radius))
+                val a = polygon[i]
+                val b = polygon[(i + 1) % polygon.size]
+                val travel = capsuleContact(origin, forward, a, b, radius)
+                if (travel < distance) {
+                    distance = travel
+                    contactPoint = closestPoint(origin + forward * travel, a, b)
+                }
             }
         }
         for (pocket in PocketGeometry.pockets) {
-            distance = min(distance, segmentContact(origin, forward, pocket.mouth(-1f), pocket.mouth(1f)))
+            val travel = segmentContact(origin, forward, pocket.mouth(-1f), pocket.mouth(1f))
+            if (travel < distance) {
+                distance = travel
+                contactPoint = origin + forward * travel
+            }
         }
         for (ball in balls) {
             if (ball.id == 0) continue
@@ -28,11 +39,19 @@ class AimPredictor {
             if (contact < distance) {
                 distance = contact
                 target = ball.id
+                val cueCenter = origin + forward * contact
+                contactPoint = ball.position + (cueCenter - ball.position).normalized() * radius
             }
         }
         // Invalid origins outside the defined playing surface may have no forward intersection.
         if (!distance.isFinite()) distance = 0f
-        return AimPath(origin + forward * distance, target)
+        return AimPath(origin + forward * distance, target, contactPoint)
+    }
+
+    private fun closestPoint(point: Point, a: Point, b: Point): Point {
+        val edge = b - a
+        val fraction = ((point - a).dot(edge) / edge.dot(edge)).coerceIn(0f, 1f)
+        return a + edge * fraction
     }
 
     private fun circleContact(origin: Point, direction: Point, center: Point, radius: Float): Float {

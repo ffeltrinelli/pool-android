@@ -5,7 +5,6 @@ import com.badlogic.gdx.graphics.*
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.utils.Disposable
 import io.github.ffeltrinelli.pool.model.Point
-import kotlin.math.min
 
 /** A single dynamic mesh keeps world-space dashes cheap and depth-tested in either camera. */
 class AimGuideRenderer : Disposable {
@@ -18,24 +17,20 @@ class AimGuideRenderer : Disposable {
 
     init { check(shader.isCompiled) { "Aim guide shader: ${shader.log}" } }
 
-    fun render(camera: Camera, origin: Point, end: Point) {
-        val length = (end - origin).length()
-        if (length < 0.001f) return
-        val direction = (end - origin).normalized()
-        val side = Point(-direction.z, direction.x) * 0.0012f
+    fun render(camera: Camera, origin: Point, cueCenterAtImpact: Point, contactPoint: Point) {
+        val segments = AimGuideGeometry.segments(origin, cueCenterAtImpact, contactPoint)
         var count = 0
         fun vertex(point: Point) {
             vertices[count++] = point.x
             vertices[count++] = 0.003f
             vertices[count++] = point.z
         }
-        var offset = 0f
-        while (offset < length && count + 18 <= vertices.size) {
-            val start = origin + direction * offset
-            val finish = origin + direction * min(offset + 0.025f, length)
+        for ((start, finish) in segments) {
+            if (count + 18 > vertices.size) break
+            val direction = (finish - start).normalized()
+            val side = Point(-direction.z, direction.x) * 0.0012f
             vertex(start - side); vertex(start + side); vertex(finish + side)
             vertex(start - side); vertex(finish + side); vertex(finish - side)
-            offset += 0.043f
         }
         mesh.setVertices(vertices, 0, count)
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
