@@ -144,3 +144,9 @@ The final prediction regression (separating from already-touching objects) was a
 The user reported that the guide ended too far before obstacles. The collision prediction correctly stopped the cue **centre** before contact, but the renderer left the cue radius as visible clearance and could also end during a gap in the dash pattern. Prediction now exposes the obstacle contact point separately. Rendering retains the centre trajectory and adds its final short connection to that surface; dashes are anchored at the impact end so no trailing gap shortens the guide. Glancing contacts connect along the contact normal rather than shifting the entire aiming direction. Pocket mouths remain unchanged, with no extension into the pocket.
 
 All **101 unit/native tests**, **81 rendered scenarios**, audio verification, Android lint (0 errors, 5 existing warnings), and APK assembly pass. New tests cover ball surfaces for head-on/glancing/tangent contacts, cushion and jaw surfaces, all pocket mouths, and every dash phase over 1–1,000 mm paths. Updated top/player/glancing screenshots show surface-reaching endpoints. The corrected APK is reinstalled on the OnePlus for hands-on review.
+
+### Keep the whole guide straight
+
+The user’s live OnePlus screen showed the contact-normal connector as a bent tail on an off-centre rack hit. Removed that connector: the contact clearance now extends the guide along the original cue axis, and every dash remains collinear, including the final one. Collision selection remains radius-aware and unchanged. Dashes still reach the endpoint, and pocket mouths receive no extra extension.
+
+All **102 unit/native tests**, **81 rendered scenarios**, audio verification, lint and APK build pass. Tests assert collinearity through head-on, glancing, tangent and oblique-cushion approaches. Updated the glancing screenshot and installed the corrected APK on the OnePlus for review.

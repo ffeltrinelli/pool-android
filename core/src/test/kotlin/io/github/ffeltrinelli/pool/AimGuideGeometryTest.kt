@@ -12,16 +12,16 @@ class AimGuideGeometryTest {
     private val radius = TableGeometry.BALL_RADIUS
     private val predictor = AimPredictor()
 
-    @Test fun `guide reaches actual ball surface for head on glancing and tangent collisions`() {
+    @Test fun `guide extends straight along original aim for head on glancing and tangent collisions`() {
         for (offset in listOf(0f, radius, radius * 2)) {
             val target = Point(offset, 0f)
             val path = predictor.predict(origin, direction, listOf(AimBall(1, target)))
             assertEquals(radius, (path.contactPoint - target).length(), 0.00001f)
             assertEquals(radius, (path.contactPoint - path.end).length(), 0.00001f)
             val segments = AimGuideGeometry.segments(origin + direction * radius, path.end, path.contactPoint)
-            assertEquals(path.contactPoint, segments.last().second)
-            assertEquals(path.end, segments.last().first)
-            for ((a, b) in segments.dropLast(1)) {
+            val end = path.end + direction * radius
+            assertTrue((end - segments.first().second).length() < 0.00001f)
+            for ((a, b) in segments) {
                 assertEquals(0f, a.x, 0.00001f)
                 assertEquals(0f, b.x, 0.00001f)
             }
@@ -44,6 +44,19 @@ class AimGuideGeometryTest {
         val start = pocket.mouthCenter - pocket.outward * 0.3f + pocket.lateral * (pocket.width / 2 - radius / 2)
         val path = predictor.predict(start, pocket.outward, emptyList())
         assertEquals(radius, (path.contactPoint - path.end).length(), 0.0001f)
+    }
+
+    @Test fun `oblique rail contact never turns the final dash toward the rail normal`() {
+        val forward = Point(0.2f, -1f).normalized()
+        val path = predictor.predict(origin, forward, emptyList())
+        val start = origin + forward * radius
+        val segments = AimGuideGeometry.segments(start, path.end, path.contactPoint)
+        for ((a, b) in segments) {
+            for (point in listOf(a, b)) {
+                val delta = point - origin
+                assertEquals(0f, delta.x * forward.z - delta.z * forward.x, 0.00001f)
+            }
+        }
     }
 
     @Test fun `last dash reaches endpoint for every dash phase including short paths`() {

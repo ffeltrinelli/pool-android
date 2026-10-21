@@ -29,7 +29,7 @@ The Gradle task adds macOS's required `-XstartOnFirstThread`. Mouse dragging use
 ## Controls
 
 - Touch behind the cue ball, away from its immediate center. The cue lies between your finger and the ball.
-- Circle your finger around the cue ball to aim. Aided aim is enabled by default: a dashed line shows the direct cue-ball path to its first object-ball contact, or the first rail/jaw/pocket mouth if no ball is reached. It accounts for ball radius and does not predict rebounds or the object ball’s path. The last segment connects the cue-centre trajectory to the actual contact surface, and the dash pattern always reaches that endpoint.
+- Circle your finger around the cue ball to aim. Aided aim is enabled by default: a dashed line shows the direct cue-ball path to its first object-ball contact, or the first rail/jaw/pocket mouth if no ball is reached. It accounts for ball radius and does not predict rebounds or the object ball’s path. The guide extends the impact position by the cue-ball contact clearance along the original aim axis, without bending toward the contact normal. The dash pattern always reaches the endpoint.
 - Drag backward to withdraw the cue and forward to advance it. You can make repeated practice strokes without lifting. A deliberate axial movement locks the aiming direction until release; lift your finger to re-aim.
 - The forward-moving tip strikes on contact; pulling back first is optional. A faster push produces a stronger shot. Releasing before contact cancels the stroke.
 - Wait for all balls to settle before aiming again. Additional fingers are ignored.
