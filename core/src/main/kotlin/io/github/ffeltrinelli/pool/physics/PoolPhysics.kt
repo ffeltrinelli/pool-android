@@ -35,6 +35,7 @@ class PoolPhysics(
     private val transform = Matrix4()
     private val velocity = Vector3()
     private var accumulator = 0f
+    private val restStability = RestStability()
     private var quietSeconds = 0f
     private var wasSettled = true
     var interpolation = 0f
@@ -71,6 +72,7 @@ class PoolPhysics(
         layout.forEach { (id, point) -> addBall(id, point) }
         accumulator = 0f
         quietSeconds = 0f
+        restStability.reset()
         wasSettled = true
         interpolation = 0f
     }
@@ -130,6 +132,7 @@ class PoolPhysics(
         val direction = shot.direction.normalized()
         cue.body.applyCentralImpulse(Vector3(direction.x * shot.impulse, 0f, direction.z * shot.impulse))
         quietSeconds = 0f
+        restStability.reset()
         wasSettled = false
         impacts(Impact(ImpactKind.CUE, shot.impulse))
     }
@@ -149,12 +152,16 @@ class PoolPhysics(
         world.stepSimulation(STEP, 0)
         collectImpactContacts()
         var moving = false
+        restStability.beginStep()
         balls.forEach { ball ->
             if (!ball.pocketed) {
                 readTransform(ball)
                 velocity.set(ball.body.linearVelocity)
-                if (velocity.len2() > PhysicsTuning.LINEAR_SLEEP_SPEED * PhysicsTuning.LINEAR_SLEEP_SPEED ||
-                    ball.body.angularVelocity.len2() > PhysicsTuning.ANGULAR_SLEEP_SPEED * PhysicsTuning.ANGULAR_SLEEP_SPEED) moving = true
+                val linearSpeed2 = velocity.len2()
+                val angularSpeed2 = ball.body.angularVelocity.len2()
+                if (linearSpeed2 > PhysicsTuning.LINEAR_SLEEP_SPEED * PhysicsTuning.LINEAR_SLEEP_SPEED ||
+                    angularSpeed2 > PhysicsTuning.ANGULAR_SLEEP_SPEED * PhysicsTuning.ANGULAR_SLEEP_SPEED) moving = true
+                restStability.observe(ball.id, ball.position, ball.rotation, linearSpeed2, angularSpeed2)
                 val pocket = PocketGeometry.pockets.firstOrNull { it.containsDrop(ball.point) }
                 if (ball.position.y < PocketGeometry.CAPTURE_DEPTH && pocket != null) {
                     capture(ball)
@@ -165,8 +172,9 @@ class PoolPhysics(
                 }
             }
         }
+        restStability.finishStep(STEP)
         quietSeconds = if (moving) 0f else quietSeconds + STEP
-        if (!wasSettled && quietSeconds >= PhysicsTuning.SETTLED_SECONDS) {
+        if (!wasSettled && (quietSeconds >= PhysicsTuning.SETTLED_SECONDS || restStability.settled)) {
             balls.filter { !it.pocketed }.forEach {
                 it.body.linearVelocity = Vector3.Zero
                 it.body.angularVelocity = Vector3.Zero
