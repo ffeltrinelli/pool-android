@@ -4,7 +4,7 @@
   "android_version": "14",
   "api": 34,
   "automated_suite": {
-    "unit_native_tests": 123,
+    "unit_native_tests": 125,
     "rendered_scenarios": 103,
     "audio_assets": 4,
     "lint_errors": 0,
@@ -107,5 +107,10 @@
     "computer_cue_aiming_and_strike_natural": true,
     "opponent_reasonable_for_casual_play": true,
     "reply": "yes"
+  },
+  "cue_scratch_audio_followup": {
+    "rearmed_after_cue_replacement": true,
+    "duplicate_and_lifecycle_regressions_passed": true,
+    "device_audibility_confirmed": false
   }
 }

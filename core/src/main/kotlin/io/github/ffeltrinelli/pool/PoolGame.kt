@@ -139,6 +139,7 @@ class PoolGame : ApplicationAdapter() {
             if (event == PhysicsEvent.Settled && session.mode == PlayMode.COMPUTER && !session.finished) {
                 session.outcome?.takeIf { it.foul }?.let { outcome ->
                     physics.replaceCueBall()
+                    audio.cueBallReplaced()
                     computer.foul(outcome.player)
                 }
             }

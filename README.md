@@ -2,6 +2,21 @@
 
 An offline 3D pool demo for Android, based on [MVP Design #1](https://github.com/ffeltrinelli/pool-android/issues/1). Aim and shoot with one continuous touch gesture. Choose Solo practice or Vs computer in Settings. In Solo, the round ends when the cue ball is pocketed or all 15 object balls are cleared. Vs computer alternates one shot per player and awards one point per object ball; a scratch cancels all points for that shot. The eight ball has no special rule.
 
+## Table of contents
+
+- [Build and run](#build-and-run)
+- [Controls](#controls)
+- [Architecture and tuning](#architecture-and-tuning)
+- [Automated verification](#automated-verification)
+- [OnePlus 8T validation](#oneplus-8t-validation)
+- [Assets and attribution](#assets-and-attribution)
+- [Playing against the computer](#playing-against-the-computer)
+- [How the computer opponent works](#how-the-computer-opponent-works)
+  - [Starting shots: ghost-ball geometry](#starting-shots-ghost-ball-geometry)
+  - [What CMA-ES searches](#what-cma-es-searches)
+  - [Isolation, casual strength and lifecycle](#isolation-casual-strength-and-lifecycle)
+  - [Current limits and tuning](#current-limits-and-tuning)
+
 ## Build and run
 
 Requirements: JDK 21, Android SDK platform 36, and build-tools 35.0.0. Android Studio can import the root Gradle project. The Gradle wrapper is included; dependencies need network access on the first build.
@@ -36,7 +51,7 @@ The Gradle task adds macOS's required `-XstartOnFirstThread`. Mouse dragging use
 - Open the **gear** for Settings: choose **Solo** / **Vs computer**, choose **Top view** / **Player view**, toggle **Aided aim**, **Restart**, or **Exit game**, in that order. Settings pauses play and stops current sounds. Use the top-right **X** or Android Back to resume. Exit closes the app immediately without saving the rack. **Play again** remains available after a result. Every fresh rack resets the cue toward the apex ball and aligns the player camera, with a 50 mm resting tip gap.
 - In **Player view**, touching preserves aim. Drag sideways to turn the cue and camera together; drag down to pull back and up to strike. Lift to unlock the direction. At contact, the camera smoothly pulls back to a closer overview while balls move; outer table edges may be off-screen, then returns behind the settled cue ball.
 - The selected play mode, view and aided-aim setting are remembered across rack restarts and app launches; the first launch uses Solo, Top view and aided aim On. Changing play mode starts a fresh rack immediately.
-- Ball collisions click, cushions thud, and cue contact plays a separate strike. Stronger impacts are louder. There is no music or in-game volume control.
+- Ball collisions click, cushions thud, and cue contact plays a separate strike. Every physical pocket drop plays the pocket sound, including each cue-ball scratch after replacement in Vs computer. Stronger impacts are louder. There is no music or in-game volume control.
 
 Top view uses the original fixed portrait overhead camera and shows the whole table with gesture space around the rails. Player view uses a raised first-person perspective and may crop parts of the table. The cue can pass visually over rails and balls; there are no cue obstruction, spin, jump-shot, or eight-ball rule controls.
 
