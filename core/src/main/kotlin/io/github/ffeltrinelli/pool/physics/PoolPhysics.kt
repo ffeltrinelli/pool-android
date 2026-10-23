@@ -41,7 +41,7 @@ class PoolPhysics(
         private set
 
     init {
-        Bullet.init()
+        BulletRuntime.initialize()
         configuration = btDefaultCollisionConfiguration()
         dispatcher = btCollisionDispatcher(configuration)
         broadphase = btDbvtBroadphase()
@@ -68,25 +68,58 @@ class PoolPhysics(
         contactImpacts.reset()
         balls.forEach { if (!it.pocketed) world.removeRigidBody(it.body); it.body.dispose() }
         balls.clear()
-        layout.forEach { (id, point) ->
-            val body = rigidBody(ballShape, TableGeometry.BALL_MASS, point)
-            // Texture stamps lie on local ±Z, away from sphere UV poles. Face +Z upward.
-            body.worldTransform = Matrix4().setToTranslation(point.x, TableGeometry.BALL_RADIUS, point.z).rotate(Vector3.X, -90f)
-            body.userValue = id
-            body.restitution = PhysicsTuning.BALL_RESTITUTION
-            body.friction = PhysicsTuning.BALL_FRICTION
-            body.rollingFriction = PhysicsTuning.ROLLING_FRICTION
-            body.spinningFriction = PhysicsTuning.SPINNING_FRICTION
-            body.setDamping(0f, 0f)
-            body.setSleepingThresholds(PhysicsTuning.LINEAR_SLEEP_SPEED, PhysicsTuning.ANGULAR_SLEEP_SPEED)
-            body.ccdMotionThreshold = TableGeometry.BALL_RADIUS * 0.5f
-            body.ccdSweptSphereRadius = TableGeometry.BALL_RADIUS * 0.8f
-            world.addRigidBody(body)
-            balls.add(Ball(id, body).also { readTransform(it); it.previousPosition.set(it.position); it.previousRotation.set(it.rotation) })
-        }
+        layout.forEach { (id, point) -> addBall(id, point) }
         accumulator = 0f
         quietSeconds = 0f
         wasSettled = true
+        interpolation = 0f
+    }
+
+    private fun addBall(id: Int, point: Point): Ball {
+        val body = rigidBody(ballShape, TableGeometry.BALL_MASS, point)
+        // Texture stamps lie on local ±Z, away from sphere UV poles. Face +Z upward.
+        body.worldTransform = Matrix4().setToTranslation(point.x, TableGeometry.BALL_RADIUS, point.z).rotate(Vector3.X, -90f)
+        body.userValue = id
+        body.restitution = PhysicsTuning.BALL_RESTITUTION
+        body.friction = PhysicsTuning.BALL_FRICTION
+        body.rollingFriction = PhysicsTuning.ROLLING_FRICTION
+        body.spinningFriction = PhysicsTuning.SPINNING_FRICTION
+        body.setDamping(0f, 0f)
+        body.setSleepingThresholds(PhysicsTuning.LINEAR_SLEEP_SPEED, PhysicsTuning.ANGULAR_SLEEP_SPEED)
+        body.ccdMotionThreshold = TableGeometry.BALL_RADIUS * 0.5f
+        body.ccdSweptSphereRadius = TableGeometry.BALL_RADIUS * 0.8f
+        world.addRigidBody(body)
+        val ball = Ball(id, body).also { readTransform(it); it.previousPosition.set(it.position); it.previousRotation.set(it.rotation) }
+        balls.add(ball)
+        return ball
+    }
+
+    fun snapshot() = TableSnapshot(balls.filter { !it.pocketed }.map { ball ->
+        BallSnapshot(ball.id, ball.point, ball.position.y, ball.rotation.x, ball.rotation.y, ball.rotation.z, ball.rotation.w)
+    })
+
+    /** Snapshots are taken only after settling: velocities are intentionally zero. */
+    fun restore(snapshot: TableSnapshot) {
+        reset(emptyList())
+        snapshot.balls.forEach { saved ->
+            val ball = addBall(saved.id, saved.point)
+            ball.body.worldTransform = Matrix4().set(Vector3(saved.point.x, saved.height, saved.point.z),
+                Quaternion(saved.qx, saved.qy, saved.qz, saved.qw))
+            readTransform(ball)
+            ball.previousPosition.set(ball.position)
+            ball.previousRotation.set(ball.rotation)
+        }
+    }
+
+    fun replaceCueBall() {
+        val point = CueReplacement.position(balls.filter { it.id != 0 && !it.pocketed }.map { it.point })
+        balls.firstOrNull { it.id == 0 }?.let {
+            if (!it.pocketed) world.removeRigidBody(it.body)
+            it.body.dispose()
+            balls.remove(it)
+        }
+        contactImpacts.reset()
+        addBall(0, point)
         interpolation = 0f
     }
 
@@ -184,4 +217,10 @@ class PoolPhysics(
     }
 
     companion object { const val STEP = 1f / 120f }
+}
+
+/** Initialization precedes worker creation; subsequent worlds never reload native libraries. */
+private object BulletRuntime {
+    init { Bullet.init() }
+    fun initialize() = Unit
 }

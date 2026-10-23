@@ -12,6 +12,7 @@ import io.github.ffeltrinelli.pool.aim.*
 import io.github.ffeltrinelli.pool.input.*
 import io.github.ffeltrinelli.pool.model.*
 import io.github.ffeltrinelli.pool.physics.PoolPhysics
+import io.github.ffeltrinelli.pool.opponent.*
 import io.github.ffeltrinelli.pool.render.PoolRenderer
 import java.io.File
 import io.github.ffeltrinelli.pool.view.ViewMode
@@ -55,7 +56,10 @@ object VisualSmoke {
         private val aidScenarios = listOf("top", "player").flatMap { mode ->
             listOf("enabled", "disabled", "glancing", "rail", "pocket", "blocked", "reset", "settings-off").map { "$mode-aid-$it" }
         }
-        private val allScenarios get() = scenarios + viewScenarios + pocketScenarios + aidScenarios
+        private val computerScenarios = listOf("top", "player").flatMap { mode ->
+            listOf("human", "thinking", "cue-aim", "cue-withdrawn", "cue-contact", "foul-human", "foul-computer", "human-win", "computer-win", "draw", "settings").map { "$mode-computer-$it" }
+        }
+        private val allScenarios get() = scenarios + viewScenarios + pocketScenarios + aidScenarios + computerScenarios
         private var index = 0
         override fun create() {
             renderer = PoolRenderer()
@@ -72,6 +76,10 @@ object VisualSmoke {
                 if (System.getenv("POOL_RECORD_PLAYER_VIEW") == "1") {
                     try { recordPlayerMotion() }
                     catch (failure: Throwable) { report.record("player-motion-recording", failure.stackTraceToString()) }
+                }
+                if (System.getenv("POOL_RECORD_COMPUTER") == "1") {
+                    try { recordComputerMotion() }
+                    catch (failure: Throwable) { report.record("computer-motion-recording", failure.stackTraceToString()) }
                 }
                 Gdx.app.exit()
                 return
@@ -95,11 +103,17 @@ object VisualSmoke {
             }
         }
         private fun fixture(name: String) {
-            physics.reset(); session.restart(); gesture.resetForRack(Point(0f, 0.58f), Point(0f, -0.38f))
+            physics.reset(); session.restart(PlayMode.SOLO); gesture.resetForRack(Point(0f, 0.58f), Point(0f, -0.38f))
             renderer.views.select(ViewMode.TOP)
             renderer.views.reset()
             renderer.settingsOpen = false
             renderer.aidedAim = true
+            renderer.humanCanAim = true
+            renderer.computerPose = null
+            renderer.holdOverview = false
+            renderer.computerThinking = false
+            renderer.foulPlayer = null
+            if (name in computerScenarios) { computerFixture(name); return }
             if (name in aidScenarios) { aidFixture(name); return }
             if (name in viewScenarios) { viewFixture(name); return }
             if (name in pocketScenarios) { pocketFixture(name); return }
@@ -172,6 +186,65 @@ object VisualSmoke {
                 }
             }
         }
+        private fun computerFixture(name: String) {
+            session.restart(PlayMode.COMPUTER)
+            val playerView = name.startsWith("player")
+            renderer.views.select(if (playerView) ViewMode.PLAYER else ViewMode.TOP)
+            renderer.views.update(Point(0f, 0.58f), gesture.direction, true)
+            fun shot(ids: List<Int>) {
+                session.beginShot()
+                ids.forEach { session.accept(PhysicsEvent.Pocketed(it)) }
+                session.accept(PhysicsEvent.Settled)
+            }
+            when {
+                name.endsWith("human-win") -> { shot((1..8).toList()); shot((9..15).toList()) }
+                name.endsWith("computer-win") -> { shot(listOf(1)); shot((2..15).toList()) }
+                name.endsWith("draw") -> shot((1..15).toList() + 0)
+                name.endsWith("foul-human") -> { shot(listOf(0)); renderer.foulPlayer = Player.HUMAN }
+                name.endsWith("foul-computer") -> { shot(emptyList()); shot(listOf(0)); renderer.foulPlayer = Player.COMPUTER }
+                !name.endsWith("human") && !name.endsWith("settings") -> shot(emptyList())
+            }
+            if (session.finished) physics.reset(listOf(0 to Point(0f, 0.58f)))
+            renderer.humanCanAim = session.humanTurn && renderer.foulPlayer == null
+            renderer.holdOverview = !renderer.humanCanAim
+            renderer.computerThinking = name.endsWith("thinking")
+            renderer.settingsOpen = name.endsWith("settings")
+            if ("cue-" in name) {
+                val stroke = ComputerStroke(ShotCommand(Point(0.4f, -1f).normalized(), 0.35f))
+                val elapsed = when {
+                    name.endsWith("withdrawn") -> 0.6f
+                    name.endsWith("contact") -> 0.799f
+                    else -> 0f
+                }
+                check(stroke.advance(elapsed) == null)
+                renderer.computerPose = stroke.pose
+                check(stroke.pose.direction == Point(0.4f, -1f).normalized())
+                val expected = if (name.endsWith("withdrawn")) 0.12f else if (name.endsWith("contact")) 0f else 0.05f
+                check(abs(stroke.pose.tipGap - expected) < 0.0001f)
+            }
+            if (playerView && renderer.holdOverview) renderer.views.update(Point(0f, 0.58f), gesture.direction, false, 1f)
+            check(session.mode == PlayMode.COMPUTER)
+        }
+
+        private fun recordComputerMotion() {
+            fixture("player-computer-cue-aim")
+            val stroke = ComputerStroke(ShotCommand(Point(0f, -1f), 0.65f))
+            val directory = File(report.directory, "computer-motion").apply { mkdirs() }
+            for (frame in 0 until 150) {
+                val shot = stroke.advance(1f / 60f)
+                if (shot != null) { session.beginShot(); physics.strike(shot) }
+                renderer.computerPose = if (session.canShoot) stroke.pose else null
+                if (!session.canShoot) physics.advance(1f / 60f)
+                framebuffer.begin()
+                try {
+                    renderer.render(physics, session, gesture, 1080, 2400)
+                    val pixels = Pixmap.createFromFrameBuffer(0, 0, 1080, 2400)
+                    try { PixmapIO.writePNG(FileHandle(File(directory, "frame-%03d.png".format(frame))), pixels, -1, true) }
+                    finally { pixels.dispose() }
+                } finally { framebuffer.end() }
+            }
+        }
+
         private fun pocketFixture(name: String) {
             val pocket = if ("corner" in name) PocketGeometry.pockets[3] else PocketGeometry.pockets[5]
             val cue = pocket.mouthCenter - pocket.outward * 0.24f

@@ -11,6 +11,7 @@ import com.badlogic.gdx.math.*
 import com.badlogic.gdx.utils.Disposable
 import io.github.ffeltrinelli.pool.aim.*
 import io.github.ffeltrinelli.pool.input.CueGesture
+import io.github.ffeltrinelli.pool.opponent.CuePose
 import io.github.ffeltrinelli.pool.model.*
 import io.github.ffeltrinelli.pool.physics.PoolPhysics
 import io.github.ffeltrinelli.pool.view.GameViews
@@ -26,6 +27,11 @@ class PoolRenderer : Disposable {
     private val attributes = (VertexAttributes.Usage.Position or VertexAttributes.Usage.Normal or VertexAttributes.Usage.TextureCoordinates).toLong()
     val views = GameViews()
     val hud = GameHud()
+    var humanCanAim = true
+    var computerPose: CuePose? = null
+    var holdOverview = false
+    var computerThinking = false
+    var foulPlayer: Player? = null
     var aidedAim = true
     private val aimPredictor = AimPredictor()
     private val aimGuide = AimGuideRenderer()
@@ -89,7 +95,7 @@ class PoolRenderer : Disposable {
         Gdx.gl.glClearColor(0.035f, 0.075f, 0.095f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
         val cuePoint = physics.balls.firstOrNull { it.id == 0 && !it.pocketed }?.point
-        views.update(cuePoint, gesture.direction, session.canShoot, viewDelta)
+        views.update(cuePoint, gesture.direction, session.canShoot && !holdOverview, viewDelta)
         modelBatch.begin(views.active.camera)
         modelBatch.render(scene, environment)
         physics.balls.forEach { ball ->
@@ -100,9 +106,10 @@ class PoolRenderer : Disposable {
             modelBatch.render(ballInstances[ball.id].apply { transform.set(position, rotation) }, environment)
         }
         val cueBall = physics.balls.firstOrNull { it.id == 0 && !it.pocketed }
-        if (session.canShoot && cueBall != null) {
-            val d = gesture.direction
-            val tip = cueBall.point - d * (TableGeometry.BALL_RADIUS + gesture.tipGap)
+        val cuePose = if (session.humanTurn && humanCanAim) CuePose(gesture.direction, gesture.tipGap) else computerPose
+        if (session.canShoot && cueBall != null && cuePose != null) {
+            val d = cuePose.direction
+            val tip = cueBall.point - d * (TableGeometry.BALL_RADIUS + cuePose.tipGap)
             val length = views.active.cueLength(tip, d)
             val center = tip - d * (length / 2)
             modelBatch.render(cueInstance.apply {
@@ -114,7 +121,7 @@ class PoolRenderer : Disposable {
 
         }
         modelBatch.end()
-        if (aidedAim && !settingsOpen && session.canShoot && cueBall != null) {
+        if (aidedAim && !settingsOpen && session.humanTurn && humanCanAim && cueBall != null) {
             val path = aimPredictor.predict(cueBall.point, gesture.direction,
                 physics.balls.filter { !it.pocketed }.map { AimBall(it.id, it.point) })
             val start = cueBall.point + gesture.direction * TableGeometry.BALL_RADIUS
@@ -122,7 +129,7 @@ class PoolRenderer : Disposable {
                 aimGuide.render(views.active.camera, start, path.end, path.contactPoint)
             }
         }
-        hud.render(session, settingsOpen, views.mode, aidedAim)
+        hud.render(session, settingsOpen, views.mode, aidedAim, computerThinking, foulPlayer)
     }
 
     override fun dispose() {
