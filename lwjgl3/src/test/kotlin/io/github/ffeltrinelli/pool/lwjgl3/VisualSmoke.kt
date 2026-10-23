@@ -59,7 +59,10 @@ object VisualSmoke {
         private val computerScenarios = listOf("top", "player").flatMap { mode ->
             listOf("human", "thinking", "cue-aim", "cue-withdrawn", "cue-contact", "foul-human", "foul-computer", "human-win", "computer-win", "draw", "settings").map { "$mode-computer-$it" }
         }
-        private val allScenarios get() = scenarios + viewScenarios + pocketScenarios + aidScenarios + computerScenarios
+        private val difficultyScenarios = listOf("top", "player").flatMap { view ->
+            OpponentDifficulty.entries.map { "$view-difficulty-${it.name.lowercase()}" }
+        }
+        private val allScenarios get() = scenarios + viewScenarios + pocketScenarios + aidScenarios + computerScenarios + difficultyScenarios
         private var index = 0
         override fun create() {
             renderer = PoolRenderer()
@@ -113,6 +116,16 @@ object VisualSmoke {
             renderer.holdOverview = false
             renderer.computerThinking = false
             renderer.foulPlayer = null
+            renderer.difficulty = OpponentDifficulty.MEDIUM
+            if (name in difficultyScenarios) {
+                session.restart(PlayMode.COMPUTER)
+                renderer.views.select(if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP)
+                renderer.difficulty = OpponentDifficulty.entries.single { name.endsWith(it.name.lowercase()) }
+                renderer.settingsOpen = true
+                check(renderer.hud.layout.restart.y == renderer.hud.layout.exit.y)
+                check(renderer.hud.layout.aidedAim.width == renderer.hud.layout.top.width)
+                return
+            }
             if (name in computerScenarios) { computerFixture(name); return }
             if (name in aidScenarios) { aidFixture(name); return }
             if (name in viewScenarios) { viewFixture(name); return }

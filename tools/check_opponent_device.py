@@ -4,6 +4,7 @@ import argparse
 import json
 import subprocess
 import time
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 PACKAGE = 'io.github.ffeltrinelli.pool'
@@ -21,6 +22,8 @@ def main():
         return subprocess.check_output([args.adb, *arguments], timeout=20)
 
     def shell(command):
+        if command.startswith('input ') and not pool_is_foreground():
+            raise SystemExit('Game left the foreground; stopped before sending touch input.')
         return adb('shell', command).decode()
 
     def capture(name):
@@ -39,21 +42,36 @@ def main():
 
     def hud_visible():
         pixels = subprocess.check_output(['ffmpeg', '-v', 'error', '-i', 'pipe:0',
-            '-vf', 'crop=280:180:30:140', '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'],
+            '-vf', 'crop=110:110:900:245', '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'],
             input=adb('exec-out', 'screencap', '-p'), timeout=10)
-        return sum(1 for i in range(0, len(pixels), 3) if min(pixels[i:i+3]) > 180) > 30
+        # Require Pool's green gear button and cream icon, not arbitrary bright launcher pixels.
+        green = sum(1 for i in range(0, len(pixels), 3)
+                    if all(abs(pixels[i + c] - value) < 5 for c, value in enumerate((50, 80, 79))))
+        cream = sum(1 for i in range(0, len(pixels), 3)
+                    if all(abs(pixels[i + c] - value) < 5 for c, value in enumerate((242, 229, 200))))
+        return green > 1000 and cream > 50
 
     def pool_is_foreground():
         activity = shell('dumpsys activity activities')
         resumed = [line for line in activity.splitlines() if 'topResumedActivity=' in line or 'mResumedActivity:' in line]
-        return any(PACKAGE in line for line in resumed)
+        focused = shell('dumpsys window').splitlines()
+        return (any(PACKAGE in line for line in resumed)
+                and any('mCurrentFocus=' in line and PACKAGE in line for line in focused))
 
     if '1080x2400' not in shell('wm size'):
         raise SystemExit('This script requires the OnePlus 1080x2400 safe viewport.')
+    def preference(name, default=None):
+        node = ET.fromstring(preferences()).find(f"./string[@name='{name}']")
+        return default if node is None else node.text
+
+    def select_difficulty(level, x):
+        shell(f'input tap {x} 1511')
+        wait_for(lambda: preference('opponent-difficulty', 'MEDIUM') == level, f'saved {level} difficulty')
+
     checks = {}
     shell('am force-stop ' + PACKAGE)
     shell('am start -W -n ' + ACTIVITY)
-    wait_for(hud_visible, 'first game frame')
+    wait_for(lambda: pool_is_foreground() and hud_visible(), 'first foreground game frame')
     capture('reopened')
     shell('input tap 956 288')
     shell('input tap 342 829')  # Solo, starts a fresh rack.
@@ -64,28 +82,53 @@ def main():
     wait_for(lambda: 'COMPUTER' in preferences(), 'saved computer mode')
     checks['computer_saved'] = True
     capture('versus-settings')
+    for level, x in [('EASY', 283), ('MEDIUM', 540), ('HARD', 797)]:
+        select_difficulty(level, x)
+        capture('difficulty-' + level.lower())
+    checks['difficulty_taps_save_all_levels'] = True
+    shell('input touchscreen swipe 797 1511 100 1511 600')
+    wait_for(lambda: preference('opponent-difficulty') == 'EASY', 'left drag clamps to Easy')
+    shell('input touchscreen swipe 283 1511 1000 1511 600')
+    wait_for(lambda: preference('opponent-difficulty') == 'HARD', 'right drag clamps to Hard')
+    checks['difficulty_drag_snaps_and_clamps'] = True
+    shell('input tap 20 1511')
+    checks['outside_tap_preserves_difficulty'] = preference('opponent-difficulty') == 'HARD'
+    shell('input tap 926 609')  # X dismisses the modal.
+    capture('x-dismissed')
+    shell('input tap 956 288')
+    select_difficulty('MEDIUM', 540)
+    capture('difficulty-medium-restored')
     shell('input keyevent KEYCODE_BACK')
     capture('back-dismissed')
     pid = shell('pidof ' + PACKAGE).strip()
+    shell('input tap 956 288')  # Suspend with Settings still open through Home/resume.
+    capture('before-background')
     shell('input keyevent KEYCODE_HOME')
     shell('am start -W -n ' + ACTIVITY)
-    wait_for(hud_visible, 'resumed game frame')
+    wait_for(pool_is_foreground, 'resumed foreground game')
     checks['background_resume_same_process'] = pid == shell('pidof ' + PACKAGE).strip()
+    capture('after-background')
+    select_difficulty('HARD', 797)  # This tap succeeds only if the modal stayed open.
+    checks['background_preserves_open_settings'] = preference('opponent-difficulty') == 'HARD'
+    shell('input keyevent KEYCODE_BACK')
     for index in range(3):
         shell('input tap 956 288')
-        shell('input tap 540 1498')
+        shell('input tap 342 1781')
         time.sleep(.1)
         capture('restart-' + str(index))
     shell('am force-stop ' + PACKAGE)
     shell('am start -W -n ' + ACTIVITY)
-    wait_for(hud_visible, 'new process first frame')
-    checks['computer_persists_after_process_restart'] = 'COMPUTER' in preferences()
+    wait_for(lambda: pool_is_foreground() and hud_visible(), 'new process foreground frame')
+    checks['computer_persists_after_process_restart'] = preference('play-mode') == 'COMPUTER'
+    checks['difficulty_persists_after_process_restart'] = preference('opponent-difficulty') == 'HARD'
     shell('input tap 956 288')
-    shell('input tap 540 1678')
+    select_difficulty('MEDIUM', 540)
+    shell('input tap 738 1781')
     wait_for(lambda: not pool_is_foreground(), 'Exit finishing the activity')
     checks['exit_finishes_activity'] = True
+    checks['medium_saved_before_exit'] = preference('opponent-difficulty') == 'MEDIUM'
     shell('am start -W -n ' + ACTIVITY)
-    wait_for(hud_visible, 'first game frame')
+    wait_for(lambda: pool_is_foreground() and hud_visible(), 'first foreground game frame')
     capture('ready-to-play')
     (args.output / 'lifecycle.json').write_text(json.dumps(checks, indent=2))
     print(json.dumps(checks, indent=2))

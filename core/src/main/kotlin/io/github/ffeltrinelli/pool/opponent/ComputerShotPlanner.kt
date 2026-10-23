@@ -7,7 +7,6 @@ import org.apache.commons.math3.optim.*
 import org.apache.commons.math3.optim.nonlinear.scalar.*
 import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizer
 import org.apache.commons.math3.random.Well19937c
-import java.util.Random
 import java.util.concurrent.CancellationException
 import kotlin.math.*
 
@@ -15,13 +14,10 @@ object OpponentTuning {
     const val MAX_IMPULSE = 1.15f
     const val MIN_IMPULSE = 0.04f
     const val EVALUATIONS = 64
-    const val DEADLINE_MILLIS = 2000L
+    const val DEADLINE_MILLIS = 5000L
     const val SIMULATION_SECONDS = 30f
     const val THINK_SECONDS = 1f
     const val FOUL_SECONDS = 3f
-    const val ANGLE_ERROR_DEGREES = 0.25
-    const val MAX_ANGLE_ERROR_DEGREES = 0.75
-    const val POWER_ERROR = 0.03
 }
 
 data class PlanningResult(val shot: ShotCommand, val evaluations: Int, val elapsedMillis: Long, val usedFallback: Boolean)
@@ -33,8 +29,7 @@ interface ComputerShotPlanner : AutoCloseable {
 /** Called exclusively by one worker. Its Bullet world never emits live session or audio events. */
 class BulletShotPlanner(
     private val maxEvaluations: Int = OpponentTuning.EVALUATIONS,
-    private val deadlineMillis: Long = OpponentTuning.DEADLINE_MILLIS,
-    private val variation: Boolean = true
+    private val deadlineMillis: Long = OpponentTuning.DEADLINE_MILLIS
 ) : ComputerShotPlanner {
     private var simulation: PoolPhysics? = null
     private var settled = false
@@ -100,18 +95,9 @@ class BulletShotPlanner(
             }
         } catch (_: SearchDeadline) { /* Keep the best complete simulation; partial outcomes are never scored. */ }
         if (cancelled() || Thread.currentThread().isInterrupted) throw CancellationException()
-        val shot = if (variation) casualVariation(best, seed) else best
-        return PlanningResult(shot, completed, (System.nanoTime() - started) / 1_000_000, completed == 0)
+        return PlanningResult(best, completed, (System.nanoTime() - started) / 1_000_000, completed == 0)
     }
 
-    private fun casualVariation(shot: ShotCommand, seed: Long): ShotCommand {
-        val random = Random(seed)
-        val error = (random.nextGaussian() * OpponentTuning.ANGLE_ERROR_DEGREES)
-            .coerceIn(-OpponentTuning.MAX_ANGLE_ERROR_DEGREES, OpponentTuning.MAX_ANGLE_ERROR_DEGREES)
-        val angle = atan2(shot.direction.x.toDouble(), -shot.direction.z.toDouble()) + Math.toRadians(error)
-        val impulse = (shot.impulse * (1 + (random.nextDouble() * 2 - 1) * OpponentTuning.POWER_ERROR)).toFloat()
-        return ShotCommand(Point(sin(angle).toFloat(), -cos(angle).toFloat()), impulse.coerceIn(OpponentTuning.MIN_IMPULSE, OpponentTuning.MAX_IMPULSE))
-    }
     override fun close() { simulation?.dispose(); simulation = null }
     private class SearchDeadline : RuntimeException()
 }

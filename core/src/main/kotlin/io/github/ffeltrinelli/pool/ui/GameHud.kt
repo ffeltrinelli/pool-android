@@ -7,6 +7,7 @@ import com.badlogic.gdx.utils.Disposable
 import io.github.ffeltrinelli.pool.model.*
 import io.github.ffeltrinelli.pool.model.RoundState
 import io.github.ffeltrinelli.pool.view.ViewMode
+import io.github.ffeltrinelli.pool.opponent.OpponentDifficulty
 import kotlin.math.*
 
 /** One layout supplies drawing and hit regions, including the modal input barrier. */
@@ -21,15 +22,33 @@ class HudLayout(width: Int, height: Int) {
     val close = Rectangle(336f, panel.y + panel.height - 54f, 48f, 48f)
     val top = Rectangle(60f, uiHeight / 2 + 55f, 146f, 48f)
     val player = Rectangle(214f, uiHeight / 2 + 55f, 146f, 48f)
-    val aidedAim = Rectangle(60f, uiHeight / 2 - 30f, 300f, 48f)
-    val restart = Rectangle(60f, uiHeight / 2 - 120f, 300f, 48f)
-    val exit = Rectangle(60f, uiHeight / 2 - 190f, 300f, 48f)
+    val aidedAim = Rectangle(60f, uiHeight / 2 - 30f, 146f, 48f)
+    val difficulty = Rectangle(60f, uiHeight / 2 - 125f, 300f, 48f)
+    val difficultyStops = OpponentDifficulty.entries.mapIndexed { index, _ ->
+        Rectangle(difficulty.x + index * 100f, difficulty.y, 100f, 48f)
+    }
+    val restart = Rectangle(60f, uiHeight / 2 - 230f, 146f, 48f)
+    val exit = Rectangle(214f, uiHeight / 2 - 230f, 146f, 48f)
     val playAgain = Rectangle(100f, uiHeight / 2 - 85f, 220f, 48f)
+
+    fun difficultyAt(screenX: Int): OpponentDifficulty {
+        val x = screenX * 420f / width
+        val index = ((x - difficulty.x) / 100f).toInt().coerceIn(0, 2)
+        return OpponentDifficulty.entries[index]
+    }
+
+    fun containsDifficulty(screenX: Int, screenY: Int): Boolean =
+        difficulty.contains(screenX * 420f / width, uiHeight - screenY * uiHeight / height)
 
     fun hit(screenX: Int, screenY: Int, settingsOpen: Boolean, finished: Boolean): HudAction? {
         val x = screenX * 420f / width
         val y = uiHeight - screenY * uiHeight / height
         if (settingsOpen) return when {
+            difficulty.contains(x, y) -> when (difficultyAt(screenX)) {
+                OpponentDifficulty.EASY -> HudAction.EASY
+                OpponentDifficulty.MEDIUM -> HudAction.MEDIUM
+                OpponentDifficulty.HARD -> HudAction.HARD
+            }
             solo.contains(x, y) -> HudAction.SOLO
             computer.contains(x, y) -> HudAction.COMPUTER
             aidedAim.contains(x, y) -> HudAction.TOGGLE_AIM
@@ -80,7 +99,7 @@ class GameHud : Disposable {
         camera.setToOrtho(false, 420f, layout.uiHeight)
     }
 
-    fun render(session: GameSession, settingsOpen: Boolean, mode: ViewMode, aidedAim: Boolean = true, thinking: Boolean = false, foulPlayer: Player? = null) {
+    fun render(session: GameSession, settingsOpen: Boolean, mode: ViewMode, aidedAim: Boolean = true, thinking: Boolean = false, foulPlayer: Player? = null, difficulty: OpponentDifficulty = OpponentDifficulty.MEDIUM) {
         val h = layout.uiHeight
         sprites.projectionMatrix = camera.combined
         sprites.begin()
@@ -99,7 +118,7 @@ class GameHud : Disposable {
         }
         if (session.finished) drawResult(session)
         drawGear()
-        if (settingsOpen) drawSettings(mode, aidedAim, session.mode)
+        if (settingsOpen) drawSettings(mode, aidedAim, session.mode, difficulty)
         sprites.end()
     }
 
@@ -109,7 +128,7 @@ class GameHud : Disposable {
         sprites.draw(gearIcon, layout.gear.x + 8f, layout.gear.y + 8f, 32f, 32f)
     }
 
-    private fun drawSettings(mode: ViewMode, aidedAim: Boolean, playMode: PlayMode) {
+    private fun drawSettings(mode: ViewMode, aidedAim: Boolean, playMode: PlayMode, difficulty: OpponentDifficulty) {
         shade()
         rectangle(layout.panel, "163039")
         text("SETTINGS", 60f, layout.uiHeight / 2 + 245f, 1.35f, "f2e5c8")
@@ -122,8 +141,24 @@ class GameHud : Disposable {
         button(layout.player, "Player view", mode == ViewMode.PLAYER)
         text("Aided aim", 60f, layout.uiHeight / 2 + 30f, 0.92f, "b8ccca")
         button(layout.aidedAim, if (aidedAim) "On" else "Off", aidedAim)
+        drawDifficulty(difficulty, playMode)
         button(layout.restart, "Restart")
         button(layout.exit, "Exit game")
+    }
+
+    private fun drawDifficulty(difficulty: OpponentDifficulty, playMode: PlayMode) {
+        val track = layout.difficulty
+        text("Difficulty: ${difficulty.label}", 60f, track.y + 67f, 0.92f, "b8ccca")
+        rectangle(Rectangle(track.x + 50f, track.y + 22f, 200f, 4f), "527e70")
+        for ((index, level) in OpponentDifficulty.entries.withIndex()) {
+            val stop = layout.difficultyStops[index]
+            val center = stop.x + stop.width / 2
+            val selected = level == difficulty
+            rectangle(Rectangle(center - 5f, stop.y + 18f, 10f, 12f), "8ba6a8")
+            if (selected) rectangle(Rectangle(center - 10f, stop.y + 14f, 20f, 20f), "d9bd83")
+            text(level.label, center, stop.y - 10f, 0.82f, if (selected) "f2e5c8" else "b8ccca", true)
+        }
+        if (playMode == PlayMode.SOLO) text("Applies to Vs computer", 60f, track.y - 36f, 0.72f, "8ba6a8")
     }
 
     private fun drawResult(session: GameSession) {

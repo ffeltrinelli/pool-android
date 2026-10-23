@@ -58,7 +58,7 @@ class ComputerPhysicsTest {
     }
     @Test fun `seeded optimization is reproducible bounded and uses a separate silent world`() {
         val live = PoolPhysics()
-        val planner = BulletShotPlanner(maxEvaluations = 24, deadlineMillis = Long.MAX_VALUE, variation = false)
+        val planner = BulletShotPlanner(maxEvaluations = 24, deadlineMillis = Long.MAX_VALUE)
         try {
             live.reset(listOf(0 to Point(0f, 0f), 1 to Point(0.3f, 0f)))
             val snapshot = live.snapshot()

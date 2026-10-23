@@ -2,6 +2,7 @@ package io.github.ffeltrinelli.pool
 
 import com.badlogic.gdx.Preferences
 import io.github.ffeltrinelli.pool.model.PlayMode
+import io.github.ffeltrinelli.pool.opponent.OpponentDifficulty
 import io.github.ffeltrinelli.pool.ui.*
 import io.github.ffeltrinelli.pool.view.ViewMode
 import org.junit.Assert.*
@@ -10,6 +11,10 @@ import java.lang.reflect.Proxy
 
 class GameControlsTest {
     private class Preference(var saved: ViewMode = ViewMode.TOP) : SettingsPreference {
+        var difficulty = OpponentDifficulty.MEDIUM
+        var difficultySaves = 0
+        override fun loadDifficulty() = difficulty
+        override fun saveDifficulty(difficulty: OpponentDifficulty) { this.difficulty = difficulty; difficultySaves++ }
         var play = PlayMode.SOLO
         override fun loadPlayMode() = play
         override fun savePlayMode(mode: PlayMode) { play = mode }
@@ -109,7 +114,15 @@ class GameControlsTest {
         assertEquals(PlayMode.COMPUTER, SavedSettingsPreference(preferences).loadPlayMode())
         values["play-mode"] = "obsolete"
         assertEquals(PlayMode.SOLO, store.loadPlayMode())
-        assertEquals(3, flushes)
+        assertEquals(OpponentDifficulty.MEDIUM, store.loadDifficulty())
+        values["opponent-difficulty"] = "obsolete"
+        assertEquals(OpponentDifficulty.MEDIUM, store.loadDifficulty())
+        store.saveDifficulty(OpponentDifficulty.EASY)
+        assertEquals(OpponentDifficulty.EASY, SavedSettingsPreference(preferences).loadDifficulty())
+        assertEquals(PlayMode.SOLO, store.loadPlayMode())
+        assertEquals(ViewMode.PLAYER, store.loadViewMode())
+        assertFalse(store.loadAidedAim())
+        assertEquals(4, flushes)
     }
 
     @Test fun `aided aim is enabled initially saved independently and retained by restart`() {
@@ -145,6 +158,27 @@ class GameControlsTest {
         assertEquals(PlayMode.COMPUTER, controls.playMode)
     }
 
+    @Test fun `difficulty persists without restarting resuming or saving duplicate selections`() {
+        val preference = Preference()
+        val effects = Effects()
+        val controls = GameControls(preference, effects)
+        assertEquals(OpponentDifficulty.MEDIUM, controls.difficulty)
+        controls.handle(HudAction.SETTINGS)
+        controls.selectDifficulty(OpponentDifficulty.MEDIUM)
+        assertEquals(0, preference.difficultySaves)
+        for (level in OpponentDifficulty.entries) {
+            controls.selectDifficulty(level)
+            assertEquals(level, controls.difficulty)
+            assertTrue(controls.settingsOpen && controls.suspended && effects.paused)
+            assertEquals(0, effects.restarts)
+            assertEquals(level, GameControls(preference, Effects()).difficulty)
+        }
+        controls.handle(HudAction.SOLO)
+        controls.handle(HudAction.COMPUTER)
+        controls.handle(HudAction.RESTART)
+        assertEquals(OpponentDifficulty.HARD, controls.difficulty)
+    }
+
     @Test fun `exit cancels input stops playback and requests one normal application exit`() {
         val effects = Effects()
         val controls = GameControls(Preference(), effects)
@@ -173,7 +207,7 @@ class GameControlsTest {
             assertEquals(HudAction.CLOSE, hit(layout.close, true))
             assertEquals(HudAction.TOGGLE_AIM, hit(layout.aidedAim, true))
             assertEquals(HudAction.EXIT, hit(layout.exit, true))
-            assertTrue(layout.top.y > layout.aidedAim.y && layout.aidedAim.y > layout.restart.y && layout.restart.y > layout.exit.y)
+            assertTrue(layout.top.y > layout.aidedAim.y && layout.aidedAim.y > layout.restart.y && layout.restart.y == layout.exit.y)
             assertTrue(layout.close.x > layout.panel.x + layout.panel.width / 2)
             assertTrue(layout.close.y > layout.top.y)
             for (rect in listOf(layout.solo, layout.computer, layout.close, layout.top, layout.player, layout.aidedAim, layout.restart, layout.exit)) {

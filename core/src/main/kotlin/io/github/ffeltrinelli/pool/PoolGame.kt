@@ -13,6 +13,7 @@ import io.github.ffeltrinelli.pool.view.ViewMode
 class PoolGame : ApplicationAdapter() {
     private val session = GameSession()
     private val gesture = CueGesture()
+    private val difficultySlider = DifficultySliderInput()
     private lateinit var audio: PoolAudio
     private lateinit var physics: PoolPhysics
     private lateinit var renderer: PoolRenderer
@@ -54,7 +55,15 @@ class PoolGame : ApplicationAdapter() {
         }
 
         override fun touchDown(x: Int, y: Int, pointer: Int, button: Int): Boolean {
-            if (pointer != 0 || button != Input.Buttons.LEFT || paused) return false
+            if (paused) return false
+            if (pointer != 0 || button != Input.Buttons.LEFT) return controls.settingsOpen
+            if (controls.settingsOpen) {
+                difficultySlider.begin(renderer.hud.layout, x, y, pointer)
+                difficultySlider.selection(renderer.hud.layout, x, pointer)?.let {
+                    controls.selectDifficulty(it)
+                    return true
+                }
+            }
             val action = renderer.hud.layout.hit(x, y, controls.settingsOpen, session.finished)
             if (action != null) { controls.handle(action); return true }
             if (!controls.acceptsGameplay || !humanCanShoot() || gameplayPointer != null) return false
@@ -66,6 +75,10 @@ class PoolGame : ApplicationAdapter() {
         }
 
         override fun touchDragged(x: Int, y: Int, pointer: Int): Boolean {
+            if (controls.settingsOpen) {
+                difficultySlider.selection(renderer.hud.layout, x, pointer)?.let(controls::selectDifficulty)
+                return true
+            }
             if (pointer != gameplayPointer || !controls.acceptsGameplay || !humanCanShoot()) return false
             val point = renderer.views.active.moveInput(x, y, gesture.phase, gesture.direction)
             gesture.move(sample(pointer, point))?.let(::strike)
@@ -73,11 +86,13 @@ class PoolGame : ApplicationAdapter() {
         }
 
         override fun touchUp(x: Int, y: Int, pointer: Int, button: Int): Boolean {
+            difficultySlider.end(pointer)
             if (pointer == gameplayPointer) cancelInput()
             return true
         }
 
         override fun touchCancelled(x: Int, y: Int, pointer: Int, button: Int): Boolean {
+            difficultySlider.end(pointer)
             if (pointer == gameplayPointer) cancelInput()
             return true
         }
@@ -91,7 +106,7 @@ class PoolGame : ApplicationAdapter() {
     }
 
     private fun sample(pointer: Int, point: Point) = PointerSample(pointer, point, Gdx.input.currentEventTime / 1e9)
-    private fun cancelInput() { gameplayPointer = null; gesture.cancel() }
+    private fun cancelInput() { difficultySlider.cancel(); gameplayPointer = null; gesture.cancel() }
     private fun humanCanShoot() = session.humanTurn && !computer.blocksShot
 
     private fun restart(mode: PlayMode = session.mode) {
@@ -117,7 +132,7 @@ class PoolGame : ApplicationAdapter() {
         if (!controls.suspended) {
             physics.advance(delta)
             processPhysicsEvents()
-            computer.advance(session, physics::snapshot, delta)?.let(::strike)
+            computer.advance(session, physics::snapshot, delta, controls.difficulty)?.let(::strike)
             audio.flush(delta)
             skipDelta = false
         }
@@ -128,6 +143,7 @@ class PoolGame : ApplicationAdapter() {
         renderer.foulPlayer = computer.foulPlayer
         renderer.settingsOpen = controls.settingsOpen
         renderer.aidedAim = controls.aidedAim
+        renderer.difficulty = controls.difficulty
         renderer.render(physics, session, gesture, viewDelta = delta)
     }
 

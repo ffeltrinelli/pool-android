@@ -48,9 +48,9 @@ The Gradle task adds macOS's required `-XstartOnFirstThread`. Mouse dragging use
 - Drag backward to withdraw the cue and forward to advance it. You can make repeated practice strokes without lifting. A deliberate axial movement locks the aiming direction until release; lift your finger to re-aim.
 - The forward-moving tip strikes on contact; pulling back first is optional. A faster push produces a stronger shot. Releasing before contact cancels the stroke.
 - Wait for all balls to settle before aiming again. Additional fingers are ignored.
-- Open the **gear** for Settings: choose **Solo** / **Vs computer**, choose **Top view** / **Player view**, toggle **Aided aim**, **Restart**, or **Exit game**, in that order. Settings pauses play and stops current sounds. Use the top-right **X** or Android Back to resume. Exit closes the app immediately without saving the rack. **Play again** remains available after a result. Every fresh rack resets the cue toward the apex ball and aligns the player camera, with a 50 mm resting tip gap.
+- Open the **gear** for Settings: choose **Solo** / **Vs computer**, choose **Top view** / **Player view**, toggle **Aided aim**, set **Difficulty** (Easy / Medium / Hard), then use **Restart** or **Exit game** side by side. Aided aim uses the same half-width button as the mode selectors. Settings pauses play and stops current sounds. Use the top-right **X** or Android Back to resume. Exit closes the app immediately without saving the rack. **Play again** remains available after a result. Every fresh rack resets the cue toward the apex ball and aligns the player camera, with a 50 mm resting tip gap.
 - In **Player view**, touching preserves aim. Drag sideways to turn the cue and camera together; drag down to pull back and up to strike. Lift to unlock the direction. At contact, the camera smoothly pulls back to a closer overview while balls move; outer table edges may be off-screen, then returns behind the settled cue ball.
-- The selected play mode, view and aided-aim setting are remembered across rack restarts and app launches; the first launch uses Solo, Top view and aided aim On. Changing play mode starts a fresh rack immediately.
+- The selected play mode, view, aided-aim setting and computer difficulty are remembered across rack restarts and app launches; the first launch uses Solo, Top view, aided aim On and Medium difficulty. Changing play mode starts a fresh rack immediately.
 - Ball collisions click, cushions thud, and cue contact plays a separate strike. Every physical pocket drop plays the pocket sound, including each cue-ball scratch after replacement in Vs computer. Stronger impacts are louder. There is no music or in-game volume control.
 
 Top view uses the original fixed portrait overhead camera and shows the whole table with gesture space around the rails. Player view uses a raised first-person perspective and may crop parts of the table. The cue can pass visually over rails and balls; there are no cue obstruction, spin, jump-shot, or eight-ball rule controls.
@@ -87,6 +87,9 @@ Native bodies and graphics resources have explicit owners and disposal paths. A 
 # Fast gesture/session tests and real native Bullet integration tests
 ./gradlew :core:test
 
+# Opt-in fixed-plan difficulty calibration: 8 layouts × 64 seeds × 3 levels
+./gradlew :core:difficultyCalibration
+
 # Production renderer at 1080 × 2400, writing PNGs and HTML
 ./gradlew :lwjgl3:visualTest
 
@@ -99,9 +102,9 @@ Native bodies and graphics resources have explicit owners and disposal paths. A 
 ./gradlew :android:lintDebug :android:assembleDebug
 ```
 
-JUnit tests also cover saved view/aided-aim selection, radius-aware aim prediction and obstruction, fresh-rack cue/camera alignment, exit delivery, modal hit routing and suspension, independent background/settings pause states, camera elevation/alignment/freeze/resize, virtual input without camera feedback, stable player circling, practice strokes, and equal-speed power across modes. JUnit tests cover continuous aiming/stroking, cancellation, noisy and multi-pointer input, power scaling/capping, exactly one impulse, settling, game outcomes, restart, native collisions, six physical pockets, high-speed cushion hits, rack integrity, fixed-step consistency, stable cloth support, sliding-to-rolling slip, energy loss, angular settling, and pose reset. Physics assertions use tolerances rather than exact trajectories.
+JUnit tests also cover saved view/aided-aim/difficulty selection, discrete slider capture and cancellation, seeded execution profiles and exact Hard commands, radius-aware aim prediction and obstruction, fresh-rack cue/camera alignment, exit delivery, modal hit routing and suspension, independent background/settings pause states, camera elevation/alignment/freeze/resize, virtual input without camera feedback, stable player circling, practice strokes, and equal-speed power across modes. JUnit tests cover continuous aiming/stroking, cancellation, noisy and multi-pointer input, power scaling/capping, exactly one impulse, settling, game outcomes, restart, native collisions, six physical pockets, high-speed cushion hits, rack integrity, fixed-step consistency, stable cloth support, sliding-to-rolling slip, energy loss, angular settling, and pose reset. Physics assertions use tolerances rather than exact trajectories.
 
-Rendered smoke tests capture 103 deterministic scenarios. Twenty-two opponent fixtures cover both views, human/computer turns, three computer cue stages, foul notices, all match results, and updated Settings. The original eighteen cover initial rack, cue/aim, three bidirectional cue positions (initial, withdrawn, forward return), six pocket approaches, scratch result, cleared result, and five stages of rolling solid/striped balls (0, 12, 18, 24 and 48 simulation steps). Nineteen additional fixtures cover settings in both modes, player view at four headings, withdrawn/returned strokes, halfway/full shot pullbacks and return to aiming, both player-view results, and six rail/pocket-adjacent positions. Twenty-eight additional pocket fixtures cover corner/side drop stages at 0, 12, 24, 36 and 60 fixed steps, shelf positions and jaw contacts in both views. Sixteen aided-aim fixtures cover enabled/disabled guides, glancing hits, rail and pocket endpoints, obstruction, restart alignment, and the Off setting in both views. Detail crops accompany rolling and pocket fixtures. Captures run on the graphics thread into a fixed-size framebuffer after fixture setup or a fixed simulation pre-roll. No timing sleeps or image baselines are used. Assertions check fixture state; screenshots support human visual review rather than automatic appearance approval.
+Rendered smoke tests capture 109 deterministic scenarios, including all three difficulty selections in both views. Twenty-two other opponent fixtures cover both views, human/computer turns, three computer cue stages, foul notices, all match results, and updated Settings. The original eighteen cover initial rack, cue/aim, three bidirectional cue positions (initial, withdrawn, forward return), six pocket approaches, scratch result, cleared result, and five stages of rolling solid/striped balls (0, 12, 18, 24 and 48 simulation steps). Nineteen additional fixtures cover settings in both modes, player view at four headings, withdrawn/returned strokes, halfway/full shot pullbacks and return to aiming, both player-view results, and six rail/pocket-adjacent positions. Twenty-eight additional pocket fixtures cover corner/side drop stages at 0, 12, 24, 36 and 60 fixed steps, shelf positions and jaw contacts in both views. Sixteen aided-aim fixtures cover enabled/disabled guides, glancing hits, rail and pocket endpoints, obstruction, restart alignment, and the Off setting in both views. Detail crops accompany rolling and pocket fixtures. Captures run on the graphics thread into a fixed-size framebuffer after fixture setup or a fixed simulation pre-roll. No timing sleeps or image baselines are used. Assertions check fixture state; screenshots support human visual review rather than automatic appearance approval.
 
 For an optional five-second player-view recording, generate deterministic frames with `POOL_RECORD_PLAYER_VIEW=1 ./gradlew :lwjgl3:visualTest`, then encode them with ffmpeg:
 
@@ -162,7 +165,7 @@ You can open Settings during any turn. The computer's input is not controlled by
 
 ## How the computer opponent works
 
-The opponent is an offline, one-shot numerical search, not a language model or a trained policy. **Apache Commons Math 3.6.1 supplies CMA-ES (Covariance Matrix Adaptation Evolution Strategy)**, a search algorithm that tries batches of variations and uses the better results to guide the next batch. Here, it adjusts shot direction and power; Bullet simulates each candidate. Our pool-specific code supplies starting candidates, outcome scoring, turn coordination and a small casual execution error. No data is sent to a server.
+The opponent is an offline, one-shot numerical search, not a language model or a trained policy. **Apache Commons Math 3.6.1 supplies CMA-ES (Covariance Matrix Adaptation Evolution Strategy)**, a search algorithm that tries batches of variations and uses the better results to guide the next batch. Here, it adjusts shot direction and power; Bullet simulates each candidate. Our pool-specific code supplies starting candidates, outcome scoring, turn coordination and difficulty-dependent execution accuracy. No data is sent to a server.
 
 ```mermaid
 flowchart TD
@@ -172,7 +175,7 @@ flowchart TD
     D --> E[Our code: score completed outcome]
     E -->|Feedback within budget| C
     E --> F[Best completed shot or legal fallback]
-    F --> G[Small casual execution variation]
+    F --> G[Execution accuracy: Easy / Medium / Hard]
     G --> H[Visible cue animation]
     H --> I[At tip contact: strike in the live game]
 ```
@@ -194,7 +197,7 @@ There are at most 90 ball/pocket combinations. Shortlist up to four by travel di
 
 The optimizer changes **angle and impulse together**, sampling populations of six and adjusting their search distribution from the scores. Each shortlisted direction gets a local angle window of ±0.14 radians (about 8°); initial standard deviations are 0.035 radians and 0.12 N·s. Impulse remains within 0.04–1.15 N·s. The optimizer receives no pool rules directly: it sees only the score returned by the simulator. It reuses a proven search implementation instead of introducing our own evolutionary algorithm.
 
-Evaluate geometric seeds first, then divide the remaining evaluation budget between their CMA-ES searches. A turn allows up to 64 candidate attempts and a two-second deadline, including setup. Each simulation uses the production 120 Hz physics and must settle within 30 simulated seconds. Incomplete or interrupted simulations cannot win. Bounds and deadlines are checked between physics steps. The best fully evaluated shot is retained even when the optimizer exhausts its budget.
+Evaluate geometric seeds first, then divide the remaining evaluation budget between their CMA-ES searches. A turn allows up to 64 candidate attempts and a five-second deadline shared by all difficulties, including setup. Each simulation uses the production 120 Hz physics and must settle within 30 simulated seconds. Incomplete or interrupted simulations cannot win. Bounds and deadlines are checked between physics steps. The best fully evaluated shot is retained even when the optimizer exhausts its budget.
 
 The objective is `100 × awardedPoints + 10 × noScratch + pocketProximity − 0.01 × impulse`. Awarded points are zero on a scratch. Proximity is bounded to 0–1 and uses the nearest remaining object ball's distance to a pocket mouth. These weights prioritize scored balls, then avoiding a scratch, then proximity; lower impulse breaks otherwise equal outcomes. This secondary signal helps distinguish some shots that pocket nothing, but does not guarantee an easy search landscape.
 
@@ -202,14 +205,24 @@ The objective is `100 × awardedPoints + 10 × noScratch + pocketProximity − 0
 
 A single worker exclusively owns a separate Bullet world and disposes it on that same worker. A settled snapshot carries ball identity, position, height and rotation; velocities are zero because meaningful movement has already ended. Native contact caches are not copied, so predictions are physically approximate rather than bit-identical to the live world. No planning simulation delivers live game or audio events.
 
-After selection, add seeded Gaussian angle error (0.25° standard deviation, clipped to ±0.75°) and uniform power error of ±3%, retaining the impulse bounds. Thinking remains visible for at least one active second. The live shot is animated using the final varied direction, so the cue matches the actual impulse. If planning fails, log the issue and use the best completed result or the legal fallback.
+The Settings slider has exactly three discrete levels. Tapping a stop selects it; dragging snaps to the nearest stop. The saved selection defaults to **Medium** and is also editable in Solo, where it applies only to future Vs computer play.
 
-Settings, backgrounding, restart and mode changes invalidate pending work. A result can only reach the current match and turn. Pausing an unfinished cue stroke resets its animation without firing; a selected shot can be reused on resume. Restart discards both the selected shot and animation. Planning metrics appear in Android logcat under `PoolAI`.
+| Difficulty | Gaussian angular standard deviation | Angular clipping | Uniform power variation |
+|---|---|---|---|
+| Easy | 1.2° | ±3.6° | ±14% |
+| Medium (default) | 0.25° | ±0.75° | ±3% |
+| Hard | None | None | None |
+
+Easy targets approximately 30% settled pot success on the fixed calibration layouts.
+
+The planner returns an unmodified command. When a cue stroke starts, `ExecutionAccuracy` applies the selected seeded profile once, retaining impulse bounds. Medium preserves the previously accepted casual error calculation. Hard uses the exact planned command with no artificial direction or power error; **perfect execution does not guarantee pocketing**, because numerical search and physical predictions remain approximate. Every level uses the same CMA-ES algorithm, five-second deadline, 64-attempt cap and other search tuning. More time can improve the selected shot at every level even though Medium's execution accuracy is unchanged. Thinking remains visible for at least one active second. The live shot is animated using the final varied direction, so the cue matches the actual impulse. If planning fails, log the issue and use the best completed result or the legal fallback.
+
+Settings, backgrounding, restart and mode changes invalidate pending work. A result can only reach the current match and turn. Difficulty changes save immediately without restarting the rack or dismissing Settings and affect the next unstruck computer shot, including a retained plan. Pausing an unfinished cue stroke resets its animation without firing; the raw selected plan and seed are retained on resume, so a changed difficulty is applied without compounding error. The cue always follows the final execution direction. Restart discards both the selected shot and animation. Planning metrics appear in Android logcat under `PoolAI`.
 
 ### Current limits and tuning
 
-This is one casual difficulty, with no multi-turn lookahead and no learning across matches. Candidate generation deliberately considers direct pots, not banks or kicks. Bullet can produce incidental rebounds, and CMA-ES may find nearby rebound outcomes, but reliable bank/kick search is not promised. Time limits mean it selects the best completed attempt, not the globally best shot. Casual error and differences between restored and live contacts can turn predicted pots into misses.
+The three difficulty levels change execution accuracy only; there is no multi-turn lookahead or learning across matches. Candidate generation deliberately considers direct pots, not banks or kicks. Bullet can produce incidental rebounds, and CMA-ES may find nearby rebound outcomes, but reliable bank/kick search is not promised. Time limits mean it selects the best completed attempt, not the globally best shot. Casual error and differences between restored and live contacts can turn predicted pots into misses.
 
-All search and casual-error limits are centralized in `OpponentTuning`; candidate-generation and animation constants live beside their respective algorithms. Device results and outstanding human checks are recorded in [device validation](docs/device-validation.md). Deterministic tests use fixed seeds and evaluation budgets rather than asserting exact planning times.
+Search limits are centralized in `OpponentTuning` and accuracy profiles in `OpponentDifficulty`; candidate-generation and animation constants live beside their respective algorithms. Device results, difficulty calibration and outstanding human checks are recorded in [device validation](docs/device-validation.md). Deterministic tests use fixed seeds and evaluation budgets rather than asserting exact planning times.
 
 Apache Commons Math is distributed under Apache License 2.0. See [third-party notices](assets/licenses/commons-math3-NOTICE.txt) and the [licence](assets/licenses/Apache-2.0.txt).

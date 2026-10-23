@@ -1,0 +1,46 @@
+{
+  "reason": "User accepted Hard and Medium, requested Easy a bit easier",
+  "easy": {
+    "angle_deviation_degrees": 1.0,
+    "max_angle_error_degrees": 3.0,
+    "power_variation": 0.1
+  },
+  "medium_and_hard_profiles_unchanged": true,
+  "search_tuning_unchanged": true,
+  "calibration_totals": {
+    "EASY": {
+      "layout": "TOTAL",
+      "difficulty": "EASY",
+      "shots": "512",
+      "pot_successes": "172",
+      "awarded_points": "167",
+      "scratches": "20",
+      "unsettled": "1",
+      "completed_evaluations": ""
+    },
+    "MEDIUM": {
+      "layout": "TOTAL",
+      "difficulty": "MEDIUM",
+      "shots": "512",
+      "pot_successes": "300",
+      "awarded_points": "300",
+      "scratches": "11",
+      "unsettled": "4",
+      "completed_evaluations": ""
+    },
+    "HARD": {
+      "layout": "TOTAL",
+      "difficulty": "HARD",
+      "shots": "512",
+      "pot_successes": "512",
+      "awarded_points": "575",
+      "scratches": "0",
+      "unsettled": "0",
+      "completed_evaluations": ""
+    }
+  },
+  "apk_sha256": "1cd9ba4651ee042ac67eabeee7669a060d0d6fa69415e81ebb4bb28f1205111b",
+  "revised_easy_human_acceptance": "pending",
+  "device_installation": "Final retuned APK installed successfully on OnePlus 8T / API 34",
+  "device_ready": "Easy selected and persisted; Player view, Vs computer, aided aim Off preserved"
+}

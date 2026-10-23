@@ -12,6 +12,7 @@ import com.badlogic.gdx.utils.Disposable
 import io.github.ffeltrinelli.pool.aim.*
 import io.github.ffeltrinelli.pool.input.CueGesture
 import io.github.ffeltrinelli.pool.opponent.CuePose
+import io.github.ffeltrinelli.pool.opponent.OpponentDifficulty
 import io.github.ffeltrinelli.pool.model.*
 import io.github.ffeltrinelli.pool.physics.PoolPhysics
 import io.github.ffeltrinelli.pool.view.GameViews
@@ -32,6 +33,7 @@ class PoolRenderer : Disposable {
     var holdOverview = false
     var computerThinking = false
     var foulPlayer: Player? = null
+    var difficulty = OpponentDifficulty.MEDIUM
     var aidedAim = true
     private val aimPredictor = AimPredictor()
     private val aimGuide = AimGuideRenderer()
@@ -129,7 +131,7 @@ class PoolRenderer : Disposable {
                 aimGuide.render(views.active.camera, start, path.end, path.contactPoint)
             }
         }
-        hud.render(session, settingsOpen, views.mode, aidedAim, computerThinking, foulPlayer)
+        hud.render(session, settingsOpen, views.mode, aidedAim, computerThinking, foulPlayer, difficulty)
     }
 
     override fun dispose() {
