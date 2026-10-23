@@ -53,7 +53,7 @@ The Gradle task adds macOS's required `-XstartOnFirstThread`. Mouse dragging use
 - The selected play mode, view, aided-aim setting and computer difficulty are remembered across rack restarts and app launches; the first launch uses Solo, Top view, aided aim On and Medium difficulty. Changing play mode starts a fresh rack immediately.
 - Ball collisions click, cushions thud, and cue contact plays a separate strike. Every physical pocket drop plays the pocket sound, including each cue-ball scratch after replacement in Vs computer. Stronger impacts are louder. There is no music or in-game volume control.
 
-Top view uses the original fixed portrait overhead camera and shows the whole table with gesture space around the rails. Player view uses a raised first-person perspective and may crop parts of the table. The cue can pass visually over rails and balls; there are no cue obstruction, spin, jump-shot, or eight-ball rule controls.
+Top view uses the original fixed portrait overhead camera and shows the whole table with gesture space around the rails. Player view uses a raised first-person perspective and may crop parts of the table. The cue is drawn over the table borders and balls so it stays visible near rails in both views, including computer strokes. It keeps its perspective and lighting, and is still clipped at screen edges. Settings and the HUD remain above it; there are no cue obstruction, spin, jump-shot, or eight-ball rule controls.
 
 ## Architecture and tuning
 
