@@ -1,6 +1,7 @@
 package io.github.ffeltrinelli.pool
 
 import com.badlogic.gdx.Preferences
+import io.github.ffeltrinelli.pool.model.PlayMode
 import io.github.ffeltrinelli.pool.ui.*
 import io.github.ffeltrinelli.pool.view.ViewMode
 import org.junit.Assert.*
@@ -9,6 +10,9 @@ import java.lang.reflect.Proxy
 
 class GameControlsTest {
     private class Preference(var saved: ViewMode = ViewMode.TOP) : SettingsPreference {
+        var play = PlayMode.SOLO
+        override fun loadPlayMode() = play
+        override fun savePlayMode(mode: PlayMode) { play = mode }
         var aided = true
         override fun loadAidedAim() = aided
         override fun saveAidedAim(enabled: Boolean) { aided = enabled }
@@ -16,6 +20,8 @@ class GameControlsTest {
         override fun saveViewMode(mode: ViewMode) { saved = mode }
     }
     private class Effects : ControlEffects {
+        var play = PlayMode.SOLO
+        override fun selectPlayMode(mode: PlayMode) { play = mode }
         var exits = 0
         override fun exitGame() { exits++ }
         var cancelled = 0
@@ -89,6 +95,7 @@ class GameControlsTest {
             }
         } as Preferences
         val store = SavedSettingsPreference(preferences)
+        assertEquals(PlayMode.SOLO, store.loadPlayMode())
         assertEquals(ViewMode.TOP, store.loadViewMode())
         values["view-mode"] = "obsolete"
         assertEquals(ViewMode.TOP, store.loadViewMode())
@@ -98,7 +105,11 @@ class GameControlsTest {
         store.saveAidedAim(false)
         assertFalse(SavedSettingsPreference(preferences).loadAidedAim())
         assertEquals(ViewMode.PLAYER, store.loadViewMode())
-        assertEquals(2, flushes)
+        store.savePlayMode(PlayMode.COMPUTER)
+        assertEquals(PlayMode.COMPUTER, SavedSettingsPreference(preferences).loadPlayMode())
+        values["play-mode"] = "obsolete"
+        assertEquals(PlayMode.SOLO, store.loadPlayMode())
+        assertEquals(3, flushes)
     }
 
     @Test fun `aided aim is enabled initially saved independently and retained by restart`() {
@@ -117,6 +128,21 @@ class GameControlsTest {
         val relaunched = GameControls(preference, Effects())
         assertFalse(relaunched.aidedAim)
         assertEquals(ViewMode.PLAYER, relaunched.mode)
+    }
+
+    @Test fun `play mode is saved applied immediately and switching does not dismiss settings`() {
+        val preference = Preference()
+        val effects = Effects()
+        val controls = GameControls(preference, effects)
+        assertEquals(PlayMode.SOLO, effects.play)
+        controls.handle(HudAction.SETTINGS)
+        controls.handle(HudAction.COMPUTER)
+        assertEquals(PlayMode.COMPUTER, effects.play)
+        assertEquals(PlayMode.COMPUTER, preference.play)
+        assertTrue(controls.settingsOpen && controls.suspended)
+        assertEquals(PlayMode.COMPUTER, GameControls(preference, Effects()).playMode)
+        controls.handle(HudAction.RESTART)
+        assertEquals(PlayMode.COMPUTER, controls.playMode)
     }
 
     @Test fun `exit cancels input stops playback and requests one normal application exit`() {
@@ -139,6 +165,9 @@ class GameControlsTest {
             assertTrue(layout.gear.width >= 48f && layout.gear.height >= 48f)
             assertEquals(HudAction.SETTINGS, hit(layout.gear))
             assertEquals(HudAction.SETTINGS, hit(layout.gear, finished = true))
+            assertEquals(HudAction.SOLO, hit(layout.solo, true))
+            assertEquals(HudAction.COMPUTER, hit(layout.computer, true))
+            assertTrue(layout.solo.y > layout.top.y)
             assertEquals(HudAction.TOP_VIEW, hit(layout.top, true))
             assertEquals(HudAction.PLAYER_VIEW, hit(layout.player, true))
             assertEquals(HudAction.CLOSE, hit(layout.close, true))
@@ -147,7 +176,7 @@ class GameControlsTest {
             assertTrue(layout.top.y > layout.aidedAim.y && layout.aidedAim.y > layout.restart.y && layout.restart.y > layout.exit.y)
             assertTrue(layout.close.x > layout.panel.x + layout.panel.width / 2)
             assertTrue(layout.close.y > layout.top.y)
-            for (rect in listOf(layout.close, layout.top, layout.player, layout.aidedAim, layout.restart, layout.exit)) {
+            for (rect in listOf(layout.solo, layout.computer, layout.close, layout.top, layout.player, layout.aidedAim, layout.restart, layout.exit)) {
                 assertTrue(rect.width >= 48f && rect.height >= 48f)
                 assertTrue(layout.panel.contains(rect))
             }

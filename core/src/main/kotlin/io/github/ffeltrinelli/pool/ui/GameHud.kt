@@ -4,7 +4,7 @@ import com.badlogic.gdx.graphics.*
 import com.badlogic.gdx.graphics.g2d.*
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.utils.Disposable
-import io.github.ffeltrinelli.pool.model.GameSession
+import io.github.ffeltrinelli.pool.model.*
 import io.github.ffeltrinelli.pool.model.RoundState
 import io.github.ffeltrinelli.pool.view.ViewMode
 import kotlin.math.*
@@ -15,19 +15,23 @@ class HudLayout(width: Int, height: Int) {
     private val height = height.coerceAtLeast(1)
     val uiHeight = 420f * this.height / this.width
     val gear = Rectangle(348f, uiHeight - 96f, 48f, 48f)
-    val panel = Rectangle(30f, uiHeight / 2 - 220f, 360f, 440f)
+    val panel = Rectangle(30f, uiHeight / 2 - 280f, 360f, 560f)
+    val solo = Rectangle(60f, uiHeight / 2 + 140f, 146f, 48f)
+    val computer = Rectangle(214f, uiHeight / 2 + 140f, 146f, 48f)
     val close = Rectangle(336f, panel.y + panel.height - 54f, 48f, 48f)
-    val top = Rectangle(60f, uiHeight / 2 + 80f, 146f, 48f)
-    val player = Rectangle(214f, uiHeight / 2 + 80f, 146f, 48f)
-    val aidedAim = Rectangle(60f, uiHeight / 2 - 10f, 300f, 48f)
-    val restart = Rectangle(60f, uiHeight / 2 - 100f, 300f, 48f)
-    val exit = Rectangle(60f, uiHeight / 2 - 170f, 300f, 48f)
+    val top = Rectangle(60f, uiHeight / 2 + 55f, 146f, 48f)
+    val player = Rectangle(214f, uiHeight / 2 + 55f, 146f, 48f)
+    val aidedAim = Rectangle(60f, uiHeight / 2 - 30f, 300f, 48f)
+    val restart = Rectangle(60f, uiHeight / 2 - 120f, 300f, 48f)
+    val exit = Rectangle(60f, uiHeight / 2 - 190f, 300f, 48f)
     val playAgain = Rectangle(100f, uiHeight / 2 - 85f, 220f, 48f)
 
     fun hit(screenX: Int, screenY: Int, settingsOpen: Boolean, finished: Boolean): HudAction? {
         val x = screenX * 420f / width
         val y = uiHeight - screenY * uiHeight / height
         if (settingsOpen) return when {
+            solo.contains(x, y) -> HudAction.SOLO
+            computer.contains(x, y) -> HudAction.COMPUTER
             aidedAim.contains(x, y) -> HudAction.TOGGLE_AIM
             exit.contains(x, y) -> HudAction.EXIT
             restart.contains(x, y) -> HudAction.RESTART
@@ -76,16 +80,26 @@ class GameHud : Disposable {
         camera.setToOrtho(false, 420f, layout.uiHeight)
     }
 
-    fun render(session: GameSession, settingsOpen: Boolean, mode: ViewMode, aidedAim: Boolean = true) {
+    fun render(session: GameSession, settingsOpen: Boolean, mode: ViewMode, aidedAim: Boolean = true, thinking: Boolean = false, foulPlayer: Player? = null) {
         val h = layout.uiHeight
         sprites.projectionMatrix = camera.combined
         sprites.begin()
         text("POOL", 28f, h - 34f, 1.9f, "f2e5c8")
-        text("SOLO PRACTICE", 29f, h - 57f, 0.65f, "8ba6a8")
-        text("%02d / 15 LEFT".format(session.remaining), 29f, h - 86f, 0.85f, "d5e5dd")
+        if (session.mode == PlayMode.SOLO) {
+            text("SOLO PRACTICE", 29f, h - 57f, 0.65f, "8ba6a8")
+            text("%02d / 15 LEFT".format(session.remaining), 29f, h - 86f, 0.85f, "d5e5dd")
+        } else {
+            text("YOU ${session.humanScore}   /   COMPUTER ${session.computerScore}", 29f, h - 57f, 0.78f, "d5e5dd")
+            val status = if (thinking) "Computer thinking..." else if (session.player == Player.HUMAN) "Your turn" else "Computer's turn"
+            text(status, 29f, h - 86f, 0.85f, "d5e5dd")
+            if (foulPlayer != null && !session.finished) {
+                text("${foulPlayer.label}: Foul - cue ball pocketed.", 210f, h - 123f, 0.8f, "f2d295", true)
+                text("No points for this shot.", 210f, h - 143f, 0.8f, "f2d295", true)
+            }
+        }
         if (session.finished) drawResult(session)
         drawGear()
-        if (settingsOpen) drawSettings(mode, aidedAim)
+        if (settingsOpen) drawSettings(mode, aidedAim, session.mode)
         sprites.end()
     }
 
@@ -95,15 +109,18 @@ class GameHud : Disposable {
         sprites.draw(gearIcon, layout.gear.x + 8f, layout.gear.y + 8f, 32f, 32f)
     }
 
-    private fun drawSettings(mode: ViewMode, aidedAim: Boolean) {
+    private fun drawSettings(mode: ViewMode, aidedAim: Boolean, playMode: PlayMode) {
         shade()
         rectangle(layout.panel, "163039")
-        text("SETTINGS", 60f, layout.uiHeight / 2 + 185f, 1.35f, "f2e5c8")
+        text("SETTINGS", 60f, layout.uiHeight / 2 + 245f, 1.35f, "f2e5c8")
         button(layout.close, "X")
-        text("View mode", 60f, layout.uiHeight / 2 + 150f, 0.92f, "b8ccca")
+        text("Play mode", 60f, layout.uiHeight / 2 + 200f, 0.92f, "b8ccca")
+        button(layout.solo, "Solo", playMode == PlayMode.SOLO)
+        button(layout.computer, "Vs computer", playMode == PlayMode.COMPUTER)
+        text("View mode", 60f, layout.uiHeight / 2 + 115f, 0.92f, "b8ccca")
         button(layout.top, "Top view", mode == ViewMode.TOP)
         button(layout.player, "Player view", mode == ViewMode.PLAYER)
-        text("Aided aim", 60f, layout.uiHeight / 2 + 55f, 0.92f, "b8ccca")
+        text("Aided aim", 60f, layout.uiHeight / 2 + 30f, 0.92f, "b8ccca")
         button(layout.aidedAim, if (aidedAim) "On" else "Off", aidedAim)
         button(layout.restart, "Restart")
         button(layout.exit, "Exit game")
@@ -113,6 +130,18 @@ class GameHud : Disposable {
         val center = layout.uiHeight / 2
         shade()
         rectangle(Rectangle(30f, center - 112f, 360f, 225f), "163039")
+        if (session.mode == PlayMode.COMPUTER) {
+            text("MATCH COMPLETE", 210f, center + 80f, 0.72f, "9dbbb7", true)
+            val result = when (session.result) {
+                MatchResult.HUMAN_WINS -> "You win"
+                MatchResult.COMPUTER_WINS -> "Computer wins"
+                else -> "Draw"
+            }
+            text(result, 210f, center + 40f, 1.35f, "f2e5c8", true)
+            text("You ${session.humanScore} - Computer ${session.computerScore}", 210f, center + 6f, 0.9f, "b8ccca", true)
+            button(layout.playAgain, "PLAY AGAIN")
+            return
+        }
         text("PRACTICE COMPLETE", 210f, center + 80f, 0.72f, "9dbbb7", true)
         text(if (session.state == RoundState.SCRATCHED) "Cue ball pocketed" else "Table cleared", 210f, center + 40f, 1.35f, "f2e5c8", true)
         text("${15 - session.remaining} of 15 object balls pocketed", 210f, center + 6f, 0.84f, "b8ccca", true)

@@ -61,8 +61,8 @@ def main():
             # Back dismisses any open settings before opening a fresh modal.
             shell('input keyevent KEYCODE_BACK')
             shell('input tap 956 288')
-            shell('input tap ' + ('342' if args.view == 'top' else '738') + ' 984')
-            shell('input tap 540 1447')
+            shell('input tap ' + ('342' if args.view == 'top' else '738') + ' 1048')
+            shell('input tap 540 1498')
             time.sleep(0.3)
             shell('input touchscreen swipe 540 1850 540 1400 220')
             shot_count += 1

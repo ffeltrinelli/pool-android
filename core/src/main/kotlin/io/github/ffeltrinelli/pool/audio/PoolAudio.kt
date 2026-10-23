@@ -102,6 +102,9 @@ class PoolAudio(private val player: SoundPlayer, private val tuning: AudioTuning
 
     private fun totalVolume() = voices.sumOf { it.volume.toDouble() }.toFloat()
 
+    /** The replacement cue is a new pocketable ball; object balls remain suppressed until rack reset. */
+    fun cueBallReplaced() { pocketedIds.remove(0) }
+
     fun clear() {
         pocketedIds.clear()
         stopPlayback()

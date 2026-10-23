@@ -1,6 +1,21 @@
-# Pool — solo practice
+# Pool — solo practice and computer opponent
 
-An offline 3D pool demo for Android, based on [MVP Design #1](https://github.com/ffeltrinelli/pool-android/issues/1). Aim and shoot with one continuous touch gesture. The round ends when the cue ball is pocketed or all 15 object balls are cleared; the eight ball has no special rule.
+An offline 3D pool demo for Android, based on [MVP Design #1](https://github.com/ffeltrinelli/pool-android/issues/1). Aim and shoot with one continuous touch gesture. Choose Solo practice or Vs computer in Settings. In Solo, the round ends when the cue ball is pocketed or all 15 object balls are cleared. Vs computer alternates one shot per player and awards one point per object ball; a scratch cancels all points for that shot. The eight ball has no special rule.
+
+## Table of contents
+
+- [Build and run](#build-and-run)
+- [Controls](#controls)
+- [Architecture and tuning](#architecture-and-tuning)
+- [Automated verification](#automated-verification)
+- [OnePlus 8T validation](#oneplus-8t-validation)
+- [Assets and attribution](#assets-and-attribution)
+- [Playing against the computer](#playing-against-the-computer)
+- [How the computer opponent works](#how-the-computer-opponent-works)
+  - [Starting shots: ghost-ball geometry](#starting-shots-ghost-ball-geometry)
+  - [What CMA-ES searches](#what-cma-es-searches)
+  - [Isolation, casual strength and lifecycle](#isolation-casual-strength-and-lifecycle)
+  - [Current limits and tuning](#current-limits-and-tuning)
 
 ## Build and run
 
@@ -33,10 +48,10 @@ The Gradle task adds macOS's required `-XstartOnFirstThread`. Mouse dragging use
 - Drag backward to withdraw the cue and forward to advance it. You can make repeated practice strokes without lifting. A deliberate axial movement locks the aiming direction until release; lift your finger to re-aim.
 - The forward-moving tip strikes on contact; pulling back first is optional. A faster push produces a stronger shot. Releasing before contact cancels the stroke.
 - Wait for all balls to settle before aiming again. Additional fingers are ignored.
-- Open the **gear** for Settings: choose **Top view** / **Player view**, toggle **Aided aim**, **Restart**, or **Exit game**, in that order. Settings pauses play and stops current sounds. Use the top-right **X** or Android Back to resume. Exit closes the app immediately without saving the rack. **Play again** remains available after a result. Every fresh rack resets the cue toward the apex ball and aligns the player camera, with a 50 mm resting tip gap.
+- Open the **gear** for Settings: choose **Solo** / **Vs computer**, choose **Top view** / **Player view**, toggle **Aided aim**, **Restart**, or **Exit game**, in that order. Settings pauses play and stops current sounds. Use the top-right **X** or Android Back to resume. Exit closes the app immediately without saving the rack. **Play again** remains available after a result. Every fresh rack resets the cue toward the apex ball and aligns the player camera, with a 50 mm resting tip gap.
 - In **Player view**, touching preserves aim. Drag sideways to turn the cue and camera together; drag down to pull back and up to strike. Lift to unlock the direction. At contact, the camera smoothly pulls back to a closer overview while balls move; outer table edges may be off-screen, then returns behind the settled cue ball.
-- The selected view and aided-aim setting are remembered across rack restarts and app launches; the first launch uses Top view with aided aim On.
-- Ball collisions click, cushions thud, and cue contact plays a separate strike. Stronger impacts are louder. There is no music or in-game volume control.
+- The selected play mode, view and aided-aim setting are remembered across rack restarts and app launches; the first launch uses Solo, Top view and aided aim On. Changing play mode starts a fresh rack immediately.
+- Ball collisions click, cushions thud, and cue contact plays a separate strike. Every physical pocket drop plays the pocket sound, including each cue-ball scratch after replacement in Vs computer. Stronger impacts are louder. There is no music or in-game volume control.
 
 Top view uses the original fixed portrait overhead camera and shows the whole table with gesture space around the rails. Player view uses a raised first-person perspective and may crop parts of the table. The cue can pass visually over rails and balls; there are no cue obstruction, spin, jump-shot, or eight-ball rule controls.
 
@@ -54,7 +69,7 @@ Physics units are metres and kilograms. The table is 1.12 × 2.24 m; ball radius
 
 `ViewTuning` centralizes player camera elevation (45°), vertical field of view (60°), horizontal distance behind the cue ball (0.95 m), near/far planes (0.01 / 20 m), and virtual aiming radius (0.30 m). Screen-right motion increases yaw; downward motion withdraws the cue. Direction locking and power retain the shared gesture tuning. Camera yaw stays fixed during strokes. At contact, a 0.65 s smooth pullback recenters on the table, retaining the shot yaw and 45° elevation. The overview uses 80% of the full-table-fit camera distance for larger balls; outer table edges may be cropped, as preferred during device review. The overview holds while balls move and during results; settling returns the camera to the cue ball over 0.45 s. The near plane increases from 0.01 to 0.25 m during pullback to preserve depth precision. Settings/background suspension pauses the camera animation too; rack restart resets it. Settings and OS suspension are independent; returning from the background with settings open keeps the shot paused. View mode and aided aim are saved independently; racks are not saved.
 
-Physics advances at 120 Hz with up to 100 ms / 12 steps of catch-up per render frame. Rendering interpolates the previous and current poses. Both linear and angular movement must remain below the settling thresholds for 300 ms before input unlocks. Backgrounding freezes simulation and cancels gestures; resume drops its first delta to prevent catch-up. Process death starts a new rack.
+Physics advances at 120 Hz with up to 100 ms / 12 steps of catch-up per render frame. Rendering interpolates the previous and current poses. Input unlocks after 300 ms of low linear and angular speed. A separate contact-stability check also accepts cloth-supported balls that stay within a 0.5 mm position envelope and 2° orientation envelope for that interval, despite tiny solver velocity spikes. It requires instantaneous speeds below 0.025 m/s and 0.8 rad/s and a centre within 1 mm of cloth height; genuine rolling, continuous spin and falling do not qualify. Backgrounding freezes simulation and cancels gestures; resume drops its first delta to prevent catch-up. Process death starts a new rack.
 
 Object-ball numbers are baked into two opposite circular patches on each sphere's texture. Numbers and stripes follow the same interpolated Bullet orientation; markings can rotate out of view. A restart faces one number upward. There is no separate visual rolling calculation.
 
@@ -86,7 +101,7 @@ Native bodies and graphics resources have explicit owners and disposal paths. A 
 
 JUnit tests also cover saved view/aided-aim selection, radius-aware aim prediction and obstruction, fresh-rack cue/camera alignment, exit delivery, modal hit routing and suspension, independent background/settings pause states, camera elevation/alignment/freeze/resize, virtual input without camera feedback, stable player circling, practice strokes, and equal-speed power across modes. JUnit tests cover continuous aiming/stroking, cancellation, noisy and multi-pointer input, power scaling/capping, exactly one impulse, settling, game outcomes, restart, native collisions, six physical pockets, high-speed cushion hits, rack integrity, fixed-step consistency, stable cloth support, sliding-to-rolling slip, energy loss, angular settling, and pose reset. Physics assertions use tolerances rather than exact trajectories.
 
-Rendered smoke tests capture 81 deterministic scenarios. The original eighteen cover initial rack, cue/aim, three bidirectional cue positions (initial, withdrawn, forward return), six pocket approaches, scratch result, cleared result, and five stages of rolling solid/striped balls (0, 12, 18, 24 and 48 simulation steps). Nineteen additional fixtures cover settings in both modes, player view at four headings, withdrawn/returned strokes, halfway/full shot pullbacks and return to aiming, both player-view results, and six rail/pocket-adjacent positions. Twenty-eight additional pocket fixtures cover corner/side drop stages at 0, 12, 24, 36 and 60 fixed steps, shelf positions and jaw contacts in both views. Sixteen aided-aim fixtures cover enabled/disabled guides, glancing hits, rail and pocket endpoints, obstruction, restart alignment, and the Off setting in both views. Detail crops accompany rolling and pocket fixtures. Captures run on the graphics thread into a fixed-size framebuffer after fixture setup or a fixed simulation pre-roll. No timing sleeps or image baselines are used. Assertions check fixture state; screenshots support human visual review rather than automatic appearance approval.
+Rendered smoke tests capture 103 deterministic scenarios. Twenty-two opponent fixtures cover both views, human/computer turns, three computer cue stages, foul notices, all match results, and updated Settings. The original eighteen cover initial rack, cue/aim, three bidirectional cue positions (initial, withdrawn, forward return), six pocket approaches, scratch result, cleared result, and five stages of rolling solid/striped balls (0, 12, 18, 24 and 48 simulation steps). Nineteen additional fixtures cover settings in both modes, player view at four headings, withdrawn/returned strokes, halfway/full shot pullbacks and return to aiming, both player-view results, and six rail/pocket-adjacent positions. Twenty-eight additional pocket fixtures cover corner/side drop stages at 0, 12, 24, 36 and 60 fixed steps, shelf positions and jaw contacts in both views. Sixteen aided-aim fixtures cover enabled/disabled guides, glancing hits, rail and pocket endpoints, obstruction, restart alignment, and the Off setting in both views. Detail crops accompany rolling and pocket fixtures. Captures run on the graphics thread into a fixed-size framebuffer after fixture setup or a fixed simulation pre-roll. No timing sleeps or image baselines are used. Assertions check fixture state; screenshots support human visual review rather than automatic appearance approval.
 
 For an optional five-second player-view recording, generate deterministic frames with `POOL_RECORD_PLAYER_VIEW=1 ./gradlew :lwjgl3:visualTest`, then encode them with ffmpeg:
 
@@ -135,3 +150,66 @@ ffmpeg -framerate 30 -i build/reports/visual/pocket-motion-frames/frame-%03d.png
 ```
 
 The optional recording uses test-only fixtures; normal play exposes no fixture controls. FFmpeg is needed only for encoding the optional video, not tests or CI.
+
+
+## Playing against the computer
+
+Choose **Vs computer** in Settings. You always break. Players alternate a single shot even after pocketing balls. Points are committed when the table settles: each object ball is worth one point, but pocketing the cue ball awards **zero points for the entire shot**. Those object balls stay removed. A three-second foul notice identifies the player during ongoing play; Settings and background suspension pause that timer.
+
+After a scratch, the cue returns to its initial position without disturbing the object balls. If blocked, placement uses the nearest safe point on a deterministic 5 mm lattice in the starting half, with 2 mm extra clearance. The next player then shoots. Once all object balls are gone, the higher score wins; uncredited foul balls make draws possible. The result screen shows the outcome and scores without a foul explanation. Restart and Play again clear scores and restore the human break. Preferences persist, matches do not.
+
+You can open Settings during any turn. The computer's input is not controlled by your gestures. Player view stays in the existing overview during its turn, returning to your previous aiming heading on yours. The computer cue becomes visible after planning: 350 ms at the 50 mm gap, 250 ms backswing to 120 mm, then 200 ms forward to contact. Contact applies one shot impulse and the existing cue sound. Its animation speed does not determine shot power. The aided-aim line is hidden throughout computer turns.
+
+## How the computer opponent works
+
+The opponent is an offline, one-shot numerical search, not a language model or a trained policy. **Apache Commons Math 3.6.1 supplies CMA-ES (Covariance Matrix Adaptation Evolution Strategy)**, a search algorithm that tries batches of variations and uses the better results to guide the next batch. Here, it adjusts shot direction and power; Bullet simulates each candidate. Our pool-specific code supplies starting candidates, outcome scoring, turn coordination and a small casual execution error. No data is sent to a server.
+
+```mermaid
+flowchart TD
+    A[Settled table snapshot] --> B[Our code: direct ghost-ball candidates and estimated impulse]
+    B --> C[Commons Math: CMA-ES varies angle and impulse]
+    C --> D[Silent worker-owned Bullet world simulates a shot]
+    D --> E[Our code: score completed outcome]
+    E -->|Feedback within budget| C
+    E --> F[Best completed shot or legal fallback]
+    F --> G[Small casual execution variation]
+    G --> H[Visible cue animation]
+    H --> I[At tip contact: strike in the live game]
+```
+
+### Starting shots: ghost-ball geometry
+
+For each remaining object ball and pocket, compute the desired object-ball direction toward the pocket interior. Place an imaginary cue-ball centre two ball radii behind the object ball along that direction. Aiming at this **ghost ball** gives an initial cue direction. Reject paths blocked by balls, cushions or jaws, ghost positions outside the playing bounds, and cuts with insufficient forward momentum transfer. The shared aim predictor checks the initial paths; actual pocket success is decided by Bullet.
+
+```mermaid
+flowchart LR
+    C[Real cue-ball centre] -->|Initial aiming direction| G[Ghost-ball centre]
+    G -->|Centres separated by two radii| O[Object-ball centre]
+    O -->|Intended object-ball path| P[Pocket]
+```
+
+There are at most 90 ball/pocket combinations. Shortlist up to four by travel distance and cut difficulty. The initial impulse in N·s is `clamp(0.18 + 0.16 × sqrt(cueDistance + objectDistance / cutCosine²), 0.08, 1.15)`, with distances in metres. This is a rough seed, not a second physics model. If no direct pot is available, seed a 0.55 N·s shot toward the nearest object ball.
+
+### What CMA-ES searches
+
+The optimizer changes **angle and impulse together**, sampling populations of six and adjusting their search distribution from the scores. Each shortlisted direction gets a local angle window of ±0.14 radians (about 8°); initial standard deviations are 0.035 radians and 0.12 N·s. Impulse remains within 0.04–1.15 N·s. The optimizer receives no pool rules directly: it sees only the score returned by the simulator. It reuses a proven search implementation instead of introducing our own evolutionary algorithm.
+
+Evaluate geometric seeds first, then divide the remaining evaluation budget between their CMA-ES searches. A turn allows up to 64 candidate attempts and a two-second deadline, including setup. Each simulation uses the production 120 Hz physics and must settle within 30 simulated seconds. Incomplete or interrupted simulations cannot win. Bounds and deadlines are checked between physics steps. The best fully evaluated shot is retained even when the optimizer exhausts its budget.
+
+The objective is `100 × awardedPoints + 10 × noScratch + pocketProximity − 0.01 × impulse`. Awarded points are zero on a scratch. Proximity is bounded to 0–1 and uses the nearest remaining object ball's distance to a pocket mouth. These weights prioritize scored balls, then avoiding a scratch, then proximity; lower impulse breaks otherwise equal outcomes. This secondary signal helps distinguish some shots that pocket nothing, but does not guarantee an easy search landscape.
+
+### Isolation, casual strength and lifecycle
+
+A single worker exclusively owns a separate Bullet world and disposes it on that same worker. A settled snapshot carries ball identity, position, height and rotation; velocities are zero because meaningful movement has already ended. Native contact caches are not copied, so predictions are physically approximate rather than bit-identical to the live world. No planning simulation delivers live game or audio events.
+
+After selection, add seeded Gaussian angle error (0.25° standard deviation, clipped to ±0.75°) and uniform power error of ±3%, retaining the impulse bounds. Thinking remains visible for at least one active second. The live shot is animated using the final varied direction, so the cue matches the actual impulse. If planning fails, log the issue and use the best completed result or the legal fallback.
+
+Settings, backgrounding, restart and mode changes invalidate pending work. A result can only reach the current match and turn. Pausing an unfinished cue stroke resets its animation without firing; a selected shot can be reused on resume. Restart discards both the selected shot and animation. Planning metrics appear in Android logcat under `PoolAI`.
+
+### Current limits and tuning
+
+This is one casual difficulty, with no multi-turn lookahead and no learning across matches. Candidate generation deliberately considers direct pots, not banks or kicks. Bullet can produce incidental rebounds, and CMA-ES may find nearby rebound outcomes, but reliable bank/kick search is not promised. Time limits mean it selects the best completed attempt, not the globally best shot. Casual error and differences between restored and live contacts can turn predicted pots into misses.
+
+All search and casual-error limits are centralized in `OpponentTuning`; candidate-generation and animation constants live beside their respective algorithms. Device results and outstanding human checks are recorded in [device validation](docs/device-validation.md). Deterministic tests use fixed seeds and evaluation budgets rather than asserting exact planning times.
+
+Apache Commons Math is distributed under Apache License 2.0. See [third-party notices](assets/licenses/commons-math3-NOTICE.txt) and the [licence](assets/licenses/Apache-2.0.txt).

@@ -1,0 +1,132 @@
+{
+  "date": "2026-10-23",
+  "device": "OnePlus 8T KB2003",
+  "android_version": "14",
+  "api": 34,
+  "automated_suite": {
+    "unit_native_tests": 130,
+    "rendered_scenarios": 103,
+    "audio_assets": 4,
+    "lint_errors": 0,
+    "lint_existing_warnings": 5,
+    "debug_apk": true
+  },
+  "lifecycle": {
+    "solo_saved": true,
+    "computer_saved": true,
+    "background_resume_same_process": true,
+    "computer_persists_after_process_restart": true,
+    "exit_finishes_activity": true
+  },
+  "first_computer_search": {
+    "completed_evaluations": 15,
+    "elapsed_ms": 2000,
+    "fallback": false
+  },
+  "human_break": {
+    "observed_score": 1,
+    "computer_turn_and_overview_observed": true
+  },
+  "performance": {
+    "model": "KB2003",
+    "api": "34",
+    "samples": [
+      {
+        "seconds": 0.2,
+        "fps": 60.26708544166153,
+        "p95_ms": 16.893646
+      },
+      {
+        "seconds": 5.4,
+        "fps": 60.277711039747246,
+        "p95_ms": 16.838073
+      },
+      {
+        "seconds": 10.7,
+        "fps": 60.29067074046837,
+        "p95_ms": 16.7775
+      },
+      {
+        "seconds": 15.9,
+        "fps": 60.27006133392837,
+        "p95_ms": 16.817812
+      },
+      {
+        "seconds": 21.1,
+        "fps": 60.28587198781389,
+        "p95_ms": 16.898125
+      },
+      {
+        "seconds": 26.4,
+        "fps": 60.26383515640594,
+        "p95_ms": 16.853386
+      },
+      {
+        "seconds": 31.7,
+        "fps": 60.26475990700926,
+        "p95_ms": 16.774948
+      },
+      {
+        "seconds": 36.9,
+        "fps": 60.25716002703119,
+        "p95_ms": 16.634323
+      },
+      {
+        "seconds": 42.3,
+        "fps": 60.26985710850612,
+        "p95_ms": 16.689635
+      },
+      {
+        "seconds": 47.6,
+        "fps": 60.268011877749,
+        "p95_ms": 16.849844
+      },
+      {
+        "seconds": 52.8,
+        "fps": 60.255331998034684,
+        "p95_ms": 16.864687
+      },
+      {
+        "seconds": 58.0,
+        "fps": 60.24778398752644,
+        "p95_ms": 16.933281
+      }
+    ],
+    "method": "Passive SurfaceFlinger presented timestamps, sampled every 5 seconds; not continuous profiling and not proof of sustained planning FPS.",
+    "elapsed_seconds": 63.0,
+    "median_fps": 60.26754865970526,
+    "logs": ""
+  },
+  "not_completed": [
+    "Full matches in both views on device",
+    "Interrupting the actual device planner and cue stroke at each stage",
+    "Device scratch replacement and foul timing around every pocket",
+    "Sustained performance under repeated planning or a ten-minute soak"
+  ],
+  "human_acceptance": {
+    "computer_cue_aiming_and_strike_natural": true,
+    "opponent_reasonable_for_casual_play": true,
+    "reply": "yes"
+  },
+  "cue_scratch_audio_followup": {
+    "rearmed_after_cue_replacement": true,
+    "duplicate_and_lifecycle_regressions_passed": true,
+    "device_audibility_confirmed": false
+  },
+  "settling_fix_handoff": {
+    "computer_started": true,
+    "seconds_to_plan_result": 8.66,
+    "logs": "--------- beginning of main\n10-23 22:20:37.221 30999 31138 I PoolAI  : 16 evaluations in 2000 ms; fallback=false\n"
+  },
+  "settling_stall": {
+    "live_session_state": "MOVING",
+    "live_quiet_seconds": 0.1,
+    "oscillating_ball": 13,
+    "position_m": [
+      -0.501586676,
+      -0.933050632
+    ],
+    "diagnostic_method": "Read-only JDWP fields; one-step transform differences, not native velocity reads",
+    "corrected_with": "Bounded 300 ms pose stability on supported cloth contact; ordinary speed-based settling retained"
+  }
+}

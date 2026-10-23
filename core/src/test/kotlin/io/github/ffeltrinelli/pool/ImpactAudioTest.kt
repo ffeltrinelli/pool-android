@@ -119,6 +119,36 @@ class ImpactAudioTest {
         assertEquals(2, player.played.size)
     }
 
+    @Test fun `each replacement cue can play another pocket sound without replaying duplicate drops`() {
+        val player = Player()
+        val audio = PoolAudio(player)
+        audio.queue(PocketDrop(1, 2)); audio.flush(0f)
+        repeat(3) { pocket ->
+            audio.queue(PocketDrop(0, pocket))
+            audio.queue(PocketDrop(0, pocket))
+            audio.flush(1f)
+            assertEquals(pocket + 2, player.played.size)
+            audio.cueBallReplaced()
+            // Replacing the cue must not re-enable an already removed object ball.
+            audio.queue(PocketDrop(1, 2)); audio.flush(0f)
+            assertEquals(pocket + 2, player.played.size)
+        }
+        audio.dispose()
+    }
+
+    @Test fun `replacement does not stop a pocket clip or replay sounds after pause`() {
+        val player = Player()
+        val audio = PoolAudio(player)
+        audio.queue(PocketDrop(0, 2)); audio.flush(0f)
+        audio.cueBallReplaced()
+        assertTrue(player.stopped.isEmpty())
+        audio.pause(); audio.resume(); audio.flush(0f)
+        assertEquals(1, player.played.size)
+        audio.queue(PocketDrop(0, 3)); audio.flush(0f)
+        assertEquals(2, player.played.size)
+        audio.dispose()
+    }
+
     @Test fun `pocket sound takes priority over louder pending and active impacts`() {
         val player = Player()
         val audio = PoolAudio(player, AudioTuning(maximumVoices = 1))

@@ -35,13 +35,14 @@ class PoolPhysics(
     private val transform = Matrix4()
     private val velocity = Vector3()
     private var accumulator = 0f
+    private val restStability = RestStability()
     private var quietSeconds = 0f
     private var wasSettled = true
     var interpolation = 0f
         private set
 
     init {
-        Bullet.init()
+        BulletRuntime.initialize()
         configuration = btDefaultCollisionConfiguration()
         dispatcher = btCollisionDispatcher(configuration)
         broadphase = btDbvtBroadphase()
@@ -68,25 +69,59 @@ class PoolPhysics(
         contactImpacts.reset()
         balls.forEach { if (!it.pocketed) world.removeRigidBody(it.body); it.body.dispose() }
         balls.clear()
-        layout.forEach { (id, point) ->
-            val body = rigidBody(ballShape, TableGeometry.BALL_MASS, point)
-            // Texture stamps lie on local ±Z, away from sphere UV poles. Face +Z upward.
-            body.worldTransform = Matrix4().setToTranslation(point.x, TableGeometry.BALL_RADIUS, point.z).rotate(Vector3.X, -90f)
-            body.userValue = id
-            body.restitution = PhysicsTuning.BALL_RESTITUTION
-            body.friction = PhysicsTuning.BALL_FRICTION
-            body.rollingFriction = PhysicsTuning.ROLLING_FRICTION
-            body.spinningFriction = PhysicsTuning.SPINNING_FRICTION
-            body.setDamping(0f, 0f)
-            body.setSleepingThresholds(PhysicsTuning.LINEAR_SLEEP_SPEED, PhysicsTuning.ANGULAR_SLEEP_SPEED)
-            body.ccdMotionThreshold = TableGeometry.BALL_RADIUS * 0.5f
-            body.ccdSweptSphereRadius = TableGeometry.BALL_RADIUS * 0.8f
-            world.addRigidBody(body)
-            balls.add(Ball(id, body).also { readTransform(it); it.previousPosition.set(it.position); it.previousRotation.set(it.rotation) })
-        }
+        layout.forEach { (id, point) -> addBall(id, point) }
         accumulator = 0f
         quietSeconds = 0f
+        restStability.reset()
         wasSettled = true
+        interpolation = 0f
+    }
+
+    private fun addBall(id: Int, point: Point): Ball {
+        val body = rigidBody(ballShape, TableGeometry.BALL_MASS, point)
+        // Texture stamps lie on local ±Z, away from sphere UV poles. Face +Z upward.
+        body.worldTransform = Matrix4().setToTranslation(point.x, TableGeometry.BALL_RADIUS, point.z).rotate(Vector3.X, -90f)
+        body.userValue = id
+        body.restitution = PhysicsTuning.BALL_RESTITUTION
+        body.friction = PhysicsTuning.BALL_FRICTION
+        body.rollingFriction = PhysicsTuning.ROLLING_FRICTION
+        body.spinningFriction = PhysicsTuning.SPINNING_FRICTION
+        body.setDamping(0f, 0f)
+        body.setSleepingThresholds(PhysicsTuning.LINEAR_SLEEP_SPEED, PhysicsTuning.ANGULAR_SLEEP_SPEED)
+        body.ccdMotionThreshold = TableGeometry.BALL_RADIUS * 0.5f
+        body.ccdSweptSphereRadius = TableGeometry.BALL_RADIUS * 0.8f
+        world.addRigidBody(body)
+        val ball = Ball(id, body).also { readTransform(it); it.previousPosition.set(it.position); it.previousRotation.set(it.rotation) }
+        balls.add(ball)
+        return ball
+    }
+
+    fun snapshot() = TableSnapshot(balls.filter { !it.pocketed }.map { ball ->
+        BallSnapshot(ball.id, ball.point, ball.position.y, ball.rotation.x, ball.rotation.y, ball.rotation.z, ball.rotation.w)
+    })
+
+    /** Snapshots are taken only after settling: velocities are intentionally zero. */
+    fun restore(snapshot: TableSnapshot) {
+        reset(emptyList())
+        snapshot.balls.forEach { saved ->
+            val ball = addBall(saved.id, saved.point)
+            ball.body.worldTransform = Matrix4().set(Vector3(saved.point.x, saved.height, saved.point.z),
+                Quaternion(saved.qx, saved.qy, saved.qz, saved.qw))
+            readTransform(ball)
+            ball.previousPosition.set(ball.position)
+            ball.previousRotation.set(ball.rotation)
+        }
+    }
+
+    fun replaceCueBall() {
+        val point = CueReplacement.position(balls.filter { it.id != 0 && !it.pocketed }.map { it.point })
+        balls.firstOrNull { it.id == 0 }?.let {
+            if (!it.pocketed) world.removeRigidBody(it.body)
+            it.body.dispose()
+            balls.remove(it)
+        }
+        contactImpacts.reset()
+        addBall(0, point)
         interpolation = 0f
     }
 
@@ -97,6 +132,7 @@ class PoolPhysics(
         val direction = shot.direction.normalized()
         cue.body.applyCentralImpulse(Vector3(direction.x * shot.impulse, 0f, direction.z * shot.impulse))
         quietSeconds = 0f
+        restStability.reset()
         wasSettled = false
         impacts(Impact(ImpactKind.CUE, shot.impulse))
     }
@@ -116,12 +152,16 @@ class PoolPhysics(
         world.stepSimulation(STEP, 0)
         collectImpactContacts()
         var moving = false
+        restStability.beginStep()
         balls.forEach { ball ->
             if (!ball.pocketed) {
                 readTransform(ball)
                 velocity.set(ball.body.linearVelocity)
-                if (velocity.len2() > PhysicsTuning.LINEAR_SLEEP_SPEED * PhysicsTuning.LINEAR_SLEEP_SPEED ||
-                    ball.body.angularVelocity.len2() > PhysicsTuning.ANGULAR_SLEEP_SPEED * PhysicsTuning.ANGULAR_SLEEP_SPEED) moving = true
+                val linearSpeed2 = velocity.len2()
+                val angularSpeed2 = ball.body.angularVelocity.len2()
+                if (linearSpeed2 > PhysicsTuning.LINEAR_SLEEP_SPEED * PhysicsTuning.LINEAR_SLEEP_SPEED ||
+                    angularSpeed2 > PhysicsTuning.ANGULAR_SLEEP_SPEED * PhysicsTuning.ANGULAR_SLEEP_SPEED) moving = true
+                restStability.observe(ball.id, ball.position, ball.rotation, linearSpeed2, angularSpeed2)
                 val pocket = PocketGeometry.pockets.firstOrNull { it.containsDrop(ball.point) }
                 if (ball.position.y < PocketGeometry.CAPTURE_DEPTH && pocket != null) {
                     capture(ball)
@@ -132,8 +172,9 @@ class PoolPhysics(
                 }
             }
         }
+        restStability.finishStep(STEP)
         quietSeconds = if (moving) 0f else quietSeconds + STEP
-        if (!wasSettled && quietSeconds >= PhysicsTuning.SETTLED_SECONDS) {
+        if (!wasSettled && (quietSeconds >= PhysicsTuning.SETTLED_SECONDS || restStability.settled)) {
             balls.filter { !it.pocketed }.forEach {
                 it.body.linearVelocity = Vector3.Zero
                 it.body.angularVelocity = Vector3.Zero
@@ -184,4 +225,10 @@ class PoolPhysics(
     }
 
     companion object { const val STEP = 1f / 120f }
+}
+
+/** Initialization precedes worker creation; subsequent worlds never reload native libraries. */
+private object BulletRuntime {
+    init { Bullet.init() }
+    fun initialize() = Unit
 }
