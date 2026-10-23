@@ -162,7 +162,7 @@ You can open Settings during any turn. The computer's input is not controlled by
 
 ## How the computer opponent works
 
-The opponent is an offline, one-shot numerical search, not a language model or a trained policy. **Apache Commons Math 3.6.1 supplies CMA-ES optimization; Bullet supplies physical simulation.** Our pool-specific code supplies starting candidates, outcome scoring, turn coordination and a small casual execution error. No data is sent to a server.
+The opponent is an offline, one-shot numerical search, not a language model or a trained policy. **Apache Commons Math 3.6.1 supplies CMA-ES (Covariance Matrix Adaptation Evolution Strategy)**, a search algorithm that tries batches of variations and uses the better results to guide the next batch. Here, it adjusts shot direction and power; Bullet simulates each candidate. Our pool-specific code supplies starting candidates, outcome scoring, turn coordination and a small casual execution error. No data is sent to a server.
 
 ```mermaid
 flowchart TD
