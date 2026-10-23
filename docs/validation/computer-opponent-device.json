@@ -98,10 +98,14 @@
     "logs": ""
   },
   "not_completed": [
-    "Human assessment of computer strength and cue animation",
     "Full matches in both views on device",
     "Interrupting the actual device planner and cue stroke at each stage",
     "Device scratch replacement and foul timing around every pocket",
     "Sustained performance under repeated planning or a ten-minute soak"
-  ]
+  ],
+  "human_acceptance": {
+    "computer_cue_aiming_and_strike_natural": true,
+    "opponent_reasonable_for_casual_play": true,
+    "reply": "yes"
+  }
 }
