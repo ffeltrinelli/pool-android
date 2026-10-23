@@ -6,3 +6,14 @@ dependencies {
     testRuntimeOnly "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
     testRuntimeOnly "com.badlogicgames.gdx:gdx-bullet-platform:$gdxVersion:natives-desktop"
 }
+
+tasks.register('difficultyCalibration', Test) {
+    group = 'verification'
+    description = 'Replay fixed plans across difficulty profiles and 64 execution seeds; writes CSV results.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    filter { includeTestsMatching '*DifficultyCalibrationTest' }
+    systemProperty 'pool.calibrateDifficulty', 'true'
+    systemProperty 'pool.calibrationOutput', rootProject.file('build/reports/difficulty/calibration.csv').absolutePath
+    outputs.upToDateWhen { false }
+}

@@ -1,0 +1,55 @@
+{
+  "target_pot_success": 0.3,
+  "calibration_tolerance": 0.01,
+  "easy": {
+    "angle_deviation_degrees": 1.2,
+    "max_angle_error_degrees": 3.6,
+    "power_variation": 0.14
+  },
+  "calibration_totals": {
+    "EASY": {
+      "layout": "TOTAL",
+      "difficulty": "EASY",
+      "shots": "512",
+      "pot_successes": "154",
+      "awarded_points": "153",
+      "scratches": "13",
+      "unsettled": "1",
+      "completed_evaluations": ""
+    },
+    "MEDIUM": {
+      "layout": "TOTAL",
+      "difficulty": "MEDIUM",
+      "shots": "512",
+      "pot_successes": "299",
+      "awarded_points": "299",
+      "scratches": "11",
+      "unsettled": "4",
+      "completed_evaluations": ""
+    },
+    "HARD": {
+      "layout": "TOTAL",
+      "difficulty": "HARD",
+      "shots": "512",
+      "pot_successes": "512",
+      "awarded_points": "574",
+      "scratches": "0",
+      "unsettled": "0",
+      "completed_evaluations": ""
+    }
+  },
+  "observed_easy_pot_success": 0.30078125,
+  "medium_and_hard_profiles_unchanged": true,
+  "search_tuning_unchanged": true,
+  "human_acceptance_of_revised_easy": "User accepted the 30.1% tuning and requested merge; no additional manual-test claim.",
+  "apk_sha256": "badf9d29d7ea7dd9cc975a24d0eb3b7232de0f7f7441800f9ebb39ba995aed59",
+  "unit_tests": {
+    "tests": 140,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "calibration_passed": true,
+  "device_installation": "Installed successfully on OnePlus 8T / Android API 34",
+  "device_ready": "Fresh Player-view Vs computer rack, Easy selected and persisted, aided aim Off preserved"
+}

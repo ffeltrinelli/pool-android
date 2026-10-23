@@ -51,7 +51,7 @@ class WorkerShotPlanningService(
 /** All timing is active game time. Pausing invalidates work and restarts an unfinished cue stroke. */
 class ComputerTurn(private val planning: ShotPlanningService, private val reportPlan: (PlanningResult) -> Unit = {}) : AutoCloseable {
     private var requested = false
-    private var selected: ShotCommand? = null
+    private var plannedShot: ShotCommand? = null
     private var stroke: ComputerStroke? = null
     private var thinkingSeconds = 0f
     private var seed = 0L
@@ -60,7 +60,7 @@ class ComputerTurn(private val planning: ShotPlanningService, private val report
     var foulPlayer: Player? = null
         private set
     val pose get() = stroke?.pose
-    val thinking get() = requested || selected != null && stroke == null
+    val thinking get() = requested || plannedShot != null && stroke == null
     val blocksShot get() = foulSeconds > 0f
 
     fun foul(player: Player) {
@@ -69,7 +69,7 @@ class ComputerTurn(private val planning: ShotPlanningService, private val report
         foulSeconds = OpponentTuning.FOUL_SECONDS
     }
 
-    fun advance(session: GameSession, table: () -> TableSnapshot, seconds: Float): ShotCommand? {
+    fun advance(session: GameSession, table: () -> TableSnapshot, seconds: Float, difficulty: OpponentDifficulty = OpponentDifficulty.MEDIUM): ShotCommand? {
         val delta = seconds.coerceAtLeast(0f)
         if (foulSeconds > 0f) {
             foulSeconds = (foulSeconds - delta).coerceAtLeast(0f)
@@ -79,20 +79,20 @@ class ComputerTurn(private val planning: ShotPlanningService, private val report
         if (!session.canShoot || session.player != Player.COMPUTER || session.mode != PlayMode.COMPUTER) return null
         if (stroke != null) {
             val shot = stroke!!.advance(delta)
-            if (shot != null) { selected = null; stroke = null; thinkingSeconds = 0f }
+            if (shot != null) { plannedShot = null; stroke = null; thinkingSeconds = 0f }
             return shot
         }
-        if (selected == null && !requested) {
+        if (plannedShot == null && !requested) {
             planning.start(table(), ++seed)
             requested = true
         }
         thinkingSeconds += delta
         if (requested) planning.poll()?.let { result ->
             reportPlan(result)
-            selected = result.shot
+            plannedShot = result.shot
             requested = false
         }
-        if (selected != null && thinkingSeconds >= OpponentTuning.THINK_SECONDS) stroke = ComputerStroke(selected!!)
+        if (plannedShot != null && thinkingSeconds >= OpponentTuning.THINK_SECONDS) stroke = ComputerStroke(ExecutionAccuracy.apply(plannedShot!!, difficulty, seed))
         return null
     }
 
@@ -104,7 +104,7 @@ class ComputerTurn(private val planning: ShotPlanningService, private val report
     }
     fun reset() {
         suspend()
-        selected = null
+        plannedShot = null
         foulSeconds = 0f
         foulPlayer = null
     }

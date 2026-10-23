@@ -1,0 +1,51 @@
+{
+  "device": "OnePlus KB2003 / OnePlus 8T, Android 14 / API 34, 1080x2400",
+  "apk_sha256": "a8774346b95d985dcd82df76da0e5c4b0410be0864aab4dc8ed0c3472d2892dd",
+  "lifecycle": {
+    "solo_saved": true,
+    "computer_saved": true,
+    "difficulty_taps_save_all_levels": true,
+    "difficulty_drag_snaps_and_clamps": true,
+    "outside_tap_preserves_difficulty": true,
+    "background_resume_same_process": true,
+    "background_preserves_open_settings": true,
+    "computer_persists_after_process_restart": true,
+    "difficulty_persists_after_process_restart": true,
+    "exit_finishes_activity": true,
+    "medium_saved_before_exit": true
+  },
+  "turns": {
+    "top_thinking_seen": "POOL\nYOUO / COMPUTER 0\nComputer thinking...",
+    "top_interrupted_pending_search": true,
+    "top_planning_pause_pixels_stable": true,
+    "top_planning_log": "--------- beginning of main\n10-23 22:56:04.519 13742 14021 I PoolAI  : 38 evaluations in 5000 ms; fallback=false",
+    "top_selected_plan_pause_pixels_stable": true,
+    "top_human_turn_returned": true,
+    "top_retained_plan_not_replanned": true,
+    "top_seconds_to_human_return": 29.44,
+    "player_thinking_seen": "POOL\nYOUO / COMPUTER 0\nComputer thinking...",
+    "player_interrupted_pending_search": true,
+    "player_planning_pause_pixels_stable": true,
+    "player_planning_log": "--------- beginning of main\n10-23 22:56:04.519 13742 14021 I PoolAI  : 38 evaluations in 5000 ms; fallback=false\n10-23 22:56:33.906 13742 14021 I PoolAI  : 39 evaluations in 5000 ms; fallback=false",
+    "player_selected_plan_pause_pixels_stable": true,
+    "player_human_turn_returned": true,
+    "player_retained_plan_not_replanned": true,
+    "player_human_turn_evidence": "Visual inspection of player-after-shot.png: Your turn and the human cue are visible; OCR timed out against the table background.",
+    "player_retained_plan_evidence": "Continuous app.log contains one completed player-view planning result and no later result through the post-shot observation window.",
+    "app_log": "--------- beginning of main\n10-23 22:56:04.519 13742 14021 I PoolAI  : 38 evaluations in 5000 ms; fallback=false\n10-23 22:56:33.906 13742 14021 I PoolAI  : 39 evaluations in 5000 ms; fallback=false\n",
+    "app_error_lines": []
+  },
+  "pending": [
+    "Human difficulty feel and subjective responsiveness",
+    "Full matches in both views",
+    "Repeated-scratch audibility and full device foul timing",
+    "New ten-minute performance soak"
+  ],
+  "harness_notes": [
+    "Readiness now requires the Pool gear colors and a focused game window; arbitrary bright launcher or notification pixels are rejected.",
+    "Open Settings dims the background HUD; Home/resume readiness uses foreground state and successful modal input.",
+    "Preferences are polled after input because their on-disk writes can lag a frame.",
+    "Continuous logcat avoids counting entries that Android can evict.",
+    "Final player handoff was visually verified after OCR failed against the table background."
+  ]
+}
