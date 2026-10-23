@@ -98,6 +98,17 @@ class PoolRenderer : Disposable {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
         val cuePoint = physics.balls.firstOrNull { it.id == 0 && !it.pocketed }?.point
         views.update(cuePoint, gesture.direction, session.canShoot && !holdOverview, viewDelta)
+        renderTable(physics)
+        val cueBall = physics.balls.firstOrNull { it.id == 0 && !it.pocketed }
+        if (aidedAim && !settingsOpen && session.humanTurn && humanCanAim && cueBall != null) {
+            renderAidedAim(physics, cueBall.point, gesture.direction)
+        }
+        val cuePose = if (session.humanTurn && humanCanAim) CuePose(gesture.direction, gesture.tipGap) else computerPose
+        if (session.canShoot && cueBall != null && cuePose != null) renderCue(cueBall.point, cuePose)
+        hud.render(session, settingsOpen, views.mode, aidedAim, computerThinking, foulPlayer, difficulty)
+    }
+
+    private fun renderTable(physics: PoolPhysics) {
         modelBatch.begin(views.active.camera)
         modelBatch.render(scene, environment)
         physics.balls.forEach { ball ->
@@ -107,31 +118,34 @@ class PoolRenderer : Disposable {
             if (position.y >= TableGeometry.BALL_RADIUS - 0.005f) modelBatch.render(shadowInstances[ball.id].apply { transform.setToTranslation(position.x + 0.006f, 0.008f, position.z + 0.007f) }, environment)
             modelBatch.render(ballInstances[ball.id].apply { transform.set(position, rotation) }, environment)
         }
-        val cueBall = physics.balls.firstOrNull { it.id == 0 && !it.pocketed }
-        val cuePose = if (session.humanTurn && humanCanAim) CuePose(gesture.direction, gesture.tipGap) else computerPose
-        if (session.canShoot && cueBall != null && cuePose != null) {
-            val d = cuePose.direction
-            val tip = cueBall.point - d * (TableGeometry.BALL_RADIUS + cuePose.tipGap)
-            val length = views.active.cueLength(tip, d)
-            val center = tip - d * (length / 2)
-            modelBatch.render(cueInstance.apply {
-                transform.setToTranslation(center.x, TableGeometry.BALL_RADIUS, center.z)
-                transform.rotate(Vector3.Y, Vector3(d.x, 0f, d.z))
-                transform.scale(1f, length, 1f)
-            }, environment)
-            modelBatch.render(tipInstance.apply { transform.setToTranslation(tip.x, TableGeometry.BALL_RADIUS, tip.z) }, environment)
-
-        }
         modelBatch.end()
-        if (aidedAim && !settingsOpen && session.humanTurn && humanCanAim && cueBall != null) {
-            val path = aimPredictor.predict(cueBall.point, gesture.direction,
-                physics.balls.filter { !it.pocketed }.map { AimBall(it.id, it.point) })
-            val start = cueBall.point + gesture.direction * TableGeometry.BALL_RADIUS
-            if ((path.end - cueBall.point).dot(gesture.direction) > TableGeometry.BALL_RADIUS) {
-                aimGuide.render(views.active.camera, start, path.end, path.contactPoint)
-            }
+    }
+
+    private fun renderAidedAim(physics: PoolPhysics, cueBall: Point, direction: Point) {
+        val path = aimPredictor.predict(cueBall, direction,
+            physics.balls.filter { !it.pocketed }.map { AimBall(it.id, it.point) })
+        val start = cueBall + direction * TableGeometry.BALL_RADIUS
+        if ((path.end - cueBall).dot(direction) > TableGeometry.BALL_RADIUS) {
+            aimGuide.render(views.active.camera, start, path.end, path.contactPoint)
         }
-        hud.render(session, settingsOpen, views.mode, aidedAim, computerThinking, foulPlayer, difficulty)
+    }
+
+    private fun renderCue(cueBall: Point, pose: CuePose) {
+        val direction = pose.direction
+        val tip = cueBall - direction * (TableGeometry.BALL_RADIUS + pose.tipGap)
+        val length = views.active.cueLength(tip, direction)
+        val center = tip - direction * (length / 2)
+        // Keep perspective and self-occlusion while making the cue visible through rails and balls.
+        Gdx.gl.glDepthMask(true)
+        Gdx.gl.glClear(GL20.GL_DEPTH_BUFFER_BIT)
+        modelBatch.begin(views.active.camera)
+        modelBatch.render(cueInstance.apply {
+            transform.setToTranslation(center.x, TableGeometry.BALL_RADIUS, center.z)
+            transform.rotate(Vector3.Y, Vector3(direction.x, 0f, direction.z))
+            transform.scale(1f, length, 1f)
+        }, environment)
+        modelBatch.render(tipInstance.apply { transform.setToTranslation(tip.x, TableGeometry.BALL_RADIUS, tip.z) }, environment)
+        modelBatch.end()
     }
 
     override fun dispose() {

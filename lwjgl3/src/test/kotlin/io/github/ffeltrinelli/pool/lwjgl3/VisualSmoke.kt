@@ -62,7 +62,10 @@ object VisualSmoke {
         private val difficultyScenarios = listOf("top", "player").flatMap { view ->
             OpponentDifficulty.entries.map { "$view-difficulty-${it.name.lowercase()}" }
         }
-        private val allScenarios get() = scenarios + viewScenarios + pocketScenarios + aidScenarios + computerScenarios + difficultyScenarios
+        private val cueVisibilityScenarios = listOf("top", "player").flatMap { view ->
+            listOf("initial", "withdrawn", "return", "ball-overlap", "computer", "settings").map { "$view-cue-visibility-$it" }
+        }
+        private val allScenarios get() = scenarios + viewScenarios + pocketScenarios + aidScenarios + computerScenarios + difficultyScenarios + cueVisibilityScenarios
         private var index = 0
         override fun create() {
             renderer = PoolRenderer()
@@ -94,6 +97,7 @@ object VisualSmoke {
                 framebuffer.begin(); bound = true
                 renderer.render(physics, session, gesture, 1080, 2400)
                 capture(name)
+                if (name in cueVisibilityScenarios) verifyCueVisibility(name)
                 if (name.startsWith("rolling-markings-")) captureDetail(name)
                 if (name in pocketScenarios) capturePocketDetail(name)
                 report.record(name, null)
@@ -117,6 +121,7 @@ object VisualSmoke {
             renderer.computerThinking = false
             renderer.foulPlayer = null
             renderer.difficulty = OpponentDifficulty.MEDIUM
+            if (name in cueVisibilityScenarios) { cueVisibilityFixture(name); return }
             if (name in difficultyScenarios) {
                 session.restart(PlayMode.COMPUTER)
                 renderer.views.select(if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP)
@@ -199,6 +204,69 @@ object VisualSmoke {
                 }
             }
         }
+        private fun cueVisibilityFixture(name: String) {
+            val cue = if (name.endsWith("ball-overlap")) Point(0f, 0.4f) else Point(0.49f, 0.3f)
+            val direction = if (name.endsWith("ball-overlap")) Point(0f, -1f) else Point(-1f, 0f)
+            val objectBall = if (name.endsWith("ball-overlap")) cue - direction * 0.2f else Point(0f, 0f)
+            physics.reset(listOf(0 to cue, 1 to objectBall))
+            renderer.views.select(if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP)
+            val start = cue - direction * 0.3f
+            gesture.begin(PointerSample(0, start, 0.0), cue)
+            if (name.endsWith("withdrawn") || name.endsWith("return")) {
+                gesture.move(PointerSample(0, start - direction * 0.02f, 0.05))
+                gesture.move(PointerSample(0, start - direction * 0.10f, 0.1))
+                if (name.endsWith("return")) gesture.move(PointerSample(0, start + direction * 0.02f, 0.2))
+                check(gesture.phase == CuePhase.STROKING)
+                val expectedGap = if (name.endsWith("withdrawn")) 0.15f else 0.03f
+                check(abs(gesture.tipGap - expectedGap) < 0.0001f)
+            }
+            if (name.endsWith("computer")) {
+                session.restart(PlayMode.COMPUTER)
+                session.beginShot()
+                session.accept(PhysicsEvent.Settled)
+                check(session.player == Player.COMPUTER)
+                renderer.humanCanAim = false
+                renderer.computerPose = CuePose(direction, 0.05f)
+            }
+            renderer.settingsOpen = name.endsWith("settings")
+            renderer.views.update(cue, direction, true)
+            check(gesture.direction == direction && session.canShoot)
+        }
+
+        private fun verifyCueVisibility(name: String) {
+            val cue = physics.balls.first { it.id == 0 }.point
+            val distance = when {
+                name.endsWith("withdrawn") -> 0.21f
+                name.endsWith("ball-overlap") -> 0.2f
+                else -> 0.16f
+            }
+            val probe = cue - gesture.direction * distance
+            val screen = renderer.views.active.camera.project(
+                Vector3(probe.x, TableGeometry.BALL_RADIUS, probe.z), 0f, 0f, 1080f, 2400f)
+            check(screen.x in 6f..1073f && screen.y in 6f..2393f)
+            val withCue = Pixmap.createFromFrameBuffer(screen.x.toInt() - 5, screen.y.toInt() - 5, 11, 11)
+            val humanCanAim = renderer.humanCanAim
+            val computerPose = renderer.computerPose
+            try {
+                renderer.humanCanAim = false
+                renderer.computerPose = null
+                renderer.render(physics, session, gesture, 1080, 2400)
+                val withoutCue = Pixmap.createFromFrameBuffer(screen.x.toInt() - 5, screen.y.toInt() - 5, 11, 11)
+                try {
+                    val changed = (0 until 11).sumOf { x ->
+                        (0 until 11).count { y -> withCue.getPixel(x, y) != withoutCue.getPixel(x, y) }
+                    }
+                    if (name.endsWith("settings")) check(changed == 0) { "Settings must cover the cue ($changed changed pixels)" }
+                    else check(changed >= 5) { "Cue hidden at obstacle ($changed changed pixels)" }
+                } finally { withoutCue.dispose() }
+            } finally {
+                withCue.dispose()
+                renderer.humanCanAim = humanCanAim
+                renderer.computerPose = computerPose
+                renderer.render(physics, session, gesture, 1080, 2400)
+            }
+        }
+
         private fun computerFixture(name: String) {
             session.restart(PlayMode.COMPUTER)
             val playerView = name.startsWith("player")
