@@ -1,5 +1,8 @@
 # Computer-only play and clean-code review
 
+> Historical review of the computer-only cleanup PR. Current rules and architecture are documented in the [README](../README.md); the eight-ball change supersedes ball-count scoring and human-only fresh breaks.
+
+
 Review date: 2026-10-24. Applied the installed `clean-code` skill's mini rules and repository `AGENTS.md`. Solo removal is the intended gameplay change. Physics, gesture, camera, sound, search and accuracy tuning remain unchanged.
 
 ## Review coverage and decisions

@@ -1,5 +1,8 @@
 # Device validation — 19 October 2026
 
+This is a chronological validation log. Earlier sections describe the builds tested at that time, not necessarily the current rules. See the latest section and [README](../README.md) for current behavior.
+
+
 Device: OnePlus 8T (KB2003), API 34, ARM64, physical resolution 1080 × 2400.
 App: io.github.ffeltrinelli.pool 0.1.0; minimum API 26, target API 34, compile API 36.
 
@@ -246,3 +249,22 @@ The debug APK installed and cold-launched on the **OnePlus 8T / Android 14 / API
 - On the final production build, exercised fresh human breaks in Top and Player views. Both reached computer planning, showed its cue and strike, and returned to the human turn. Saved phone frames cover fresh rack, selected computer cue, shot motion and returned turn. Planning logged **20 completed evaluations in 5000 ms** (Top) and **30 in 5000 ms** (Player), both without fallback. The roughly 13.5-second break-to-selected-shot measurement also includes the human break settling and capture overhead; it is not planner latency. [Turn evidence](validation/computer-only-turns.json).
 - Human/computer score transitions, scratches, deterministic cue replacement and match results were verified in automated rules/native/rendered suites. A complete phone match, deliberate scratch/replacement scenario, subjective gesture/audio re-acceptance and a new ten-minute performance soak were **not repeated** for this cleanup. Earlier acceptance records remain historical evidence, not new checks.
 - Captioned Settings comparison: [before](images/computer-only/settings-before.png), [after](images/computer-only/settings-after.png). Desktop report screenshots demonstrate the production renderer; phone lifecycle/turn captures are under `build/reports/device-computer-only/`.
+
+## Simplified eight-ball (2026-10-24)
+
+Replaced ball-count scoring with the simplified WPA rules in the [README](../README.md#rules-of-this-game). Fresh breaks and fouls now require valid cue-ball placement; new requested racks alternate breakers. Added explicit open-table/group messages and eight-ball results.
+
+Local verification: **157 passed tests, one opt-in calibration skipped, zero failures; 135 rendered scenarios passed**. Audio assets and production lifecycle passed through OpenAL's null backend. Android lint and debug APK build passed. Existing lint warnings were not introduced by this change. See the [implementation/documentation review](eight-ball-review.md).
+
+Installed the debug APK on the OnePlus 8T KB2003, Android 14 / API 34, retaining view, aided-aim and difficulty preferences. Observed:
+
+- Cold launch starts human break placement, temporarily in Top view despite saved Player view.
+- Placement ahead of the head string turns the highlight red, explains the error, and remains unconfirmed when the confirmation button is tapped.
+- A valid off-centre placement survives Home/resume in the same process. Confirmation restores Player view and normal stroke input.
+- A human break pockets a ball and correctly keeps the human turn while groups remain open.
+- Settings Restart alternates to a computer break. The computer selects its placement, makes its visible stroke, pots a ball, assigns groups on a later legal pot, and continues shooting.
+- Recorded computer searches completed 12, 30 and 24 evaluations at the 5,000 ms deadline, without fallback. Inspected captures show the open-table and assigned-group HUD and the Player-view overview. No PoolPhysics escape or AndroidRuntime error appeared in the captured log.
+
+Phone evidence is generated under `build/reports/device-eight-ball`. The final confirmation-alignment correction also has automated rack/gesture coverage; the final APK is reinstalled before delivery.
+
+Not claimed as completed: a full human-played rack through its result, deliberate phone scratch/ball-in-hand recovery, all rare break/head-string exceptions on the phone, a new ten-minute performance soak, or subjective user acceptance of the new placement interaction. Automated rule/native/rendered tests cover these rule outcomes; earlier device records remain historical evidence, not acceptance of this build.

@@ -1,10 +1,11 @@
-# Pool — play against the computer
+# Pool — eight-ball against the computer
 
-An offline 3D pool demo for Android, based on [MVP Design #1](https://github.com/ffeltrinelli/pool-android/issues/1). Aim and shoot with one continuous touch gesture. Play against an offline computer opponent, alternating one shot per player and earning one point per object ball; a scratch cancels all points for that shot. The eight ball has no special rule. Every new game starts with your break.
+An offline 3D eight-ball game for Android, based on [MVP Design #1](https://github.com/ffeltrinelli/pool-android/issues/1). Play solids versus stripes against a local computer opponent, with simplified WPA rules, physical pockets, and continuous touch aiming and strokes.
 
 ## Table of contents
 
 - [Build and run](#build-and-run)
+- [Rules of this game](#rules-of-this-game)
 - [Controls](#controls)
 - [Architecture and tuning](#architecture-and-tuning)
 - [Automated verification](#automated-verification)
@@ -41,8 +42,32 @@ For desktop development:
 
 The Gradle task adds macOS's required `-XstartOnFirstThread`. Mouse dragging uses the same gesture interpreter as touch. Collision, cue and pocket-drop sounds play on both platforms and follow the device media volume.
 
+## Rules of this game
+
+Clear your seven solids (1–7) or stripes (9–15), then legally pocket the eight in any pocket to win. The table stays open after the break; the first subsequent legal shot pocketing only one group assigns it to the shooter. Keep shooting when you legally pocket your own ball, otherwise the turn passes. Hit your group first (the eight only after clearing your group); if nothing is pocketed, a ball must reach a cushion after contact. Scratches, wrong/no first contact, off-table balls, and failure to reach a cushion are fouls. The incoming player gets cue ball in hand. Pocketing the eight early, while fouling, or knocking it off-table loses the rack. There are no ball-count scores or draws.
+
+| Situation | This game's rule |
+|---|---|
+| Breaker | Human on application launch; Restart and Play again alternate breakers |
+| Fresh break | Place the cue ball behind the head string; pocket a ball or send four distinct object balls to cushions |
+| Insufficient break | Message, automatic fresh rack, opponent breaks |
+| Eight on break | Return it to the foot spot, or nearest available position on the spotting line; never an immediate win/loss |
+| Break foul | Opponent places behind the head string; cross that line before hitting a ball behind it |
+| Ordinary foul | Opponent places anywhere valid; pocketed object balls stay down |
+| Open-table mixed pot | Groups remain unassigned; the shooter continues if there was no foul |
+| Opponent's ball pocketed | Stays down; not itself a foul, but does not earn another shot |
+| Last group ball and eight together | Loss: the group must be clear before the eight-ball shot starts |
+| Scratch while attempting eight | Ordinary foul if the eight stays on the table; loss if it is pocketed too |
+
+The source is the [WPA Rules of Play, effective 15 September 2025](https://www.wpapool.com/wp-content/uploads/2026/01/2026.01.02-WPA-Rules.pdf), especially sections 1–4. **Our deviations:** no called shots or called pocket for the eight; legal accidental pots count; mixed-group open-table pots use the rule above; break choices resolve automatically; and there is no automatic referee/stalemate procedure. Use Settings → Restart for a stuck rack. On the rare open table with one group already completely gone, the eight is a legal winning target. Restricted placement also handles WPA's nearest-legal-ball spotting exception if every eligible target lies behind the head string.
+
+![Portrait table diagram: head end and shaded break-placement area below the head string, foot spot and rack at the opposite end, six pockets, centre line, and enlarged rack showing the central eight and opposite-group rear corners.](docs/images/eight-ball/table-concepts.svg)
+
+The head string lies one-quarter of the table length from the head end; the foot spot lies one-quarter from the foot end. The rack's apex sits on the foot spot. Its eight is centred in row three and the rear corners contain opposite groups; other positions are shuffled. The suggested cue-ball position is not mandatory. Guide lines in this diagram explain the geometry; gameplay draws placement guides only when needed.
+
 ## Controls
 
+- During placement, tap or drag the highlighted cue ball in Top view, then select **Confirm placement**. Invalid positions are red and cannot be confirmed. Placement restores your selected view afterward.
 - Touch behind the cue ball, away from its immediate center. The cue lies between your finger and the ball.
 - Circle your finger around the cue ball to aim. Aided aim is enabled by default: a dashed line shows the direct cue-ball path to its first object-ball contact, or the first rail/jaw/pocket mouth if no ball is reached. It accounts for ball radius and does not predict rebounds or the object ball’s path. The guide extends the impact position by the cue-ball contact clearance along the original aim axis, without bending toward the contact normal. The dash pattern always reaches the endpoint.
 - Drag backward to withdraw the cue and forward to advance it. You can make repeated practice strokes without lifting. A deliberate axial movement locks the aiming direction until release; lift your finger to re-aim.
@@ -51,15 +76,15 @@ The Gradle task adds macOS's required `-XstartOnFirstThread`. Mouse dragging use
 - Open the **gear** for Settings: choose **Top view** / **Player view**, toggle **Aided aim**, set **Difficulty** (Easy / Medium / Hard), then use **Restart** or **Exit game** side by side. Aided aim uses the same half-width button as the view selector. Settings pauses play and stops current sounds. Use the top-right **X** or Android Back to resume. Exit closes the app immediately without saving the rack. **Play again** remains available after a result. Every fresh rack resets the cue toward the apex ball and aligns the player camera, with a 50 mm resting tip gap.
 - In **Player view**, touching preserves aim. Drag sideways to turn the cue and camera together; drag down to pull back and up to strike. Lift to unlock the direction. At contact, the camera smoothly pulls back to a closer overview while balls move; outer table edges may be off-screen, then returns behind the settled cue ball.
 - The selected view, aided-aim setting and computer difficulty are remembered across rack restarts and app launches; the first launch uses Top view, aided aim On and Medium difficulty. Older play-mode preferences are ignored; all installations play against the computer.
-- Ball collisions click, cushions thud, and cue contact plays a separate strike. Every physical pocket drop plays the pocket sound, including each cue-ball scratch after replacement in Vs computer. Stronger impacts are louder. There is no music or in-game volume control.
+- Ball collisions click, cushions thud, and cue contact plays a separate strike. Every physical pocket drop plays the pocket sound, including repeated cue-ball scratches after ball-in-hand placement. Stronger impacts are louder. There is no music or in-game volume control.
 
-Top view uses the original fixed portrait overhead camera and shows the whole table with gesture space around the rails. Player view uses a raised first-person perspective and may crop parts of the table. The cue is drawn over the table borders and balls so it stays visible near rails in both views, including computer strokes. It keeps its perspective and lighting, and is still clipped at screen edges. Settings and the HUD remain above it; there are no cue obstruction, spin, jump-shot, or eight-ball rule controls.
+Top view uses the original fixed portrait overhead camera and shows the whole table with gesture space around the rails. Player view uses a raised first-person perspective and may crop parts of the table. The cue is drawn over the table borders and balls so it stays visible near rails in both views, including computer strokes. It keeps its perspective and lighting, and is still clipped at screen edges. Settings and the HUD remain above it; there are no cue obstruction, spin, or jump-shot controls.
 
 ## Architecture and tuning
 
 The scaffold comes from official **gdx-liftoff 1.14.2.3**, using its Kotlin template and Bullet extension. Build tools: Gradle 8.11.1, Android Gradle Plugin 8.10.1, Kotlin 2.2.21, libGDX/Bullet 1.14.2. All graphics use libGDX models, materials, lighting, textures, and text rendering; there is no custom renderer or collision solver.
 
-- `core`: `GameSession` owns round rules; `CueGesture` consumes timestamped table-space input and emits one `ShotCommand`; `PoolPhysics` owns Bullet bodies, fixed-step simulation and `PhysicsEvent` delivery; `PoolRenderer` draws the same scene on both platforms; `GameViews` selects separate `TopView` and `PlayerView` camera/input implementations; `GameHud` draws HUD/settings using shared `HudLayout` hit regions; `GameControls` owns modal suspension, while `SavedSettingsPreference` adapts persistence; `PoolAudio` owns preloaded impact effects. `AimPredictor` queries direct contact geometry without modifying physics; `AimGuideRenderer` draws depth-tested world-space dashes in one mesh. `GameInput` routes settings and gameplay pointers; `PoolGame` coordinates lifecycle and frames. Immutable `TablePresentation` and `HudPresentation` carry per-frame display state instead of renderer flags. `ComputerTurn` has explicit idle, planning, selected, and stroking states; `ShotPlanningService` owns worker execution, `ShotSearch` owns request budgets/results, and `ShotSimulation` owns silent Bullet evaluation.
+- `core`: `GameSession` owns rack/turn state and delegates pure decisions to `EightBallRules`; `ShotFacts` aggregates physics facts for both live and simulated shots; `CueBallPlacement` owns the human preview; `CueGesture` consumes timestamped table-space input and emits one `ShotCommand`; `PoolPhysics` owns Bullet bodies, fixed-step simulation and `PhysicsEvent` delivery; `PoolRenderer` draws the same scene on both platforms; `GameViews` selects separate `TopView` and `PlayerView` camera/input implementations; `GameHud` draws HUD/settings using shared `HudLayout` hit regions; `GameControls` owns modal suspension, while `SavedSettingsPreference` adapts persistence; `PoolAudio` owns preloaded impact effects. `AimPredictor` queries direct contact geometry without modifying physics; `AimGuideRenderer` draws depth-tested world-space dashes in one mesh. `GameInput` routes settings and gameplay pointers; `PoolGame` coordinates lifecycle and frames. Immutable `TablePresentation` and `HudPresentation` carry per-frame display state instead of renderer flags. `ComputerTurn` has explicit idle, planning, selected, and stroking states; `ShotPlanningService` owns worker execution, `ShotSearch` owns request budgets/results, and `ShotSimulation` owns silent Bullet evaluation.
 - `android`: immersive portrait launcher, safe cutout policy, disabled motion sensors, and keep-screen-on while foregrounded.
 - `lwjgl3`: desktop launcher and separate test-only rendered fixtures. Fixtures do not introduce game debug controls.
 
@@ -77,7 +102,7 @@ Object-ball numbers are baked into two opposite circular patches on each sphere'
 
 Pocket drops use selected sound C, “Pool ball falling into pocket” by freesman (CC BY 3.0). A dedicated `PocketDrop` physics callback, separate from rule events and impact strength, queues it exactly once, including scratches. It uses fixed nominal gain 0.35 and the shared eight-voice / total-gain budget; pocket sounds take priority over ordinary impacts. Jaw rebounds retain cushion audio. Pause, settings and restart clear pending playback, and restart clears per-ball duplicate suppression. See [audio credits](assets/audio/README.md) for the source, licence and edits.
 
-Native bodies and graphics resources have explicit owners and disposal paths. A restart reuses shared collision shapes and models while replacing ball bodies. `AGENTS.md` contains the locally embedded clean-code instructions and screenshot requirements for PR descriptions. See the [computer-only cleanup review](docs/computer-only-cleanup.md) for the module review and refactoring decisions.
+Native bodies and graphics resources have explicit owners and disposal paths. A restart reuses shared collision shapes and models while replacing ball bodies. `AGENTS.md` contains the locally embedded clean-code instructions and screenshot requirements for PR descriptions. See the current [eight-ball implementation and documentation review](docs/eight-ball-review.md), or the historical [computer-only cleanup review](docs/computer-only-cleanup.md).
 
 `AudioTuning` centralizes minimum impulse (0.002 N·s), full-volume impulse (1.15 N·s), maximum gain (0.45), eight concurrent voices, and summed gain budget (1.0). Bullet impact events are separate from session rules, aggregate contact-point impulses per pair per step, and suppress repeated contact until separation. The cue effect is emitted only when the shot impulse is applied. Stronger pending hits take priority, and stronger new hits can replace quieter active voices. Sounds are stopped on pause/restart and disposed on shutdown. Audio failures are logged without stopping play.
 
@@ -104,7 +129,7 @@ Native bodies and graphics resources have explicit owners and disposal paths. A 
 
 JUnit tests also cover saved view/aided-aim/difficulty selection, discrete slider capture and cancellation, seeded execution profiles and exact Hard commands, radius-aware aim prediction and obstruction, fresh-rack cue/camera alignment, exit delivery, modal hit routing and suspension, independent background/settings pause states, camera elevation/alignment/freeze/resize, virtual input without camera feedback, stable player circling, practice strokes, and equal-speed power across modes. JUnit tests cover continuous aiming/stroking, cancellation, noisy and multi-pointer input, power scaling/capping, exactly one impulse, settling, game outcomes, restart, native collisions, six physical pockets, high-speed cushion hits, rack integrity, fixed-step consistency, stable cloth support, sliding-to-rolling slip, energy loss, angular settling, and pose reset. Physics assertions use tolerances rather than exact trajectories.
 
-Rendered smoke tests capture 109 deterministic scenarios, including all three difficulty selections in both views. Twenty-two other opponent fixtures cover both views, human/computer turns, three computer cue stages, foul notices, all match results, and updated Settings. The original eighteen cover initial rack, cue/aim, three bidirectional cue positions (initial, withdrawn, forward return), six pocket approaches, scratch result, cleared result, and five stages of rolling solid/striped balls (0, 12, 18, 24 and 48 simulation steps). Nineteen additional fixtures cover settings in both modes, player view at four headings, withdrawn/returned strokes, halfway/full shot pullbacks and return to aiming, both player-view results, and six rail/pocket-adjacent positions. Twenty-eight additional pocket fixtures cover corner/side drop stages at 0, 12, 24, 36 and 60 fixed steps, shelf positions and jaw contacts in both views. Sixteen aided-aim fixtures cover enabled/disabled guides, glancing hits, rail and pocket endpoints, obstruction, restart alignment, and the Off setting in both views. Detail crops accompany rolling and pocket fixtures. Captures run on the graphics thread into a fixed-size framebuffer after fixture setup or a fixed simulation pre-roll. No timing sleeps or image baselines are used. Assertions check fixture state; screenshots support human visual review rather than automatic appearance approval.
+Rendered smoke tests capture 135 deterministic scenarios: table and rolling markings, six pocket approaches and physical drop stages, views and camera transitions, aided aim, cue visibility, computer strokes, settings/difficulty, group ownership, eight-ball turns, and valid/invalid cue placement. Detail crops accompany rolling and pocket fixtures. Captures use the graphics thread at 1080 × 2400 after setup or a fixed simulation pre-roll. Assertions check fixture state; screenshots support human review without automatic image baselines. Rule tests exercise break legality, groups, retained turns, fouls, wins/losses, placement, and alternating breakers; native tests verify shot contact facts, spotting and isolated group-aware planning.
 
 For an optional five-second player-view recording, generate deterministic frames with `POOL_RECORD_PLAYER_VIEW=1 ./gradlew :lwjgl3:visualTest`, then encode them with ffmpeg:
 
@@ -157,9 +182,7 @@ The optional recording uses test-only fixtures; normal play exposes no fixture c
 
 ## Playing against the computer
 
-Choose **Vs computer** in Settings. You always break. Players alternate a single shot even after pocketing balls. Points are committed when the table settles: each object ball is worth one point, but pocketing the cue ball awards **zero points for the entire shot**. Those object balls stay removed. A three-second foul notice identifies the player during ongoing play; Settings and background suspension pause that timer.
-
-After a scratch, the cue returns to its initial position without disturbing the object balls. If blocked, placement uses the nearest safe point on a deterministic 5 mm lattice in the starting half, with 2 mm extra clearance. The next player then shoots. Once all object balls are gone, the higher score wins; uncredited foul balls make draws possible. The result screen shows the outcome and scores without a foul explanation. Restart and Play again clear scores and restore the human break. Preferences persist, matches do not.
+The computer is the only opponent. Both players follow the rules above, including retained turns after legal pots and ball in hand after fouls. The HUD shows group ownership, remaining balls and whose turn it is. A foul announcement identifies its reason for three seconds of active game time; Settings and background suspension pause it. The computer chooses its own cue-ball placement. Restart and Play again clear the rack and ownership and alternate the breaker. Preferences persist; racks and breaker order do not survive application restart.
 
 You can open Settings during any turn. The computer's input is not controlled by your gestures. Player view stays in the existing overview during its turn, returning to your previous aiming heading on yours. The computer cue becomes visible after planning: 350 ms at the 50 mm gap, 250 ms backswing to 120 mm, then 200 ms forward to contact. Contact applies one shot impulse and the existing cue sound. Its animation speed does not determine shot power. The aided-aim line is hidden throughout computer turns.
 
@@ -169,12 +192,13 @@ The opponent is an offline, one-shot numerical search, not a language model or a
 
 ```mermaid
 flowchart TD
-    A[Settled table snapshot] --> B[Our code: direct ghost-ball candidates and estimated impulse]
+    A[Settled table + rules context] --> P[Our code: valid placement candidates if needed]
+    P --> B[Our code: legal ghost-ball candidates and estimated impulse]
     B --> C[Commons Math: CMA-ES varies angle and impulse]
     C --> D[Silent worker-owned Bullet world simulates a shot]
-    D --> E[Our code: score completed outcome]
+    D --> E[Shared eight-ball rules: wins, losses, fouls and legal pots]
     E -->|Feedback within budget| C
-    E --> F[Best completed shot or legal fallback]
+    E --> F[Best placement and shot or fallback]
     F --> G[Execution accuracy: Easy / Medium / Hard]
     G --> H[Visible cue animation]
     H --> I[At tip contact: strike in the live game]
@@ -182,7 +206,7 @@ flowchart TD
 
 ### Starting shots: ghost-ball geometry
 
-For each remaining object ball and pocket, compute the desired object-ball direction toward the pocket interior. Place an imaginary cue-ball centre two ball radii behind the object ball along that direction. Aiming at this **ghost ball** gives an initial cue direction. Reject paths blocked by balls, cushions or jaws, ghost positions outside the playing bounds, and cuts with insufficient forward momentum transfer. The shared aim predictor checks the initial paths; actual pocket success is decided by Bullet.
+For each legal target ball and pocket, compute the desired object-ball direction toward the pocket interior. Place an imaginary cue-ball centre two ball radii behind the object ball along that direction. Aiming at this **ghost ball** gives an initial cue direction. Reject paths blocked by balls, cushions or jaws, ghost positions outside the playing bounds, and cuts with insufficient forward momentum transfer. The shared aim predictor checks the initial paths; actual pocket success is decided by Bullet.
 
 ```mermaid
 flowchart LR
@@ -191,7 +215,7 @@ flowchart LR
     O -->|Intended object-ball path| P[Pocket]
 ```
 
-There are at most 90 ball/pocket combinations. Shortlist up to four by travel distance and cut difficulty. The initial impulse in N·s is `clamp(0.18 + 0.16 × sqrt(cueDistance + objectDistance / cutCosine²), 0.08, 1.15)`, with distances in metres. This is a rough seed, not a second physics model. If no direct pot is available, seed a 0.55 N·s shot toward the nearest object ball.
+A fixed-position shot shortlists two geometric candidates. Ball in hand considers up to eight valid positions, including direct-pot seeds and a safe grid, and up to two shots per position, capped at eight starting pairs. All share one search budget. Breaks seed a strong 1.10 N·s shot at the apex. The initial impulse in N·s is `clamp(0.18 + 0.16 × sqrt(cueDistance + objectDistance / cutCosine²), 0.08, 1.15)`, with distances in metres. This is a rough seed, not a second physics model. If no direct pot is available, seed a 0.55 N·s shot toward the nearest legal target.
 
 ### What CMA-ES searches
 
@@ -199,11 +223,11 @@ The optimizer changes **angle and impulse together**, sampling populations of si
 
 Evaluate geometric seeds first, then divide the remaining evaluation budget between their CMA-ES searches. A turn allows up to 64 candidate attempts and a five-second deadline shared by all difficulties, including setup. Each simulation uses the production 120 Hz physics and must settle within 30 simulated seconds. Incomplete or interrupted simulations cannot win. Bounds and deadlines are checked between physics steps. The best fully evaluated shot is retained even when the optimizer exhausts its budget.
 
-The objective is `100 × awardedPoints + 10 × noScratch + pocketProximity − 0.01 × impulse`. Awarded points are zero on a scratch. Proximity is bounded to 0–1 and uses the nearest remaining object ball's distance to a pocket mouth. These weights prioritize scored balls, then avoiding a scratch, then proximity; lower impulse breaks otherwise equal outcomes. This secondary signal helps distinguish some shots that pocket nothing, but does not guarantee an easy search landscape.
+The shared rules evaluate each completed simulation. A winning eight scores 100,000; losing the rack or requiring a new break scores −100,000; other fouls score −10,000. Otherwise the score is `100 × ownTargetPots + 10 + pocketProximity − 0.01 × impulse`. Proximity is bounded to 0–1 and considers remaining legal targets. This prioritizes wins, avoiding losses/fouls, and legal pots; lower impulse breaks otherwise equal outcomes. These are search weights, not gameplay points. An incomplete simulation is rejected with a score below a losing completed shot.
 
 ### Isolation, casual strength and lifecycle
 
-A single worker exclusively owns a separate Bullet world and disposes it on that same worker. A settled snapshot carries ball identity, position, height and rotation; velocities are zero because meaningful movement has already ended. Native contact caches are not copied, so predictions are physically approximate rather than bit-identical to the live world. No planning simulation delivers live game or audio events.
+A single worker exclusively owns a separate Bullet world and disposes it on that same worker. A settled snapshot carries ball identity, position, height, rotation, group ownership, break status and placement entitlement; velocities are zero because meaningful movement has already ended. Native contact caches are not copied, so predictions are physically approximate rather than bit-identical to the live world. No planning simulation delivers live game or audio events.
 
 The Settings slider has exactly three discrete levels. Tapping a stop selects it; dragging snaps to the nearest stop. The saved selection defaults to **Medium**.
 
@@ -213,7 +237,7 @@ The Settings slider has exactly three discrete levels. Tapping a stop selects it
 | Medium (default) | 0.25° | ±0.75° | ±3% |
 | Hard | None | None | None |
 
-Easy targets approximately 30% settled pot success on the fixed calibration layouts.
+The historical Easy calibration targeted approximately 30% settled pot success on fixed layouts. Its execution-error values are unchanged; that historical measurement is not a new eight-ball win-rate measurement.
 
 The planner returns an unmodified command. When a cue stroke starts, `ExecutionAccuracy` applies the selected seeded profile once, retaining impulse bounds. Medium preserves the previously accepted casual error calculation. Hard uses the exact planned command with no artificial direction or power error; **perfect execution does not guarantee pocketing**, because numerical search and physical predictions remain approximate. Every level uses the same CMA-ES algorithm, five-second deadline, 64-attempt cap and other search tuning. More time can improve the selected shot at every level even though Medium's execution accuracy is unchanged. Thinking remains visible for at least one active second. The live shot is animated using the final varied direction, so the cue matches the actual impulse. If planning fails, log the issue and use the best completed result or the legal fallback.
 

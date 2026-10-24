@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+<title id="title">Eight-ball table and rack</title><desc id="desc">Foot end at top, head end at bottom. Head string bounds the starting quarter. Rack apex is on the foot spot. Eight in third-row centre; opposite groups at the rear corners.</desc>
+
+<rect width="1200" height="900" fill="#102c34"/>
+<style>text{font-family:Arial,sans-serif;fill:#f5eddb;font-size:18px}.small{font-size:15px}.line{stroke:#d7e9db;stroke-width:2;fill:none}.label{fill:#ffe08a;font-weight:bold}</style>
+<text x="40" y="40" font-size="26" fill="#f5eddb">Eight-ball: table landmarks and rack</text>
+<rect x="80" y="80" width="360" height="680" rx="25" fill="#795438"/>
+<rect x="100" y="100" width="320" height="640" fill="#26715c"/>
+<rect x="100" y="580" width="320" height="160" fill="#a4dca2" opacity=".28"/>
+<path d="M260 100V740" stroke="#cfe1d2" stroke-dasharray="5 8" opacity=".6"/>
+<path d="M100 580H420" stroke="#ffe08a" stroke-width="3" stroke-dasharray="10 6"/>
+<path d="M100 420H420" stroke="#cfe1d2" stroke-dasharray="5 8" opacity=".6"/>
+
+<circle cx="100" cy="100" r="14" fill="#080f12"/>
+<circle cx="420" cy="100" r="14" fill="#080f12"/>
+<circle cx="100" cy="420" r="14" fill="#080f12"/>
+<circle cx="420" cy="420" r="14" fill="#080f12"/>
+<circle cx="100" cy="740" r="14" fill="#080f12"/>
+<circle cx="420" cy="740" r="14" fill="#080f12"/>
+<circle cx="260.0" cy="260.0" r="8.1" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="251.82" cy="245.83" r="8.1" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="268.18" cy="245.83" r="8.1" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="243.64" cy="231.66" r="8.1" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="260.0" cy="231.66" r="8.1" fill="#141619" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="276.36" cy="231.66" r="8.1" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="235.46" cy="217.49" r="8.1" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="251.82" cy="217.49" r="8.1" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="268.18" cy="217.49" r="8.1" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="284.54" cy="217.49" r="8.1" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="227.28" cy="203.32" r="8.1" fill="#d9982b" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="243.64" cy="203.32" r="8.1" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="260.0" cy="203.32" r="8.1" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="276.36" cy="203.32" r="8.1" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="292.72" cy="203.32" r="8.1" fill="#fff6de" stroke="#e7ddc7" stroke-width="1.5"/>
+<clipPath id="clip29272x20332"><circle cx="292.72" cy="203.32" r="8.1"/></clipPath><rect x="284.62" y="200.07999999999998" width="16.2" height="6.48" fill="#d9982b" clip-path="url(#clip29272x20332)"/>
+<circle cx="260" cy="586" r="8.1" fill="#fff6de" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="260" cy="260" r="3" fill="#ffe08a"/>
+<text x="135" y="70" fill="#ffe08a" font-size="18" class="label">FOOT END (rack end)</text>
+<text x="150" y="792" fill="#ffe08a" font-size="18" class="label">HEAD END (break end)</text>
+<text x="455" y="155" fill="#ffe08a" font-size="18" class="">Six pockets</text>
+<path d="M445 145L420 105" stroke="#d7e9db" stroke-width="2" fill="none"/>
+<text x="455" y="265" fill="#ffe08a" font-size="18" class="label">Foot spot / rack apex</text>
+<text x="455" y="289" fill="#ffe08a" font-size="18" class="small">¼ length from foot end</text>
+<path d="M450 260H277" stroke="#d7e9db" stroke-width="2" fill="none"/>
+<text x="455" y="428" fill="#ffe08a" font-size="18" class="">Centre string / table midpoint</text>
+<text x="455" y="453" fill="#ffe08a" font-size="18" class="small">Dashed vertical guide: long centre line</text>
+<text x="455" y="586" fill="#ffe08a" font-size="18" class="label">Head string</text>
+<text x="455" y="610" fill="#ffe08a" font-size="18" class="small">¼ length from head end</text>
+<path d="M445 580H420" stroke="#d7e9db" stroke-width="2" fill="none"/>
+<text x="135" y="657" fill="#ffe08a" font-size="18" class="small">BREAK PLACEMENT AREA</text>
+<text x="136" y="681" fill="#ffe08a" font-size="18" class="small">Ball centre behind the line</text>
+<text x="455" y="716" fill="#ffe08a" font-size="18" class="">Suggested cue start: choose any valid</text>
+<text x="455" y="740" fill="#ffe08a" font-size="18" class="small">position in the shaded area.</text>
+<text x="835" y="110" fill="#ffe08a" font-size="18" class="label">RACK DETAIL</text>
+<circle cx="950.0" cy="385.0" r="17" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="932.5" cy="354.69" r="17" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="967.5" cy="354.69" r="17" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="915.0" cy="324.38" r="17" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="950.0" cy="324.38" r="17" fill="#141619" stroke="#e7ddc7" stroke-width="1.5"/>
+<text x="950.0" y="329.38" text-anchor="middle" fill="#ffffff" font-size="15" class="small">8</text>
+<circle cx="985.0" cy="324.38" r="17" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="897.5" cy="294.07" r="17" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="932.5" cy="294.07" r="17" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="967.5" cy="294.07" r="17" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="1002.5" cy="294.07" r="17" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="880.0" cy="263.76" r="17" fill="#d9982b" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="915.0" cy="263.76" r="17" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="950.0" cy="263.76" r="17" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="985.0" cy="263.76" r="17" fill="#93a3ad" stroke="#e7ddc7" stroke-width="1.5"/>
+<circle cx="1020.0" cy="263.76" r="17" fill="#fff6de" stroke="#e7ddc7" stroke-width="1.5"/>
+<clipPath id="clip102000x26376"><circle cx="1020.0" cy="263.76" r="17"/></clipPath><rect x="1003.0" y="256.96" width="34" height="13.600000000000001" fill="#d9982b" clip-path="url(#clip102000x26376)"/>
+<text x="870" y="425" fill="#ffe08a" font-size="18" class="small">Apex → toward head end</text>
+<text x="835" y="475" fill="#ffe08a" font-size="18" class="small">• Eight: centre of row three</text>
+<text x="835" y="502" fill="#ffe08a" font-size="18" class="small">• Rear corners: one of each group</text>
+<text x="835" y="529" fill="#ffe08a" font-size="18" class="small">• Grey positions: shuffled balls</text>
+<text x="40" y="842" fill="#ffe08a" font-size="18" class="small">Diagram guides explain geometry; gameplay shows placement guides only when needed.</text>
+<text x="40" y="870" fill="#ffe08a" font-size="18" class="small">Cloth: 1.12 × 2.24 m • Ball diameter: 57.15 mm • Rack spacing: diameter + 0.1 mm</text>
+</svg>
