@@ -94,13 +94,13 @@ class GameInputTest {
             assertTrue(input.touchDown(210, 466, 0, Input.Buttons.LEFT))
             input.touchUp(210, 466, 0, Input.Buttons.LEFT)
             assertEquals(CuePhase.IDLE, gesture.phase)
-            input.touchDown(210, 853, 0, Input.Buttons.LEFT)
+            input.touchDown(210, 104, 0, Input.Buttons.LEFT)
             assertNotNull(session.placement)
             input.touchDown(210, 630, 0, Input.Buttons.LEFT)
             input.touchDragged(240, 680, 0)
             input.touchUp(240, 680, 0, Input.Buttons.LEFT)
             assertNotNull(session.placement)
-            input.touchDown(210, 853, 0, Input.Buttons.LEFT)
+            input.touchDown(210, 104, 0, Input.Buttons.LEFT)
             assertNull(session.placement)
             assertTrue(session.humanTurn)
             assertTrue(shots.isEmpty())
@@ -127,10 +127,10 @@ class GameInputTest {
             val session = GameSession().apply { if (!placing) confirmPlacement() }
             val gesture = CueGesture()
             val shots = mutableListOf<ShotCommand>()
-            val views = GameViews().apply { resize(420, HudLayout(420, 933).gameHeight) }
+            val views = GameViews().apply { resize(420, HudLayout(420, 933, placing).gameHeight) }
             val placement = io.github.ffeltrinelli.pool.input.CueBallPlacement()
             views.placing = placing
-            val input = GameInput(controls, session, { HudLayout(420, 933) }, views, physics, gesture, { session.humanTurn }, shots::add, placement) {
+            val input = GameInput(controls, session, { HudLayout(420, 933, placing) }, views, physics, gesture, { session.humanTurn }, shots::add, placement) {
                 val region = session.placement
                 if (region != null && placement.invalidReason(physics.snapshot(), region) == null) {
                     physics.placeBall(0, placement.point)

@@ -38,22 +38,34 @@ class GameHud : Disposable {
         finally { pixels.dispose() }
     }
 
+    private var width = 420
+    private var height = 933
+
     fun resize(width: Int, height: Int) {
-        layout = HudLayout(width, height)
+        this.width = width
+        this.height = height
+        updateLayout(layout.placementVisible)
+    }
+
+    private fun updateLayout(placementVisible: Boolean, notificationHeight: Float = 13f) {
+        layout = HudLayout(width, height, placementVisible, notificationHeight)
         camera.setToOrtho(false, 420f, layout.uiHeight)
     }
 
+    fun prepare(session: GameSession, presentation: HudPresentation) {
+        font.data.setScale(1.10f)
+        glyphs.setText(font, notification(session, presentation), Color.WHITE, 362f,
+            com.badlogic.gdx.utils.Align.left, true)
+        val next = HudLayout(width, height, session.placement != null && session.player == Player.HUMAN, glyphs.height)
+        if (next.headerHeight == layout.headerHeight && next.placementVisible == layout.placementVisible) return
+        updateLayout(next.placementVisible, glyphs.height)
+    }
+
     fun render(session: GameSession, mode: ViewMode, aidedAim: Boolean, presentation: HudPresentation) {
-        val h = layout.uiHeight
         sprites.projectionMatrix = camera.combined
         sprites.begin()
         drawHeader(session, presentation)
-        if (session.placement != null && session.player == Player.HUMAN) {
-            val instruction = if (session.placement == io.github.ffeltrinelli.pool.rules.PlacementRegion.ANYWHERE)
-                "Anywhere on the table" else "Behind the head string"
-            text(instruction, 210f, 163f, 1.2f, "f2e5c8", true)
-            text(presentation.placementError ?: "Tap or drag the highlighted ball", 210f, 133f, 1.05f,
-                if (presentation.placementError == null) "b8ccca" else "f29b91", true)
+        if (layout.placementVisible) {
             button(layout.confirmPlacement, "Confirm placement", presentation.placementError == null)
         }
         if (session.finished) drawResult(session)
@@ -68,23 +80,29 @@ class GameHud : Disposable {
         fun groupLabel(player: Player): String = session.group(player)?.let {
             "${it.label}: ${session.remaining(player)} left"
         } ?: "Unassigned"
-        if (presentation.notice != null && !session.finished) {
-            font.data.setScale(1.05f)
-            font.color = Color.valueOf("f2d295")
-            font.draw(sprites, presentation.notice, 29f, h - 18f, 300f, com.badlogic.gdx.utils.Align.left, true)
-        } else {
-            text("You: ${groupLabel(Player.HUMAN)}", 29f, h - 20f, 1.10f, "d5e5dd")
-            text("Computer: ${groupLabel(Player.COMPUTER)}", 29f, h - 45f, 1.10f, "d5e5dd")
-        }
-        val status = when {
+        text("You: ${groupLabel(Player.HUMAN)}", 29f, h - 14f, 1.10f, "d5e5dd")
+        text("Computer: ${groupLabel(Player.COMPUTER)}", 29f, h - 34f, 1.10f, "d5e5dd")
+        font.data.setScale(1.10f)
+        font.color = Color.valueOf(if (presentation.placementError != null) "f29b91" else "f2d295")
+        font.draw(sprites, notification(session, presentation), 29f, h - 57f, 362f,
+            com.badlogic.gdx.utils.Align.left, true)
+    }
+
+    private fun notification(session: GameSession, presentation: HudPresentation): String {
+        if (presentation.notice != null && !session.finished) return presentation.notice
+        return when {
             presentation.computerThinking -> "Computer thinking..."
-            session.placement != null -> if (session.player == Player.HUMAN) "Place the cue ball" else "Computer placing cue ball"
+            session.placement != null -> when {
+                session.player != Player.HUMAN -> "Computer placing cue ball"
+                presentation.placementError != null -> presentation.placementError
+                session.placement == io.github.ffeltrinelli.pool.rules.PlacementRegion.ANYWHERE -> "Tap or drag cue ball anywhere"
+                else -> "Tap or drag cue ball behind head string"
+            }
             session.group(session.player) == null -> if (session.player == Player.HUMAN) "Your turn" else "Computer's turn"
             session.remaining(session.player) == 0 -> if (session.player == Player.HUMAN) "You're on the 8-ball" else "Computer is on the 8-ball"
             session.player == Player.HUMAN -> "Your turn"
             else -> "Computer's turn"
         }
-        text(status, 29f, h - 74f, 1.15f, "d5e5dd")
     }
 
     private fun drawGear() {

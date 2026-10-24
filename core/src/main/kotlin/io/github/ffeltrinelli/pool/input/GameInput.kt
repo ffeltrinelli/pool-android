@@ -46,13 +46,15 @@ internal class GameInput(
         }
         val action = layout().hit(x, y, controls.settingsOpen, session.finished)
         if (action != null) { controls.handle(action); return true }
+        if (controls.acceptsGameplay && session.placement != null && session.player == Player.HUMAN &&
+            layout().confirmsPlacement(x, y)) {
+            confirmPlacement()
+            return true
+        }
         if (!layout().containsGame(x, y)) return true
         if (controls.acceptsGameplay && session.placement != null && session.player == Player.HUMAN) {
-            if (layout().confirmsPlacement(x, y)) confirmPlacement()
-            else {
-                placement.move(views.active.beginInput(x, layout().gameScreenY(y), placement.point, gesture.direction))
-                gameplayPointer = pointer
-            }
+            placement.move(views.active.beginInput(x, layout().gameScreenY(y), placement.point, gesture.direction))
+            gameplayPointer = pointer
             return true
         }
         if (!controls.acceptsGameplay || !canShoot() || gameplayPointer != null) return false

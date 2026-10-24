@@ -284,3 +284,9 @@ Local verification: 161 passed tests, one opt-in calibration skipped, 135 render
 Following further feedback, moved the ownership rows, turn label and gear upward and reduced the reserved strip from 120 to 92 logical pixels without reducing fonts. This returns approximately 72 physical vertical pixels on the 1080-pixel-wide OnePlus. Updated device-script gear coordinates accordingly.
 
 On the revised OnePlus build, the gear at its new location opened Settings and Android Back dismissed it. Captures confirm the compact header and unobstructed scene; the preceding viewport build also exercised valid placement and a cancelled backswing without changing the selected font sizes.
+
+### Unified notification and placement controls
+
+Further feedback requested one notification location, distinct player/message colours, tighter row spacing, and placement confirmation above the table. The normal HUD now uses 76 logical pixels (previously 92), with closer player rows and a gold notification line; invalid-placement feedback uses red in that same line. Placement guidance no longer appears below the table. Human placement adds a 56-logical-pixel confirmation row at the top, removed immediately after confirmation. Long notices wrap in the notification area and reserve their measured height; ownership labels remain visible. The viewport and input offset follow the resulting layout.
+
+Local verification: 162 tests passed, one opt-in calibration skipped, 135 rendered scenarios passed, four audio assets/lifecycle passed, Android lint and debug APK passed. Tests cover the top confirmation hit region, blocked invalid confirmation, viewport partition and mapped table touches. Installed on OnePlus 8T/API 34 and visually inspected the new top placement layout; before/after phone captures are committed under `docs/images/eight-ball/placement-hud-*`. User acceptance of the new layout remains pending.

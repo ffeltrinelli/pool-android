@@ -100,6 +100,11 @@ class PoolRenderer : Disposable {
         table: TablePresentation = TablePresentation(),
         hudState: HudPresentation = HudPresentation()
     ) {
+        val previousGameHeight = hud.layout.gameHeight
+        hud.prepare(session, hudState)
+        if (hud.layout.gameHeight != previousGameHeight) {
+            views.resize(hud.layout.width, hud.layout.gameHeight)
+        }
         Gdx.gl.glViewport(0, 0, pixelWidth, hud.layout.renderHeight(pixelHeight))
         Gdx.gl.glClearColor(0.035f, 0.075f, 0.095f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)

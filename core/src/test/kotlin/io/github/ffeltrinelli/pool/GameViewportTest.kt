@@ -10,15 +10,28 @@ import org.junit.Test
 class GameViewportTest {
     @Test fun `reserved HUD and game viewport partition the window at normal and high DPI`() {
         for ((width, height) in listOf(420 to 933, 1080 to 2400, 1080 to 2296)) {
-            val layout = HudLayout(width, height)
-            assertEquals(height, layout.gameTop + layout.gameHeight)
-            assertFalse(layout.containsGame(width / 2, layout.gameTop - 1))
-            assertTrue(layout.containsGame(width / 2, layout.gameTop))
-            assertEquals(0, layout.gameScreenY(layout.gameTop))
-            assertEquals(layout.gameHeight - 1, layout.gameScreenY(height - 1))
-            assertEquals(layout.gameHeight * 2, layout.renderHeight(height * 2))
+            for (placing in listOf(false, true)) {
+                val layout = HudLayout(width, height, placing)
+                assertEquals(height, layout.gameTop + layout.gameHeight)
+                assertFalse(layout.containsGame(width / 2, layout.gameTop - 1))
+                assertTrue(layout.containsGame(width / 2, layout.gameTop))
+                assertEquals(0, layout.gameScreenY(layout.gameTop))
+                assertEquals(layout.gameHeight - 1, layout.gameScreenY(height - 1))
+                assertEquals(layout.gameHeight * 2, layout.renderHeight(height * 2))
+            }
         }
     }
+    @Test fun `placement confirmation stays inside the top strip and clear of notifications`() {
+        val layout = HudLayout(420, 933, placementVisible = true)
+        val button = layout.confirmPlacement
+        assertTrue(button.y >= layout.uiHeight - layout.headerHeight)
+        assertTrue(button.y + button.height <= layout.uiHeight - 76f)
+        assertTrue(button.height >= 48f)
+        assertTrue(layout.confirmsPlacement(210, 104))
+        assertFalse(layout.containsGame(210, 104))
+        assertEquals(76f, HudLayout(420, 933).headerHeight, 0f)
+    }
+
     @Test fun `top view touches match projected table points below the reserved header`() {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
         val layout = HudLayout(1080, 2296)
