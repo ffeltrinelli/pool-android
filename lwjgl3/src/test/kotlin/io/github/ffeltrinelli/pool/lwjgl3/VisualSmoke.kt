@@ -14,6 +14,8 @@ import io.github.ffeltrinelli.pool.model.*
 import io.github.ffeltrinelli.pool.physics.PoolPhysics
 import io.github.ffeltrinelli.pool.opponent.*
 import io.github.ffeltrinelli.pool.render.PoolRenderer
+import io.github.ffeltrinelli.pool.render.TablePresentation
+import io.github.ffeltrinelli.pool.ui.HudPresentation
 import java.io.File
 import io.github.ffeltrinelli.pool.view.ViewMode
 
@@ -45,27 +47,8 @@ object VisualSmoke {
         private lateinit var framebuffer: FrameBuffer
         private val session = GameSession()
         private val gesture = CueGesture()
-        private val scenarios = listOf("initial-rack", "cue-and-aim", "cue-stroke-initial", "cue-stroke-withdrawn", "cue-stroke-return") + (1..6).map { "pocket-$it" } + listOf("scratch-result", "cleared-result") + listOf(0, 12, 18, 24, 48).map { "rolling-markings-$it" }
-        private val viewScenarios = listOf("settings-top", "player-initial", "player-right", "player-left", "player-reverse",
-            "player-withdrawn", "player-return", "settings-player", "player-shot-pullback", "player-shot-overview", "player-return-to-aim", "player-scratch", "player-cleared") +
-            (1..6).map { "player-rail-$it" }
-        private val pocketScenarios = listOf("top", "player").flatMap { mode ->
-            listOf("corner", "side").flatMap { type -> listOf(0, 12, 24, 36, 60).map { "$mode-drop-$type-$it" } +
-                listOf("$mode-shelf-$type", "$mode-jaw-$type") }
-        }
-        private val aidScenarios = listOf("top", "player").flatMap { mode ->
-            listOf("enabled", "disabled", "glancing", "rail", "pocket", "blocked", "reset", "settings-off").map { "$mode-aid-$it" }
-        }
-        private val computerScenarios = listOf("top", "player").flatMap { mode ->
-            listOf("human", "thinking", "cue-aim", "cue-withdrawn", "cue-contact", "foul-human", "foul-computer", "human-win", "computer-win", "draw", "settings").map { "$mode-computer-$it" }
-        }
-        private val difficultyScenarios = listOf("top", "player").flatMap { view ->
-            OpponentDifficulty.entries.map { "$view-difficulty-${it.name.lowercase()}" }
-        }
-        private val cueVisibilityScenarios = listOf("top", "player").flatMap { view ->
-            listOf("initial", "withdrawn", "return", "ball-overlap", "computer", "settings").map { "$view-cue-visibility-$it" }
-        }
-        private val allScenarios get() = scenarios + viewScenarios + pocketScenarios + aidScenarios + computerScenarios + difficultyScenarios + cueVisibilityScenarios
+        private var tablePresentation = TablePresentation()
+        private var hudPresentation = HudPresentation()
         private var index = 0
         override fun create() {
             renderer = PoolRenderer()
@@ -74,7 +57,7 @@ object VisualSmoke {
             framebuffer = FrameBuffer(Pixmap.Format.RGBA8888, 1080, 2400, true)
         }
         override fun render() {
-            if (index >= allScenarios.size) {
+            if (index >= VisualScenarios.all.size) {
                 if (System.getenv("POOL_RECORD_POCKETS") == "1") {
                     try { recordPocketMotion() }
                     catch (failure: Throwable) { report.record("pocket-motion-recording", failure.stackTraceToString()) }
@@ -90,16 +73,17 @@ object VisualSmoke {
                 Gdx.app.exit()
                 return
             }
-            val name = allScenarios[index++]
+            val scenario = VisualScenarios.all[index++]
+            val name = scenario.name
             var bound = false
             try {
                 fixture(name)
                 framebuffer.begin(); bound = true
-                renderer.render(physics, session, gesture, 1080, 2400)
+                renderer.render(physics, session, gesture, 1080, 2400, table = tablePresentation, hudState = hudPresentation)
                 capture(name)
-                if (name in cueVisibilityScenarios) verifyCueVisibility(name)
+                if (VisualScenarios.named(name).group == ScenarioGroup.CUE_VISIBILITY) verifyCueVisibility(name)
                 if (name.startsWith("rolling-markings-")) captureDetail(name)
-                if (name in pocketScenarios) capturePocketDetail(name)
+                if (VisualScenarios.named(name).group == ScenarioGroup.POCKET) capturePocketDetail(name)
                 report.record(name, null)
             } catch (failure: Throwable) {
                 if (bound) runCatching { capture("$name-failure") }
@@ -110,31 +94,39 @@ object VisualSmoke {
             }
         }
         private fun fixture(name: String) {
-            physics.reset(); session.restart(PlayMode.SOLO); gesture.resetForRack(Point(0f, 0.58f), Point(0f, -0.38f))
+            resetFixture()
+            when (VisualScenarios.named(name).group) {
+                ScenarioGroup.CUE_VISIBILITY -> cueVisibilityFixture(name)
+                ScenarioGroup.DIFFICULTY -> difficultyFixture(name)
+                ScenarioGroup.COMPUTER -> computerFixture(name)
+                ScenarioGroup.AID -> aidFixture(name)
+                ScenarioGroup.VIEW -> viewFixture(name)
+                ScenarioGroup.POCKET -> pocketFixture(name)
+                ScenarioGroup.TABLE -> tableFixture(name)
+            }
+        }
+
+        private fun resetFixture() {
+            physics.reset()
+            session.restart()
+            gesture.resetForRack(Point(0f, 0.58f), Point(0f, -0.38f))
             renderer.views.select(ViewMode.TOP)
             renderer.views.reset()
-            renderer.settingsOpen = false
-            renderer.aidedAim = true
-            renderer.humanCanAim = true
-            renderer.computerPose = null
-            renderer.holdOverview = false
-            renderer.computerThinking = false
-            renderer.foulPlayer = null
-            renderer.difficulty = OpponentDifficulty.MEDIUM
-            if (name in cueVisibilityScenarios) { cueVisibilityFixture(name); return }
-            if (name in difficultyScenarios) {
-                session.restart(PlayMode.COMPUTER)
-                renderer.views.select(if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP)
-                renderer.difficulty = OpponentDifficulty.entries.single { name.endsWith(it.name.lowercase()) }
-                renderer.settingsOpen = true
-                check(renderer.hud.layout.restart.y == renderer.hud.layout.exit.y)
-                check(renderer.hud.layout.aidedAim.width == renderer.hud.layout.top.width)
-                return
-            }
-            if (name in computerScenarios) { computerFixture(name); return }
-            if (name in aidScenarios) { aidFixture(name); return }
-            if (name in viewScenarios) { viewFixture(name); return }
-            if (name in pocketScenarios) { pocketFixture(name); return }
+            tablePresentation = TablePresentation()
+            hudPresentation = HudPresentation()
+        }
+
+        private fun difficultyFixture(name: String) {
+            renderer.views.select(if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP)
+            hudPresentation = hudPresentation.copy(
+                difficulty = OpponentDifficulty.entries.single { name.endsWith(it.name.lowercase()) },
+                settingsOpen = true
+            )
+            check(renderer.hud.layout.restart.y == renderer.hud.layout.exit.y)
+            check(renderer.hud.layout.aidedAim.width == renderer.hud.layout.top.width)
+        }
+
+        private fun tableFixture(name: String) {
             when {
                 name == "initial-rack" -> {
                     check(physics.balls.size == 16 && session.canShoot)
@@ -188,19 +180,21 @@ object VisualSmoke {
                     repeat(120) { physics.step() }
                     check(physics.balls.none { it.pocketed })
                 }
-                name == "scratch-result" -> {
-                    physics.reset(TableGeometry.rack().filter { it.first != 0 })
+                name == "scratch-foul" -> {
+                    physics.reset()
                     session.beginShot()
                     session.accept(PhysicsEvent.Pocketed(0))
                     session.accept(PhysicsEvent.Settled)
-                    check(session.state == RoundState.SCRATCHED)
+                    check(!session.finished)
+                    hudPresentation = hudPresentation.copy(foulPlayer = Player.HUMAN)
+                    tablePresentation = tablePresentation.copy(humanCanAim = false)
                 }
                 name == "cleared-result" -> {
                     physics.reset(listOf(0 to Point(0f, 0.58f)))
                     session.beginShot()
                     (1..15).forEach { session.accept(PhysicsEvent.Pocketed(it)) }
                     session.accept(PhysicsEvent.Settled)
-                    check(session.state == RoundState.CLEARED)
+                    check(session.state == RoundState.FINISHED)
                 }
             }
         }
@@ -221,14 +215,14 @@ object VisualSmoke {
                 check(abs(gesture.tipGap - expectedGap) < 0.0001f)
             }
             if (name.endsWith("computer")) {
-                session.restart(PlayMode.COMPUTER)
+                session.restart()
                 session.beginShot()
                 session.accept(PhysicsEvent.Settled)
                 check(session.player == Player.COMPUTER)
-                renderer.humanCanAim = false
-                renderer.computerPose = CuePose(direction, 0.05f)
+                tablePresentation = tablePresentation.copy(humanCanAim = false)
+                tablePresentation = tablePresentation.copy(computerPose = CuePose(direction, 0.05f))
             }
-            renderer.settingsOpen = name.endsWith("settings")
+            hudPresentation = hudPresentation.copy(settingsOpen = name.endsWith("settings"))
             renderer.views.update(cue, direction, true)
             check(gesture.direction == direction && session.canShoot)
         }
@@ -245,12 +239,12 @@ object VisualSmoke {
                 Vector3(probe.x, TableGeometry.BALL_RADIUS, probe.z), 0f, 0f, 1080f, 2400f)
             check(screen.x in 6f..1073f && screen.y in 6f..2393f)
             val withCue = Pixmap.createFromFrameBuffer(screen.x.toInt() - 5, screen.y.toInt() - 5, 11, 11)
-            val humanCanAim = renderer.humanCanAim
-            val computerPose = renderer.computerPose
+            val humanCanAim = tablePresentation.humanCanAim
+            val computerPose = tablePresentation.computerPose
             try {
-                renderer.humanCanAim = false
-                renderer.computerPose = null
-                renderer.render(physics, session, gesture, 1080, 2400)
+                tablePresentation = tablePresentation.copy(humanCanAim = false)
+                tablePresentation = tablePresentation.copy(computerPose = null)
+                renderer.render(physics, session, gesture, 1080, 2400, table = tablePresentation, hudState = hudPresentation)
                 val withoutCue = Pixmap.createFromFrameBuffer(screen.x.toInt() - 5, screen.y.toInt() - 5, 11, 11)
                 try {
                     val changed = (0 until 11).sumOf { x ->
@@ -261,14 +255,14 @@ object VisualSmoke {
                 } finally { withoutCue.dispose() }
             } finally {
                 withCue.dispose()
-                renderer.humanCanAim = humanCanAim
-                renderer.computerPose = computerPose
-                renderer.render(physics, session, gesture, 1080, 2400)
+                tablePresentation = tablePresentation.copy(humanCanAim = humanCanAim)
+                tablePresentation = tablePresentation.copy(computerPose = computerPose)
+                renderer.render(physics, session, gesture, 1080, 2400, table = tablePresentation, hudState = hudPresentation)
             }
         }
 
         private fun computerFixture(name: String) {
-            session.restart(PlayMode.COMPUTER)
+            session.restart()
             val playerView = name.startsWith("player")
             renderer.views.select(if (playerView) ViewMode.PLAYER else ViewMode.TOP)
             renderer.views.update(Point(0f, 0.58f), gesture.direction, true)
@@ -281,15 +275,15 @@ object VisualSmoke {
                 name.endsWith("human-win") -> { shot((1..8).toList()); shot((9..15).toList()) }
                 name.endsWith("computer-win") -> { shot(listOf(1)); shot((2..15).toList()) }
                 name.endsWith("draw") -> shot((1..15).toList() + 0)
-                name.endsWith("foul-human") -> { shot(listOf(0)); renderer.foulPlayer = Player.HUMAN }
-                name.endsWith("foul-computer") -> { shot(emptyList()); shot(listOf(0)); renderer.foulPlayer = Player.COMPUTER }
+                name.endsWith("foul-human") -> { shot(listOf(0)); hudPresentation = hudPresentation.copy(foulPlayer = Player.HUMAN) }
+                name.endsWith("foul-computer") -> { shot(emptyList()); shot(listOf(0)); hudPresentation = hudPresentation.copy(foulPlayer = Player.COMPUTER) }
                 !name.endsWith("human") && !name.endsWith("settings") -> shot(emptyList())
             }
             if (session.finished) physics.reset(listOf(0 to Point(0f, 0.58f)))
-            renderer.humanCanAim = session.humanTurn && renderer.foulPlayer == null
-            renderer.holdOverview = !renderer.humanCanAim
-            renderer.computerThinking = name.endsWith("thinking")
-            renderer.settingsOpen = name.endsWith("settings")
+            tablePresentation = tablePresentation.copy(humanCanAim = session.humanTurn && hudPresentation.foulPlayer == null)
+            tablePresentation = tablePresentation.copy(holdOverview = !tablePresentation.humanCanAim)
+            hudPresentation = hudPresentation.copy(computerThinking = name.endsWith("thinking"))
+            hudPresentation = hudPresentation.copy(settingsOpen = name.endsWith("settings"))
             if ("cue-" in name) {
                 val stroke = ComputerStroke(ShotCommand(Point(0.4f, -1f).normalized(), 0.35f))
                 val elapsed = when {
@@ -298,13 +292,12 @@ object VisualSmoke {
                     else -> 0f
                 }
                 check(stroke.advance(elapsed) == null)
-                renderer.computerPose = stroke.pose
+                tablePresentation = tablePresentation.copy(computerPose = stroke.pose)
                 check(stroke.pose.direction == Point(0.4f, -1f).normalized())
                 val expected = if (name.endsWith("withdrawn")) 0.12f else if (name.endsWith("contact")) 0f else 0.05f
                 check(abs(stroke.pose.tipGap - expected) < 0.0001f)
             }
-            if (playerView && renderer.holdOverview) renderer.views.update(Point(0f, 0.58f), gesture.direction, false, 1f)
-            check(session.mode == PlayMode.COMPUTER)
+            if (playerView && tablePresentation.holdOverview) renderer.views.update(Point(0f, 0.58f), gesture.direction, false, 1f)
         }
 
         private fun recordComputerMotion() {
@@ -314,11 +307,11 @@ object VisualSmoke {
             for (frame in 0 until 150) {
                 val shot = stroke.advance(1f / 60f)
                 if (shot != null) { session.beginShot(); physics.strike(shot) }
-                renderer.computerPose = if (session.canShoot) stroke.pose else null
+                tablePresentation = tablePresentation.copy(computerPose = if (session.canShoot) stroke.pose else null)
                 if (!session.canShoot) physics.advance(1f / 60f)
                 framebuffer.begin()
                 try {
-                    renderer.render(physics, session, gesture, 1080, 2400)
+                    renderer.render(physics, session, gesture, 1080, 2400, table = tablePresentation, hudState = hudPresentation)
                     val pixels = Pixmap.createFromFrameBuffer(0, 0, 1080, 2400)
                     try { PixmapIO.writePNG(FileHandle(File(directory, "frame-%03d.png".format(frame))), pixels, -1, true) }
                     finally { pixels.dispose() }
@@ -368,8 +361,8 @@ object VisualSmoke {
         private fun aidFixture(name: String) {
             val mode = if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP
             renderer.views.select(mode)
-            renderer.aidedAim = !name.endsWith("disabled") && !name.endsWith("settings-off")
-            renderer.settingsOpen = name.endsWith("settings-off")
+            tablePresentation = tablePresentation.copy(aidedAim = !name.endsWith("disabled") && !name.endsWith("settings-off"))
+            hudPresentation = hudPresentation.copy(settingsOpen = name.endsWith("settings-off"))
             val cue = Point(0f, 0.58f)
             val radius = TableGeometry.BALL_RADIUS
             var direction = Point(0f, -1f)
@@ -400,7 +393,7 @@ object VisualSmoke {
         }
 
         private fun viewFixture(name: String) {
-            if (name == "settings-top") { renderer.settingsOpen = true; return }
+            if (name == "settings-top") { hudPresentation = hudPresentation.copy(settingsOpen = true); return }
             renderer.views.select(ViewMode.PLAYER)
             val cue = if (name.startsWith("player-rail-")) {
                 val pocket = TableGeometry.pockets[name.substringAfterLast('-').toInt() - 1]
@@ -428,7 +421,7 @@ object VisualSmoke {
                 check(abs(gesture.tipGap - expected) < 0.0001f)
             }
             renderer.views.update(cue, direction, true)
-            if (name == "settings-player") renderer.settingsOpen = true
+            if (name == "settings-player") hudPresentation = hudPresentation.copy(settingsOpen = true)
             if (name.startsWith("player-shot-") || name == "player-return-to-aim") {
                 session.beginShot()
                 physics.strike(ShotCommand(direction, 0.4f))
@@ -439,17 +432,25 @@ object VisualSmoke {
                 if (name == "player-return-to-aim") {
                     repeat(6000) { if (!session.canShoot) physics.step() }
                     check(session.canShoot)
+                    // Complete the computer's turn before showing the human's return to aim.
+                    session.beginShot()
+                    session.accept(PhysicsEvent.Settled)
+                    check(session.humanTurn)
                     renderer.views.update(physics.balls.first { it.id == 0 }.point, direction, true, 0.225f)
                 }
             }
-            if (name == "player-scratch" || name == "player-cleared") {
+            if (name == "player-foul" || name == "player-cleared") {
                 session.beginShot()
-                if (name == "player-scratch") session.accept(PhysicsEvent.Pocketed(0))
+                if (name == "player-foul") session.accept(PhysicsEvent.Pocketed(0))
                 else (1..15).forEach { session.accept(PhysicsEvent.Pocketed(it)) }
                 session.accept(PhysicsEvent.Settled)
-                if (name == "player-scratch") physics.reset(TableGeometry.rack().filter { it.first != 0 })
+                if (name == "player-foul") physics.reset()
                 else physics.reset(listOf(0 to cue))
-                check(session.finished)
+                if (name == "player-foul") {
+                    check(!session.finished)
+                    hudPresentation = hudPresentation.copy(foulPlayer = Player.HUMAN)
+                    tablePresentation = tablePresentation.copy(humanCanAim = false)
+                } else check(session.finished)
             }
         }
         /** Opt-in production-renderer frames for a short PR recording; never enables gameplay debug input. */
@@ -478,7 +479,7 @@ object VisualSmoke {
                 if (!session.canShoot) repeat(4) { physics.step() }
                 framebuffer.begin()
                 try {
-                    renderer.render(physics, session, gesture, 1080, 2400, viewDelta = 1f / 30)
+                    renderer.render(physics, session, gesture, 1080, 2400, viewDelta = 1f / 30, table = tablePresentation, hudState = hudPresentation)
                     val pixels = Pixmap.createFromFrameBuffer(0, 0, 1080, 2400)
                     try { PixmapIO.writePNG(FileHandle(File(directory, "frame-%03d.png".format(frame))), pixels, -1, true) }
                     finally { pixels.dispose() }
@@ -493,7 +494,7 @@ object VisualSmoke {
                 if (frame % 60 > 0) repeat(2) { physics.step() }
                 framebuffer.begin()
                 try {
-                    renderer.render(physics, session, gesture, 1080, 2400)
+                    renderer.render(physics, session, gesture, 1080, 2400, table = tablePresentation, hudState = hudPresentation)
                     val pixels = Pixmap.createFromFrameBuffer(0, 0, 1080, 2400)
                     try { PixmapIO.writePNG(FileHandle(File(directory, "frame-%03d.png".format(frame))), pixels, -1, true) }
                     finally { pixels.dispose() }

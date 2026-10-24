@@ -5,54 +5,23 @@ sealed interface PhysicsEvent {
     data object Settled : PhysicsEvent
 }
 
-enum class PlayMode { SOLO, COMPUTER }
 enum class Player { HUMAN, COMPUTER;
     val opponent get() = if (this == HUMAN) COMPUTER else HUMAN
     val label get() = if (this == HUMAN) "You" else "Computer"
 }
 enum class MatchResult { HUMAN_WINS, COMPUTER_WINS, DRAW }
-enum class RoundState { READY, MOVING, SCRATCHED, CLEARED }
+enum class RoundState { READY, MOVING, FINISHED }
 data class ShotCommand(val direction: Point, val impulse: Float)
 data class ShotOutcome(val player: Player, val pocketed: Int, val foul: Boolean)
 
-private interface SessionRules {
-    val player: Player
-    val humanScore: Int get() = 0
-    val computerScore: Int get() = 0
-    fun finishShot(outcome: ShotOutcome, remaining: Int): RoundState
-}
-
-private class SoloRules : SessionRules {
-    override val player = Player.HUMAN
-    override fun finishShot(outcome: ShotOutcome, remaining: Int) = when {
-        outcome.foul -> RoundState.SCRATCHED
-        remaining == 0 -> RoundState.CLEARED
-        else -> RoundState.READY
-    }
-}
-
-private class ComputerRules : SessionRules {
-    override var player = Player.HUMAN
-        private set
-    override var humanScore = 0
-        private set
-    override var computerScore = 0
-        private set
-    override fun finishShot(outcome: ShotOutcome, remaining: Int): RoundState {
-        if (!outcome.foul) {
-            if (player == Player.HUMAN) humanScore += outcome.pocketed else computerScore += outcome.pocketed
-        }
-        if (remaining == 0) return RoundState.CLEARED
-        player = player.opponent
-        return RoundState.READY
-    }
-}
-
 /** Scores are committed only at settling, after every pocket event in the shot is known. */
-class GameSession(mode: PlayMode = PlayMode.SOLO) {
-    var mode = mode
+class GameSession {
+    var player = Player.HUMAN
         private set
-    private var rules: SessionRules = newRules()
+    var humanScore = 0
+        private set
+    var computerScore = 0
+        private set
     private val remainingIds = (1..15).toMutableSet()
     private var scratched = false
     private var shotPockets = 0
@@ -60,14 +29,11 @@ class GameSession(mode: PlayMode = PlayMode.SOLO) {
         private set
     var state = RoundState.READY
         private set
-    val player get() = rules.player
-    val humanScore get() = rules.humanScore
-    val computerScore get() = rules.computerScore
     val remaining: Int get() = remainingIds.size
     val canShoot: Boolean get() = state == RoundState.READY
     val humanTurn get() = canShoot && player == Player.HUMAN
-    val finished: Boolean get() = state == RoundState.SCRATCHED || state == RoundState.CLEARED
-    val result: MatchResult? get() = if (!finished || mode == PlayMode.SOLO) null else when {
+    val finished: Boolean get() = state == RoundState.FINISHED
+    val result: MatchResult? get() = if (!finished) null else when {
         humanScore > computerScore -> MatchResult.HUMAN_WINS
         humanScore < computerScore -> MatchResult.COMPUTER_WINS
         else -> MatchResult.DRAW
@@ -88,27 +54,37 @@ class GameSession(mode: PlayMode = PlayMode.SOLO) {
                 if (event.ballId == 0) scratched = true
                 else if (remainingIds.remove(event.ballId)) shotPockets++
             }
-            PhysicsEvent.Settled -> {
-                val completed = ShotOutcome(player, shotPockets, scratched)
-                outcome = completed
-                state = rules.finishShot(completed, remaining)
-            }
+            PhysicsEvent.Settled -> finishShot()
         }
     }
 
-    fun restart(mode: PlayMode = this.mode) {
-        this.mode = mode
-        rules = newRules()
+    private fun finishShot() {
+        val completed = ShotOutcome(player, shotPockets, scratched)
+        outcome = completed
+        if (!completed.foul) awardPoints(completed)
+        if (remaining == 0) state = RoundState.FINISHED
+        else {
+            player = player.opponent
+            state = RoundState.READY
+        }
+    }
+
+    private fun awardPoints(completed: ShotOutcome) {
+        when (completed.player) {
+            Player.HUMAN -> humanScore += completed.pocketed
+            Player.COMPUTER -> computerScore += completed.pocketed
+        }
+    }
+
+    fun restart() {
+        player = Player.HUMAN
+        humanScore = 0
+        computerScore = 0
         remainingIds.clear()
         remainingIds.addAll(1..15)
         scratched = false
         shotPockets = 0
         outcome = null
         state = RoundState.READY
-    }
-
-    private fun newRules(): SessionRules = when (mode) {
-        PlayMode.SOLO -> SoloRules()
-        PlayMode.COMPUTER -> ComputerRules()
     }
 }

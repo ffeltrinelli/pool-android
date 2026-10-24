@@ -76,15 +76,29 @@ class PoolAudio(private val player: SoundPlayer, private val tuning: AudioTuning
 
     fun flush(delta: Float) {
         if (paused) return
-        voices.forEach { it.remaining -= delta.coerceAtLeast(0f) }
-        // Explicit stopping also bounds playback if a backend starts a sample late.
-        voices.filter { it.remaining <= 0f }.forEach { player.stop(it.sound, it.id) }
-        voices.removeAll { it.remaining <= 0f }
+        expireVoices(delta)
         pending.forEach(::play)
         pending.clear()
     }
 
+    private fun expireVoices(delta: Float) {
+        voices.forEach { it.remaining -= delta.coerceAtLeast(0f) }
+        // Explicit stopping also bounds playback if a backend starts a sample late.
+        voices.filter { it.remaining <= 0f }.forEach { player.stop(it.sound, it.id) }
+        voices.removeAll { it.remaining <= 0f }
+    }
+
     private fun play(hit: Pending) {
+        makeRoomFor(hit)
+        if (voices.size >= tuning.maximumVoices) return
+        // Bounding summed gain leaves headroom for the bundled clips on a busy break.
+        val volume = minOf(hit.volume, (tuning.volumeBudget - totalVolume()))
+        if (volume <= 0f) return
+        val id = player.play(hit.sound, volume)
+        if (id >= 0) voices.add(Voice(hit.sound, id, volume, hit.sound.seconds))
+    }
+
+    private fun makeRoomFor(hit: Pending) {
         while (voices.isNotEmpty() && (voices.size >= tuning.maximumVoices || totalVolume() + hit.volume > tuning.volumeBudget)) {
             val quietest = voices.minWith(compareBy<Voice> { it.sound.priority }.thenBy { it.volume })
             if (hit.sound.priority < quietest.sound.priority ||
@@ -92,12 +106,6 @@ class PoolAudio(private val player: SoundPlayer, private val tuning: AudioTuning
             player.stop(quietest.sound, quietest.id)
             voices.remove(quietest)
         }
-        if (voices.size >= tuning.maximumVoices) return
-        // Bounding summed gain leaves headroom for the bundled clips on a busy break.
-        val volume = minOf(hit.volume, (tuning.volumeBudget - totalVolume()))
-        if (volume <= 0f) return
-        val id = player.play(hit.sound, volume)
-        if (id >= 0) voices.add(Voice(hit.sound, id, volume, hit.sound.seconds))
     }
 
     private fun totalVolume() = voices.sumOf { it.volume.toDouble() }.toFloat()

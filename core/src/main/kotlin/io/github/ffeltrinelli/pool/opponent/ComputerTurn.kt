@@ -1,66 +1,30 @@
 package io.github.ffeltrinelli.pool.opponent
 
-import io.github.ffeltrinelli.pool.model.*
+import io.github.ffeltrinelli.pool.model.GameSession
+import io.github.ffeltrinelli.pool.model.Player
+import io.github.ffeltrinelli.pool.model.ShotCommand
 import io.github.ffeltrinelli.pool.physics.TableSnapshot
-import java.util.concurrent.*
-import java.util.concurrent.atomic.AtomicLong
-
-interface ShotPlanningService : AutoCloseable {
-    fun start(table: TableSnapshot, seed: Long)
-    fun poll(): PlanningResult?
-    fun cancel()
-    override fun close()
-}
-
-/** The worker owns native resources, including their final disposal. No game objects cross threads. */
-class WorkerShotPlanningService(
-    private val planner: ComputerShotPlanner = BulletShotPlanner(),
-    private val reportFailure: (Throwable) -> Unit = {}
-) : ShotPlanningService {
-    private val executor = Executors.newSingleThreadExecutor { task -> Thread(task, "pool-shot-planner").apply { isDaemon = true } }
-    private val generation = AtomicLong()
-    private var pending: Future<PlanningResult>? = null
-    private var fallback: ShotCommand? = null
-    override fun start(table: TableSnapshot, seed: Long) {
-        cancel()
-        fallback = ShotCandidates().fallback(table)
-        val token = generation.get()
-        pending = executor.submit<PlanningResult> { planner.plan(table, seed) { generation.get() != token } }
-    }
-    override fun poll(): PlanningResult? {
-        val future = pending ?: return null
-        if (!future.isDone) return null
-        pending = null
-        return try { future.get() } catch (failure: ExecutionException) {
-            reportFailure(failure.cause ?: failure)
-            PlanningResult(requireNotNull(fallback), 0, 0, true)
-        } catch (_: CancellationException) { null }
-    }
-    override fun cancel() {
-        generation.incrementAndGet()
-        pending?.cancel(false)
-        pending = null
-    }
-    override fun close() {
-        cancel()
-        executor.submit { planner.close() }
-        executor.shutdown()
-    }
-}
 
 /** All timing is active game time. Pausing invalidates work and restarts an unfinished cue stroke. */
-class ComputerTurn(private val planning: ShotPlanningService, private val reportPlan: (PlanningResult) -> Unit = {}) : AutoCloseable {
-    private var requested = false
-    private var plannedShot: ShotCommand? = null
-    private var stroke: ComputerStroke? = null
-    private var thinkingSeconds = 0f
+class ComputerTurn(
+    private val planning: ShotPlanningService,
+    private val reportPlan: (PlanningResult) -> Unit = {}
+) : AutoCloseable {
+    private sealed interface State {
+        data object Idle : State
+        data class Planning(val elapsed: Float) : State
+        data class Selected(val shot: ShotCommand, val elapsed: Float) : State
+        data class Stroking(val selected: ShotCommand, val animation: ComputerStroke) : State
+    }
+
+    private var state: State = State.Idle
     private var seed = 0L
     var foulSeconds = 0f
         private set
     var foulPlayer: Player? = null
         private set
-    val pose get() = stroke?.pose
-    val thinking get() = requested || plannedShot != null && stroke == null
+    val pose get() = (state as? State.Stroking)?.animation?.pose
+    val thinking get() = state is State.Planning || state is State.Selected
     val blocksShot get() = foulSeconds > 0f
 
     fun foul(player: Player) {
@@ -69,44 +33,78 @@ class ComputerTurn(private val planning: ShotPlanningService, private val report
         foulSeconds = OpponentTuning.FOUL_SECONDS
     }
 
-    fun advance(session: GameSession, table: () -> TableSnapshot, seconds: Float, difficulty: OpponentDifficulty = OpponentDifficulty.MEDIUM): ShotCommand? {
+    fun advance(
+        session: GameSession,
+        table: () -> TableSnapshot,
+        seconds: Float,
+        difficulty: OpponentDifficulty = OpponentDifficulty.MEDIUM
+    ): ShotCommand? {
         val delta = seconds.coerceAtLeast(0f)
-        if (foulSeconds > 0f) {
-            foulSeconds = (foulSeconds - delta).coerceAtLeast(0f)
-            if (foulSeconds == 0f) foulPlayer = null
+        if (blocksShot) {
+            advanceFoulNotice(delta)
             return null
         }
-        if (!session.canShoot || session.player != Player.COMPUTER || session.mode != PlayMode.COMPUTER) return null
-        if (stroke != null) {
-            val shot = stroke!!.advance(delta)
-            if (shot != null) { plannedShot = null; stroke = null; thinkingSeconds = 0f }
-            return shot
+        if (!session.canShoot || session.player != Player.COMPUTER) return null
+        val current = state
+        if (current is State.Stroking) return advanceStroke(current, delta)
+        advancePlanning(table, delta)
+        val selected = state as? State.Selected ?: return null
+        if (selected.elapsed >= OpponentTuning.THINK_SECONDS) {
+            val executed = ExecutionAccuracy.apply(selected.shot, difficulty, seed)
+            state = State.Stroking(selected.shot, ComputerStroke(executed))
         }
-        if (plannedShot == null && !requested) {
-            planning.start(table(), ++seed)
-            requested = true
-        }
-        thinkingSeconds += delta
-        if (requested) planning.poll()?.let { result ->
-            reportPlan(result)
-            plannedShot = result.shot
-            requested = false
-        }
-        if (plannedShot != null && thinkingSeconds >= OpponentTuning.THINK_SECONDS) stroke = ComputerStroke(ExecutionAccuracy.apply(plannedShot!!, difficulty, seed))
         return null
+    }
+
+    private fun advanceFoulNotice(delta: Float) {
+        foulSeconds = (foulSeconds - delta).coerceAtLeast(0f)
+        if (foulSeconds == 0f) foulPlayer = null
+    }
+
+    private fun advancePlanning(table: () -> TableSnapshot, delta: Float) {
+        if (state == State.Idle) {
+            planning.start(table(), ++seed)
+            state = State.Planning(0f)
+        }
+        state = when (val current = state) {
+            is State.Planning -> {
+                val elapsed = current.elapsed + delta
+                val result = planning.poll()
+                if (result == null) State.Planning(elapsed)
+                else {
+                    reportPlan(result)
+                    State.Selected(result.shot, elapsed)
+                }
+            }
+            is State.Selected -> current.copy(elapsed = current.elapsed + delta)
+            else -> state
+        }
+    }
+
+    private fun advanceStroke(current: State.Stroking, delta: Float): ShotCommand? {
+        val shot = current.animation.advance(delta)
+        if (shot != null) state = State.Idle
+        return shot
     }
 
     fun suspend() {
         planning.cancel()
-        requested = false
-        stroke = null
-        thinkingSeconds = 0f
+        state = when (val current = state) {
+            is State.Selected -> current.copy(elapsed = 0f)
+            is State.Stroking -> State.Selected(current.selected, 0f)
+            else -> State.Idle
+        }
     }
+
     fun reset() {
         suspend()
-        plannedShot = null
+        state = State.Idle
         foulSeconds = 0f
         foulPlayer = null
     }
-    override fun close() { reset(); planning.close() }
+
+    override fun close() {
+        reset()
+        planning.close()
+    }
 }

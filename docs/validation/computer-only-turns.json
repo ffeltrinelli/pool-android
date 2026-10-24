@@ -1,0 +1,12 @@
+[
+  {
+    "view": "top",
+    "planning_log": "10-24 08:13:27.154 14949 15005 I PoolAI  : 20 evaluations in 5000 ms; fallback=false",
+    "seconds_to_selected_plan": 13.72
+  },
+  {
+    "view": "player",
+    "planning_log": "10-24 08:13:50.410 14949 15005 I PoolAI  : 30 evaluations in 5000 ms; fallback=false",
+    "seconds_to_selected_plan": 13.54
+  }
+]

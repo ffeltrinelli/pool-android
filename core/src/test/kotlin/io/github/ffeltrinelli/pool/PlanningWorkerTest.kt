@@ -11,7 +11,9 @@ import java.util.concurrent.TimeUnit
 class PlanningWorkerTest {
     private val table = TableSnapshot(listOf(BallSnapshot(0, Point(0f, 0.4f)), BallSnapshot(1, Point(0f, 0f))))
     @Test fun `cancelled work cannot leak into a later request and native owner closes on worker`() {
-        val entered = CountDownLatch(1); val release = CountDownLatch(1); val closed = CountDownLatch(1)
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val closed = CountDownLatch(1)
         var workerName = ""
         val planner = object : ComputerShotPlanner {
             override fun plan(table: TableSnapshot, seed: Long, cancelled: () -> Boolean): PlanningResult {

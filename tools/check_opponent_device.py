@@ -65,7 +65,7 @@ def main():
         return default if node is None else node.text
 
     def select_difficulty(level, x):
-        shell(f'input tap {x} 1511')
+        shell(f'input tap {x} 1402')
         wait_for(lambda: preference('opponent-difficulty', 'MEDIUM') == level, f'saved {level} difficulty')
 
     checks = {}
@@ -74,26 +74,19 @@ def main():
     wait_for(lambda: pool_is_foreground() and hud_visible(), 'first foreground game frame')
     capture('reopened')
     shell('input tap 956 288')
-    shell('input tap 342 829')  # Solo, starts a fresh rack.
-    wait_for(lambda: 'SOLO' in preferences(), 'saved Solo mode')
-    checks['solo_saved'] = True
-    capture('solo-settings')
-    shell('input tap 738 829')
-    wait_for(lambda: 'COMPUTER' in preferences(), 'saved computer mode')
-    checks['computer_saved'] = True
-    capture('versus-settings')
+    capture('settings')
     for level, x in [('EASY', 283), ('MEDIUM', 540), ('HARD', 797)]:
         select_difficulty(level, x)
         capture('difficulty-' + level.lower())
     checks['difficulty_taps_save_all_levels'] = True
-    shell('input touchscreen swipe 797 1511 100 1511 600')
+    shell('input touchscreen swipe 797 1402 100 1402 600')
     wait_for(lambda: preference('opponent-difficulty') == 'EASY', 'left drag clamps to Easy')
-    shell('input touchscreen swipe 283 1511 1000 1511 600')
+    shell('input touchscreen swipe 283 1402 1000 1402 600')
     wait_for(lambda: preference('opponent-difficulty') == 'HARD', 'right drag clamps to Hard')
     checks['difficulty_drag_snaps_and_clamps'] = True
-    shell('input tap 20 1511')
+    shell('input tap 20 1402')
     checks['outside_tap_preserves_difficulty'] = preference('opponent-difficulty') == 'HARD'
-    shell('input tap 926 609')  # X dismisses the modal.
+    shell('input tap 926 718')  # X dismisses the modal.
     capture('x-dismissed')
     shell('input tap 956 288')
     select_difficulty('MEDIUM', 540)
@@ -113,17 +106,16 @@ def main():
     shell('input keyevent KEYCODE_BACK')
     for index in range(3):
         shell('input tap 956 288')
-        shell('input tap 342 1781')
+        shell('input tap 342 1672')
         time.sleep(.1)
         capture('restart-' + str(index))
     shell('am force-stop ' + PACKAGE)
     shell('am start -W -n ' + ACTIVITY)
     wait_for(lambda: pool_is_foreground() and hud_visible(), 'new process foreground frame')
-    checks['computer_persists_after_process_restart'] = preference('play-mode') == 'COMPUTER'
     checks['difficulty_persists_after_process_restart'] = preference('opponent-difficulty') == 'HARD'
     shell('input tap 956 288')
     select_difficulty('MEDIUM', 540)
-    shell('input tap 738 1781')
+    shell('input tap 738 1672')
     wait_for(lambda: not pool_is_foreground(), 'Exit finishing the activity')
     checks['exit_finishes_activity'] = True
     checks['medium_saved_before_exit'] = preference('opponent-difficulty') == 'MEDIUM'
