@@ -16,7 +16,7 @@ class ComputerTurnTest {
         override fun cancel() { cancellations++; result = null }
         override fun close() { closed = true }
     }
-    private fun computerSession() = GameSession(PlayMode.COMPUTER).apply {
+    private fun computerSession() = GameSession().apply {
         beginShot(); accept(PhysicsEvent.Settled)
     }
     private val snapshot = TableSnapshot(listOf(BallSnapshot(0, Point(0f, 0.5f)), BallSnapshot(1, Point(0f, 0f))))
@@ -122,9 +122,9 @@ class ComputerTurnTest {
         turn.close()
         assertTrue(service.closed)
     }
-    @Test fun `solo human and moving turns never request computer work`() {
+    @Test fun `human and moving turns never request computer work`() {
         val service = Service(); val turn = ComputerTurn(service)
-        val human = GameSession(PlayMode.COMPUTER)
+        val human = GameSession()
         turn.advance(human, { error("No snapshot needed") }, 2f)
         human.beginShot()
         turn.advance(human, { error("No snapshot needed") }, 2f)

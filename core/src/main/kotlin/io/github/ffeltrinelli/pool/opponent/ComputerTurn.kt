@@ -76,7 +76,7 @@ class ComputerTurn(private val planning: ShotPlanningService, private val report
             if (foulSeconds == 0f) foulPlayer = null
             return null
         }
-        if (!session.canShoot || session.player != Player.COMPUTER || session.mode != PlayMode.COMPUTER) return null
+        if (!session.canShoot || session.player != Player.COMPUTER) return null
         if (stroke != null) {
             val shot = stroke!!.advance(delta)
             if (shot != null) { plannedShot = null; stroke = null; thinkingSeconds = 0f }

@@ -13,11 +13,11 @@ class DifficultySliderTest {
             assertEquals(layout.top.width, layout.aidedAim.width, 0f)
             assertEquals(146f, layout.restart.width, 0f)
             assertEquals(146f, layout.exit.width, 0f)
-            assertEquals(layout.solo.x, layout.restart.x, 0f)
-            assertEquals(layout.computer.x, layout.exit.x, 0f)
+            assertEquals(layout.top.x, layout.restart.x, 0f)
+            assertEquals(layout.player.x, layout.exit.x, 0f)
             assertEquals(layout.restart.y, layout.exit.y, 0f)
             assertTrue(layout.aidedAim.y > layout.difficulty.y && layout.difficulty.y > layout.restart.y)
-            val targets = listOf(layout.solo, layout.computer, layout.top, layout.player, layout.aidedAim,
+            val targets = listOf( layout.top, layout.player, layout.aidedAim,
                 layout.restart, layout.exit, layout.close) + layout.difficultyStops
             for ((index, target) in targets.withIndex()) {
                 assertTrue(target.width >= 48f && target.height >= 48f)

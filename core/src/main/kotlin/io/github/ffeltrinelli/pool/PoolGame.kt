@@ -38,7 +38,6 @@ class PoolGame : ApplicationAdapter() {
             override fun resumeGame() { audio.resume(); skipDelta = true }
             override fun restartGame() = restart()
             override fun exitGame() { computer.reset(); Gdx.app.exit() }
-            override fun selectPlayMode(mode: PlayMode) { restart(mode) }
             override fun selectView(mode: ViewMode) { renderer.views.select(mode) }
         })
         if (paused) controls.pause()
@@ -109,12 +108,12 @@ class PoolGame : ApplicationAdapter() {
     private fun cancelInput() { difficultySlider.cancel(); gameplayPointer = null; gesture.cancel() }
     private fun humanCanShoot() = session.humanTurn && !computer.blocksShot
 
-    private fun restart(mode: PlayMode = session.mode) {
+    private fun restart() {
         computer.reset()
         physicsEvents.clear()
         audio.clear()
         physics.reset()
-        session.restart(mode)
+        session.restart()
         resetRackAim()
         skipDelta = true
     }
@@ -138,7 +137,7 @@ class PoolGame : ApplicationAdapter() {
         }
         renderer.humanCanAim = humanCanShoot()
         renderer.computerPose = computer.pose
-        renderer.holdOverview = session.mode == PlayMode.COMPUTER && (!session.humanTurn || computer.blocksShot)
+        renderer.holdOverview = (!session.humanTurn || computer.blocksShot)
         renderer.computerThinking = computer.thinking
         renderer.foulPlayer = computer.foulPlayer
         renderer.settingsOpen = controls.settingsOpen
@@ -152,7 +151,7 @@ class PoolGame : ApplicationAdapter() {
         physicsEvents.clear()
         for (event in events) {
             session.accept(event)
-            if (event == PhysicsEvent.Settled && session.mode == PlayMode.COMPUTER && !session.finished) {
+            if (event == PhysicsEvent.Settled && !session.finished) {
                 session.outcome?.takeIf { it.foul }?.let { outcome ->
                     physics.replaceCueBall()
                     audio.cueBallReplaced()

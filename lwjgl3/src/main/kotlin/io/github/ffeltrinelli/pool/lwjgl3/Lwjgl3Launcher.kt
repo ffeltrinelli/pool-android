@@ -8,7 +8,7 @@ import io.github.ffeltrinelli.pool.PoolGame
 fun main() {
     if (StartupHelper.startNewJvmIfRequired()) return
     Lwjgl3Application(PoolGame(), Lwjgl3ApplicationConfiguration().apply {
-        setTitle("Pool • Solo practice")
+        setTitle("Pool • Vs computer")
         setWindowedMode(450, 1000)
         useVsync(true)
         setForegroundFPS(60)

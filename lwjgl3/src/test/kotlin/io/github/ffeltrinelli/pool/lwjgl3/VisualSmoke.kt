@@ -45,9 +45,9 @@ object VisualSmoke {
         private lateinit var framebuffer: FrameBuffer
         private val session = GameSession()
         private val gesture = CueGesture()
-        private val scenarios = listOf("initial-rack", "cue-and-aim", "cue-stroke-initial", "cue-stroke-withdrawn", "cue-stroke-return") + (1..6).map { "pocket-$it" } + listOf("scratch-result", "cleared-result") + listOf(0, 12, 18, 24, 48).map { "rolling-markings-$it" }
+        private val scenarios = listOf("initial-rack", "cue-and-aim", "cue-stroke-initial", "cue-stroke-withdrawn", "cue-stroke-return") + (1..6).map { "pocket-$it" } + listOf("scratch-foul", "cleared-result") + listOf(0, 12, 18, 24, 48).map { "rolling-markings-$it" }
         private val viewScenarios = listOf("settings-top", "player-initial", "player-right", "player-left", "player-reverse",
-            "player-withdrawn", "player-return", "settings-player", "player-shot-pullback", "player-shot-overview", "player-return-to-aim", "player-scratch", "player-cleared") +
+            "player-withdrawn", "player-return", "settings-player", "player-shot-pullback", "player-shot-overview", "player-return-to-aim", "player-foul", "player-cleared") +
             (1..6).map { "player-rail-$it" }
         private val pocketScenarios = listOf("top", "player").flatMap { mode ->
             listOf("corner", "side").flatMap { type -> listOf(0, 12, 24, 36, 60).map { "$mode-drop-$type-$it" } +
@@ -110,7 +110,7 @@ object VisualSmoke {
             }
         }
         private fun fixture(name: String) {
-            physics.reset(); session.restart(PlayMode.SOLO); gesture.resetForRack(Point(0f, 0.58f), Point(0f, -0.38f))
+            physics.reset(); session.restart(); gesture.resetForRack(Point(0f, 0.58f), Point(0f, -0.38f))
             renderer.views.select(ViewMode.TOP)
             renderer.views.reset()
             renderer.settingsOpen = false
@@ -123,7 +123,7 @@ object VisualSmoke {
             renderer.difficulty = OpponentDifficulty.MEDIUM
             if (name in cueVisibilityScenarios) { cueVisibilityFixture(name); return }
             if (name in difficultyScenarios) {
-                session.restart(PlayMode.COMPUTER)
+                session.restart()
                 renderer.views.select(if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP)
                 renderer.difficulty = OpponentDifficulty.entries.single { name.endsWith(it.name.lowercase()) }
                 renderer.settingsOpen = true
@@ -188,19 +188,21 @@ object VisualSmoke {
                     repeat(120) { physics.step() }
                     check(physics.balls.none { it.pocketed })
                 }
-                name == "scratch-result" -> {
-                    physics.reset(TableGeometry.rack().filter { it.first != 0 })
+                name == "scratch-foul" -> {
+                    physics.reset()
                     session.beginShot()
                     session.accept(PhysicsEvent.Pocketed(0))
                     session.accept(PhysicsEvent.Settled)
-                    check(session.state == RoundState.SCRATCHED)
+                    check(!session.finished)
+                    renderer.foulPlayer = Player.HUMAN
+                    renderer.humanCanAim = false
                 }
                 name == "cleared-result" -> {
                     physics.reset(listOf(0 to Point(0f, 0.58f)))
                     session.beginShot()
                     (1..15).forEach { session.accept(PhysicsEvent.Pocketed(it)) }
                     session.accept(PhysicsEvent.Settled)
-                    check(session.state == RoundState.CLEARED)
+                    check(session.state == RoundState.FINISHED)
                 }
             }
         }
@@ -221,7 +223,7 @@ object VisualSmoke {
                 check(abs(gesture.tipGap - expectedGap) < 0.0001f)
             }
             if (name.endsWith("computer")) {
-                session.restart(PlayMode.COMPUTER)
+                session.restart()
                 session.beginShot()
                 session.accept(PhysicsEvent.Settled)
                 check(session.player == Player.COMPUTER)
@@ -268,7 +270,7 @@ object VisualSmoke {
         }
 
         private fun computerFixture(name: String) {
-            session.restart(PlayMode.COMPUTER)
+            session.restart()
             val playerView = name.startsWith("player")
             renderer.views.select(if (playerView) ViewMode.PLAYER else ViewMode.TOP)
             renderer.views.update(Point(0f, 0.58f), gesture.direction, true)
@@ -304,7 +306,7 @@ object VisualSmoke {
                 check(abs(stroke.pose.tipGap - expected) < 0.0001f)
             }
             if (playerView && renderer.holdOverview) renderer.views.update(Point(0f, 0.58f), gesture.direction, false, 1f)
-            check(session.mode == PlayMode.COMPUTER)
+            check(session.player == Player.HUMAN || session.player == Player.COMPUTER)
         }
 
         private fun recordComputerMotion() {
@@ -442,14 +444,18 @@ object VisualSmoke {
                     renderer.views.update(physics.balls.first { it.id == 0 }.point, direction, true, 0.225f)
                 }
             }
-            if (name == "player-scratch" || name == "player-cleared") {
+            if (name == "player-foul" || name == "player-cleared") {
                 session.beginShot()
-                if (name == "player-scratch") session.accept(PhysicsEvent.Pocketed(0))
+                if (name == "player-foul") session.accept(PhysicsEvent.Pocketed(0))
                 else (1..15).forEach { session.accept(PhysicsEvent.Pocketed(it)) }
                 session.accept(PhysicsEvent.Settled)
-                if (name == "player-scratch") physics.reset(TableGeometry.rack().filter { it.first != 0 })
+                if (name == "player-foul") physics.reset()
                 else physics.reset(listOf(0 to cue))
-                check(session.finished)
+                if (name == "player-foul") {
+                    check(!session.finished)
+                    renderer.foulPlayer = Player.HUMAN
+                    renderer.humanCanAim = false
+                } else check(session.finished)
             }
         }
         /** Opt-in production-renderer frames for a short PR recording; never enables gameplay debug input. */

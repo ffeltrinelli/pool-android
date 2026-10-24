@@ -121,7 +121,8 @@ class PocketPhysicsTest {
             (2..15).forEach { session.accept(PhysicsEvent.Pocketed(it)) }
             q.strike(ShotCommand(Point(0f, -1f), 0.0001f))
             repeat(180) { q.step() }
-            assertEquals(RoundState.SCRATCHED, session.state)
+            assertEquals(RoundState.FINISHED, session.state)
+            assertEquals(0, session.humanScore)
             assertEquals(setOf(0, 1), drops.map { it.ballId }.toSet())
         } finally { q.dispose() }
         repeat(10) {

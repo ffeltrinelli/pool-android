@@ -1,6 +1,6 @@
-# Pool — solo practice and computer opponent
+# Pool — play against the computer
 
-An offline 3D pool demo for Android, based on [MVP Design #1](https://github.com/ffeltrinelli/pool-android/issues/1). Aim and shoot with one continuous touch gesture. Choose Solo practice or Vs computer in Settings. In Solo, the round ends when the cue ball is pocketed or all 15 object balls are cleared. Vs computer alternates one shot per player and awards one point per object ball; a scratch cancels all points for that shot. The eight ball has no special rule.
+An offline 3D pool demo for Android, based on [MVP Design #1](https://github.com/ffeltrinelli/pool-android/issues/1). Aim and shoot with one continuous touch gesture. Play against an offline computer opponent, alternating one shot per player and earning one point per object ball; a scratch cancels all points for that shot. The eight ball has no special rule.
 
 ## Table of contents
 
@@ -48,9 +48,9 @@ The Gradle task adds macOS's required `-XstartOnFirstThread`. Mouse dragging use
 - Drag backward to withdraw the cue and forward to advance it. You can make repeated practice strokes without lifting. A deliberate axial movement locks the aiming direction until release; lift your finger to re-aim.
 - The forward-moving tip strikes on contact; pulling back first is optional. A faster push produces a stronger shot. Releasing before contact cancels the stroke.
 - Wait for all balls to settle before aiming again. Additional fingers are ignored.
-- Open the **gear** for Settings: choose **Solo** / **Vs computer**, choose **Top view** / **Player view**, toggle **Aided aim**, set **Difficulty** (Easy / Medium / Hard), then use **Restart** or **Exit game** side by side. Aided aim uses the same half-width button as the mode selectors. Settings pauses play and stops current sounds. Use the top-right **X** or Android Back to resume. Exit closes the app immediately without saving the rack. **Play again** remains available after a result. Every fresh rack resets the cue toward the apex ball and aligns the player camera, with a 50 mm resting tip gap.
+- Open the **gear** for Settings: choose **Top view** / **Player view**, toggle **Aided aim**, set **Difficulty** (Easy / Medium / Hard), then use **Restart** or **Exit game** side by side. Aided aim uses the same half-width button as the mode selectors. Settings pauses play and stops current sounds. Use the top-right **X** or Android Back to resume. Exit closes the app immediately without saving the rack. **Play again** remains available after a result. Every fresh rack resets the cue toward the apex ball and aligns the player camera, with a 50 mm resting tip gap.
 - In **Player view**, touching preserves aim. Drag sideways to turn the cue and camera together; drag down to pull back and up to strike. Lift to unlock the direction. At contact, the camera smoothly pulls back to a closer overview while balls move; outer table edges may be off-screen, then returns behind the settled cue ball.
-- The selected play mode, view, aided-aim setting and computer difficulty are remembered across rack restarts and app launches; the first launch uses Solo, Top view, aided aim On and Medium difficulty. Changing play mode starts a fresh rack immediately.
+- The selected view, aided-aim setting and computer difficulty are remembered across rack restarts and app launches; the first launch uses Top view, aided aim On and Medium difficulty.
 - Ball collisions click, cushions thud, and cue contact plays a separate strike. Every physical pocket drop plays the pocket sound, including each cue-ball scratch after replacement in Vs computer. Stronger impacts are louder. There is no music or in-game volume control.
 
 Top view uses the original fixed portrait overhead camera and shows the whole table with gesture space around the rails. Player view uses a raised first-person perspective and may crop parts of the table. The cue is drawn over the table borders and balls so it stays visible near rails in both views, including computer strokes. It keeps its perspective and lighting, and is still clipped at screen edges. Settings and the HUD remain above it; there are no cue obstruction, spin, jump-shot, or eight-ball rule controls.
@@ -205,7 +205,7 @@ The objective is `100 × awardedPoints + 10 × noScratch + pocketProximity − 0
 
 A single worker exclusively owns a separate Bullet world and disposes it on that same worker. A settled snapshot carries ball identity, position, height and rotation; velocities are zero because meaningful movement has already ended. Native contact caches are not copied, so predictions are physically approximate rather than bit-identical to the live world. No planning simulation delivers live game or audio events.
 
-The Settings slider has exactly three discrete levels. Tapping a stop selects it; dragging snaps to the nearest stop. The saved selection defaults to **Medium** and is also editable in Solo, where it applies only to future Vs computer play.
+The Settings slider has exactly three discrete levels. Tapping a stop selects it; dragging snaps to the nearest stop. The saved selection defaults to **Medium**.
 
 | Difficulty | Gaussian angular standard deviation | Angular clipping | Uniform power variation |
 |---|---|---|---|
