@@ -9,7 +9,7 @@ The current game implements the simplified WPA variant described in [the README]
 - Human placement has an independent preview and confirmation. Shared geometry validation rejects balls, bounds, jaws, cushions and pocket openings. The computer evaluates bounded placement/shot pairs under its existing budget.
 - The eight is spotted by a focused physics operation that preserves every other body's transform. The obsolete automatic starting-half replacement search was removed.
 - Ball-in-hand positions prioritize pot-aligned locations before break-spot grid fallbacks, and every shortlisted position gets an evaluated seed. A native Hard regression wins from five eight-ball-only-target layouts, including opponent blockers.
-- The HUD omits the Pool title and uses larger text with a dark backing for Player-view readability.
+- The HUD omits the Pool title and redundant open-table line, retaining Unassigned in the ownership rows. It uses user-accepted larger text with a dark backing for Player-view readability. Balls use matte materials and softer diffuse illumination below clipping to reduce number-obscuring glare.
 - The computer worker retains its cancellation/resource boundary. Selected placement is applied once before animation; suspension retains the selected shot without duplicating placement or contact.
 - Physics material/solver tuning, human gestures, camera tuning, execution-error levels and audio assets are unchanged. Rack positions/packing intentionally follow the corrected rack.
 

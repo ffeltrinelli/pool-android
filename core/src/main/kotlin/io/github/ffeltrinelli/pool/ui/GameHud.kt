@@ -47,7 +47,7 @@ class GameHud : Disposable {
         val h = layout.uiHeight
         sprites.projectionMatrix = camera.combined
         sprites.begin()
-        val headerHeight = if (presentation.notice != null && !session.finished) 220f else 154f
+        val headerHeight = if (presentation.notice != null && !session.finished) 190f else 120f
         rectangle(Rectangle(0f, h - headerHeight, 420f, headerHeight), "08161ced")
         fun groupLabel(player: Player): String = session.group(player)?.let {
             "${it.label}: ${session.remaining(player)} left"
@@ -63,12 +63,10 @@ class GameHud : Disposable {
             else -> "Computer's turn"
         }
         text(status, 29f, h - 103f, 1.15f, "d5e5dd")
-        if (session.group(session.player) == null && !session.finished)
-            text("Open table - groups not assigned", 210f, h - 133f, 1.00f, "b8ccca", true)
         if (presentation.notice != null && !session.finished) {
             font.data.setScale(1.05f)
             font.color = Color.valueOf("f2d295")
-            font.draw(sprites, presentation.notice, 30f, h - 161f, 360f, com.badlogic.gdx.utils.Align.center, true)
+            font.draw(sprites, presentation.notice, 30f, h - 140f, 360f, com.badlogic.gdx.utils.Align.center, true)
         }
         if (session.placement != null && session.player == Player.HUMAN) {
             val instruction = if (session.placement == io.github.ffeltrinelli.pool.rules.PlacementRegion.ANYWHERE)

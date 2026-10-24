@@ -35,6 +35,11 @@ class PoolRenderer : Disposable {
         set(ColorAttribute(ColorAttribute.AmbientLight, 0.60f, 0.65f, 0.68f, 1f))
         add(DirectionalLight().set(0.95f, 0.94f, 0.86f, -0.4f, -1f, -0.3f))
     }
+    // Softer illumination keeps ivory number patches below clipping, even facing the light.
+    private val ballEnvironment = Environment().apply {
+        set(ColorAttribute(ColorAttribute.AmbientLight, 0.60f, 0.62f, 0.64f, 1f))
+        add(DirectionalLight().set(0.30f, 0.29f, 0.26f, -0.4f, -1f, -0.3f))
+    }
     private val ballModels: List<Model>
     private val ballInstances: List<ModelInstance>
     private val shadowInstances: List<ModelInstance>
@@ -61,7 +66,7 @@ class PoolRenderer : Disposable {
             ballModels = (0..15).map { id ->
                 val texture = ballTextures.create(id)
                 textures.add(texture)
-                val mat = Material(TextureAttribute.createDiffuse(texture), ColorAttribute.createSpecular(0.08f, 0.08f, 0.08f, 1f), FloatAttribute.createShininess(48f))
+                val mat = Material(TextureAttribute.createDiffuse(texture))
                 own(builder.createSphere(TableGeometry.BALL_RADIUS * 2, TableGeometry.BALL_RADIUS * 2, TableGeometry.BALL_RADIUS * 2, 32, 24, mat, attributes))
             }
         }
@@ -120,11 +125,11 @@ class PoolRenderer : Disposable {
             position.set(ball.previousPosition).lerp(ball.position, physics.interpolation)
             rotation.set(ball.previousRotation).slerp(ball.rotation, physics.interpolation)
             if (position.y >= TableGeometry.BALL_RADIUS - 0.005f) modelBatch.render(shadowInstances[ball.id].apply { transform.setToTranslation(position.x + 0.006f, 0.008f, position.z + 0.007f) }, environment)
-            modelBatch.render(ballInstances[ball.id].apply { transform.set(position, rotation) }, environment)
+            modelBatch.render(ballInstances[ball.id].apply { transform.set(position, rotation) }, ballEnvironment)
         }
         if (preview != null) modelBatch.render(ballInstances[0].apply {
             transform.setToTranslation(preview.x, TableGeometry.BALL_RADIUS, preview.z)
-        }, environment)
+        }, ballEnvironment)
         modelBatch.end()
     }
 
