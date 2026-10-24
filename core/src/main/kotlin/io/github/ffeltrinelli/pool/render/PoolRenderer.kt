@@ -28,13 +28,17 @@ class PoolRenderer : Disposable {
     private val attributes = (VertexAttributes.Usage.Position or VertexAttributes.Usage.Normal or VertexAttributes.Usage.TextureCoordinates).toLong()
     val views = GameViews()
     val hud = GameHud()
-    var computerPose: CuePose? = null
-    var foulPlayer: Player? = null
     private val aimPredictor = AimPredictor()
     private val aimGuide = AimGuideRenderer()
+    private val placementGuide = PlacementRenderer()
     private val environment = Environment().apply {
         set(ColorAttribute(ColorAttribute.AmbientLight, 0.60f, 0.65f, 0.68f, 1f))
         add(DirectionalLight().set(0.95f, 0.94f, 0.86f, -0.4f, -1f, -0.3f))
+    }
+    // Softer illumination keeps ivory number patches below clipping, even facing the light.
+    private val ballEnvironment = Environment().apply {
+        set(ColorAttribute(ColorAttribute.AmbientLight, 0.60f, 0.62f, 0.64f, 1f))
+        add(DirectionalLight().set(0.30f, 0.29f, 0.26f, -0.4f, -1f, -0.3f))
     }
     private val ballModels: List<Model>
     private val ballInstances: List<ModelInstance>
@@ -62,7 +66,7 @@ class PoolRenderer : Disposable {
             ballModels = (0..15).map { id ->
                 val texture = ballTextures.create(id)
                 textures.add(texture)
-                val mat = Material(TextureAttribute.createDiffuse(texture), ColorAttribute.createSpecular(0.08f, 0.08f, 0.08f, 1f), FloatAttribute.createShininess(48f))
+                val mat = Material(TextureAttribute.createDiffuse(texture))
                 own(builder.createSphere(TableGeometry.BALL_RADIUS * 2, TableGeometry.BALL_RADIUS * 2, TableGeometry.BALL_RADIUS * 2, 32, 24, mat, attributes))
             }
         }
@@ -82,8 +86,8 @@ class PoolRenderer : Disposable {
         scene.add(ModelInstance(own(builder.createBox(w, h, d, material, attributes))).apply { transform.setToTranslation(x, y, z) })
     }
     fun resize(width: Int, height: Int) {
-        views.resize(width, height)
         hud.resize(width, height)
+        views.resize(width, hud.layout.gameHeight)
     }
 
     fun render(
@@ -96,31 +100,42 @@ class PoolRenderer : Disposable {
         table: TablePresentation = TablePresentation(),
         hudState: HudPresentation = HudPresentation()
     ) {
-        Gdx.gl.glViewport(0, 0, pixelWidth, pixelHeight)
+        val previousGameHeight = hud.layout.gameHeight
+        hud.prepare(session, hudState)
+        if (hud.layout.gameHeight != previousGameHeight) {
+            views.resize(hud.layout.width, hud.layout.gameHeight)
+        }
+        Gdx.gl.glViewport(0, 0, pixelWidth, hud.layout.renderHeight(pixelHeight))
         Gdx.gl.glClearColor(0.035f, 0.075f, 0.095f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
         val cuePoint = physics.balls.firstOrNull { it.id == 0 && !it.pocketed }?.point
+        views.placing = table.placement != null
         views.update(cuePoint, gesture.direction, session.canShoot && !table.holdOverview, viewDelta)
-        renderTable(physics)
+        renderTable(physics, table.placement)
+        if (table.placement != null) placementGuide.render(views.active.camera, table)
         val cueBall = physics.balls.firstOrNull { it.id == 0 && !it.pocketed }
         if (table.aidedAim && !hudState.settingsOpen && session.humanTurn && table.humanCanAim && cueBall != null) {
             renderAidedAim(physics, cueBall.point, gesture.direction)
         }
         val cuePose = if (session.humanTurn && table.humanCanAim) CuePose(gesture.direction, gesture.tipGap) else table.computerPose
         if (session.canShoot && cueBall != null && cuePose != null) renderCue(cueBall.point, cuePose)
+        Gdx.gl.glViewport(0, 0, pixelWidth, pixelHeight)
         hud.render(session, views.mode, table.aidedAim, hudState)
     }
 
-    private fun renderTable(physics: PoolPhysics) {
+    private fun renderTable(physics: PoolPhysics, preview: Point?) {
         modelBatch.begin(views.active.camera)
         modelBatch.render(scene, environment)
         physics.balls.forEach { ball ->
-            if (ball.pocketed) return@forEach
+            if (ball.pocketed || (preview != null && ball.id == 0)) return@forEach
             position.set(ball.previousPosition).lerp(ball.position, physics.interpolation)
             rotation.set(ball.previousRotation).slerp(ball.rotation, physics.interpolation)
             if (position.y >= TableGeometry.BALL_RADIUS - 0.005f) modelBatch.render(shadowInstances[ball.id].apply { transform.setToTranslation(position.x + 0.006f, 0.008f, position.z + 0.007f) }, environment)
-            modelBatch.render(ballInstances[ball.id].apply { transform.set(position, rotation) }, environment)
+            modelBatch.render(ballInstances[ball.id].apply { transform.set(position, rotation) }, ballEnvironment)
         }
+        if (preview != null) modelBatch.render(ballInstances[0].apply {
+            transform.setToTranslation(preview.x, TableGeometry.BALL_RADIUS, preview.z)
+        }, ballEnvironment)
         modelBatch.end()
     }
 
@@ -152,7 +167,7 @@ class PoolRenderer : Disposable {
     }
 
     override fun dispose() {
-        aimGuide.dispose(); modelBatch.dispose(); font.dispose(); hud.dispose()
+        placementGuide.dispose(); aimGuide.dispose(); modelBatch.dispose(); font.dispose(); hud.dispose()
         models.forEach { it.dispose() }
         textures.forEach { it.dispose() }
     }

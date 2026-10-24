@@ -14,7 +14,9 @@ class ShotCandidates {
         val cue = table.balls.first { it.id == 0 }.point
         val balls = table.balls.map { AimBall(it.id, it.point) }
         val candidates = mutableListOf<ShotCandidate>()
-        for (ball in table.balls.filter { it.id != 0 }) for (pocket in PocketGeometry.pockets) {
+        if (table.rulesContext().breaking) return listOf(ShotCandidate(
+            ShotCommand((Point(0f, TableGeometry.FOOT_SPOT) - cue).normalized(), 1.10f), 0f))
+        for (ball in table.balls.filter { it.id in table.rulesContext().targets }) for (pocket in PocketGeometry.pockets) {
             val outgoing = (pocket.center - ball.point).normalized()
             val ghost = ball.point - outgoing * (2 * TableGeometry.BALL_RADIUS)
             if (abs(ghost.x) > TableGeometry.HALF_WIDTH - TableGeometry.BALL_RADIUS ||
@@ -34,9 +36,25 @@ class ShotCandidates {
         return candidates.sortedBy { it.rankingCost }
     }
 
+    /** Broaden the search beyond pots: a firm legal contact can satisfy the rail rule. */
+    fun contactAlternatives(table: TableSnapshot): List<ShotCommand> {
+        if (table.rulesContext().breaking) return emptyList()
+        val cue = table.balls.first { it.id == 0 }.point
+        val balls = table.balls.map { AimBall(it.id, it.point) }
+        val visible = table.balls.filter { it.id in table.rulesContext().targets }
+            .sortedBy { (it.point - cue).length() }
+            .filter { predictor.predict(cue, (it.point - cue).normalized(), balls).targetBallId == it.id }
+            .take(2)
+        return visible.flatMap { ball ->
+            val direction = (ball.point - cue).normalized()
+            listOf(OpponentTuning.CONTACT_IMPULSE, OpponentTuning.STRONG_CONTACT_IMPULSE).map { impulse -> ShotCommand(direction, impulse) }
+        }
+    }
+
     fun fallback(table: TableSnapshot): ShotCommand {
         val cue = table.balls.first { it.id == 0 }.point
-        val target = table.balls.filter { it.id != 0 }.minByOrNull { (it.point - cue).length() }
+        if (table.rulesContext().breaking) return ShotCommand((Point(0f, TableGeometry.FOOT_SPOT) - cue).normalized(), 1.10f)
+        val target = table.balls.filter { it.id in table.rulesContext().targets }.minByOrNull { (it.point - cue).length() }
         return ShotCommand(target?.let { (it.point - cue).normalized() } ?: Point(0f, -1f), 0.55f)
     }
 }

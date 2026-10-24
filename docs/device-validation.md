@@ -1,5 +1,8 @@
 # Device validation — 19 October 2026
 
+This is a chronological validation log. Earlier sections describe the builds tested at that time, not necessarily the current rules. See the latest section and [README](../README.md) for current behavior.
+
+
 Device: OnePlus 8T (KB2003), API 34, ARM64, physical resolution 1080 × 2400.
 App: io.github.ffeltrinelli.pool 0.1.0; minimum API 26, target API 34, compile API 36.
 
@@ -246,3 +249,52 @@ The debug APK installed and cold-launched on the **OnePlus 8T / Android 14 / API
 - On the final production build, exercised fresh human breaks in Top and Player views. Both reached computer planning, showed its cue and strike, and returned to the human turn. Saved phone frames cover fresh rack, selected computer cue, shot motion and returned turn. Planning logged **20 completed evaluations in 5000 ms** (Top) and **30 in 5000 ms** (Player), both without fallback. The roughly 13.5-second break-to-selected-shot measurement also includes the human break settling and capture overhead; it is not planner latency. [Turn evidence](validation/computer-only-turns.json).
 - Human/computer score transitions, scratches, deterministic cue replacement and match results were verified in automated rules/native/rendered suites. A complete phone match, deliberate scratch/replacement scenario, subjective gesture/audio re-acceptance and a new ten-minute performance soak were **not repeated** for this cleanup. Earlier acceptance records remain historical evidence, not new checks.
 - Captioned Settings comparison: [before](images/computer-only/settings-before.png), [after](images/computer-only/settings-after.png). Desktop report screenshots demonstrate the production renderer; phone lifecycle/turn captures are under `build/reports/device-computer-only/`.
+
+## Simplified eight-ball (2026-10-24)
+
+Replaced ball-count scoring with the simplified WPA rules in the [README](../README.md#rules-of-this-game). Fresh breaks and fouls now require valid cue-ball placement; new requested racks alternate breakers. Added explicit open-table/group messages and eight-ball results.
+
+Local verification: **161 passed tests, one opt-in calibration skipped, zero failures; 135 rendered scenarios passed**. Audio assets and production lifecycle passed through OpenAL's null backend. Android lint and debug APK build passed. Existing lint warnings were not introduced by this change. See the [implementation/documentation review](eight-ball-review.md).
+
+Installed the debug APK on the OnePlus 8T KB2003, Android 14 / API 34, retaining view, aided-aim and difficulty preferences. Observed:
+
+- Cold launch starts human break placement, temporarily in Top view despite saved Player view.
+- Placement ahead of the head string turns the highlight red, explains the error, and remains unconfirmed when the confirmation button is tapped.
+- A valid off-centre placement survives Home/resume in the same process. Confirmation restores Player view and normal stroke input.
+- A human break pockets a ball and correctly keeps the human turn while groups remain open.
+- Settings Restart alternates to a computer break. The computer selects its placement, makes its visible stroke, pots a ball, assigns groups on a later legal pot, and continues shooting.
+- Recorded computer searches completed 12, 30 and 24 evaluations at the 5,000 ms deadline, without fallback. Inspected captures show the open-table and assigned-group HUD and the Player-view overview. No PoolPhysics escape or AndroidRuntime error appeared in the captured log.
+
+Phone evidence is generated under `build/reports/device-eight-ball`. The final confirmation-alignment correction also has automated rack/gesture coverage; the final APK is reinstalled before delivery.
+
+Not claimed as completed: a full human-played rack through its result, deliberate phone scratch/ball-in-hand recovery, all rare break/head-string exceptions on the phone, a new ten-minute performance soak, or subjective user acceptance of the new placement interaction. Automated rule/native/rendered tests cover these rule outcomes; earlier device records remain historical evidence, not acceptance of this build.
+
+### Feedback and revisions
+
+The user requested removal of the Pool heading, larger text, and reported a poor Hard-difficulty placement when the computer only needed the eight. Removed the heading, enlarged HUD/settings/placement/result text, and added a dark HUD backing for readability over Player view. The placement shortlist had favored proximity to the break spot and could omit later positions from seed evaluation; it now prioritizes pot-aligned positions and evaluates every shortlisted position before optimization. Five deterministic native layouts, including remaining opponent blockers, now verify a winning Hard placement/shot with the 64-evaluation budget. This regression establishes those cases, not a guarantee of every possible pot. The revised build is installed for further human acceptance.
+
+The user accepted the enlarged font sizes, then reported top-view ball glare and asked to remove the redundant “Open table — groups not assigned” line. Removed that line (the two ownership rows retain “Unassigned”), reduced the header's unused height, and removed the balls' specular material component and softened their diffuse illumination to prevent number-patch clipping. Font sizes are unchanged. The user subsequently confirmed that the ball numbers are readable in Top view; the larger fonts and glare reduction are accepted.
+
+### Reserved HUD viewport
+
+The user observed that the HUD's dark backing obscured far-table balls while aiming in Player view. The scene now renders in a separate viewport below a fixed 92-logical-pixel HUD strip. Notices temporarily replace the ownership rows inside that strip instead of extending over the table. The accepted font sizes, camera tuning and gesture sensitivity remain unchanged. Shared layout supplies viewport bounds, density scaling and the touch Y offset. Header touches cannot begin gameplay.
+
+Local verification: 161 passed tests, one opt-in calibration skipped, 135 rendered scenarios passed, audio smoke/lint/debug APK passed. Added viewport partition/density and projected-touch regression tests. The revised APK is installed on the OnePlus; device captures are under `build/reports/device-eight-ball/viewport-*`. The before screenshot shows the user's actual rack; the rendered after screenshot uses a deterministic rail-adjacent fixture, not the same rack. Subjective acceptance of this layout change is pending.
+
+Following further feedback, moved the ownership rows, turn label and gear upward and reduced the reserved strip from 120 to 92 logical pixels without reducing fonts. This returns approximately 72 physical vertical pixels on the 1080-pixel-wide OnePlus. Updated device-script gear coordinates accordingly.
+
+On the revised OnePlus build, the gear at its new location opened Settings and Android Back dismissed it. Captures confirm the compact header and unobstructed scene; the preceding viewport build also exercised valid placement and a cancelled backswing without changing the selected font sizes.
+
+### Unified notification and placement controls
+
+Further feedback requested one notification location, distinct player/message colours, tighter row spacing, and placement confirmation above the table. The normal HUD now uses 76 logical pixels (previously 92), with closer player rows and a gold notification line; invalid-placement feedback uses red in that same line. Placement guidance no longer appears below the table. Human placement adds a 56-logical-pixel confirmation row at the top, removed immediately after confirmation. Long notices wrap in the notification area and reserve their measured height; ownership labels remain visible. The viewport and input offset follow the resulting layout.
+
+Local verification: 162 tests passed, one opt-in calibration skipped, 135 rendered scenarios passed, four audio assets/lifecycle passed, Android lint and debug APK passed. Tests cover the top confirmation hit region, blocked invalid confirmation, viewport partition and mapped table touches. Installed on OnePlus 8T/API 34 and visually inspected the new top placement layout; before/after phone captures are committed under `docs/images/eight-ball/placement-hud-*`. User acceptance of the new layout remains pending.
+
+### Hard-difficulty no-cushion foul
+
+The user accepted the unified placement/HUD layout, then reported a Hard computer shot fouling because no cushion was reached. The post-shot phone screenshot showed human ball in hand. Recent PoolAI logs showed 25 and 32 evaluations at the five-second deadline, both without fallback; the exact pre-shot snapshot was not recorded, so that individual shot was not replayed.
+
+Added firm centre-ball contact alternatives on up to two visible legal targets, evaluated after the first pot seed and before the remaining seeds. These share the existing five-second/64-attempt search budget and the same foul evaluation. Ordinary planning now preserves the existing cue snapshot instead of reconstructing its settled height, rotation and body order. Actual ball-in-hand placement still creates the fresh cue body. Diagnostics include selected impulse/direction and predicted foul; an untested fallback remains identified separately. Hard accuracy and physics tuning are unchanged.
+
+Local verification: 166 tests passed, one opt-in calibration skipped, 135 rendered scenarios passed, audio/lint/debug APK passed. New coverage checks no-cushion rejection versus a legal contact, visible legal targets, preservation of the settled cue pose, and a complete Hard shot on a blocked-pot layout. Existing winning-eight ball-in-hand tests remain passing. These fixed regressions establish specific legal choices, not a guarantee against fouls in every layout. Revised build installed and launched on the OnePlus; a fresh full device rack and confirmation against the reported failure remain outstanding.

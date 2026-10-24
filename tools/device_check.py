@@ -60,9 +60,11 @@ def main():
             # OnePlus API 34 safe viewport starts at y=103; coordinates include that cutout inset.
             # Back dismisses any open settings before opening a fresh modal.
             shell('input keyevent KEYCODE_BACK')
-            shell('input tap 956 288')
+            shell('input tap 956 170')
             shell('input tap ' + ('342' if args.view == 'top' else '738') + ' 939')
             shell('input tap 342 1672')
+            time.sleep(0.3)
+            shell('input tap 540 370')  # Confirm fresh-break placement on human racks.
             time.sleep(0.3)
             shell('input touchscreen swipe 540 1850 540 1400 220')
             shot_count += 1
@@ -94,7 +96,7 @@ def main():
         time.sleep(1)
     (args.output / 'oneplus-final.png').write_bytes(adb('exec-out', 'screencap', '-p'))
     result = {'model': model, 'view': args.view, 'api': int(api), 'elapsed_seconds': round(time.monotonic()-start, 1),
-              'scripted_breaks': shot_count, 'background_resume_same_process': True,
+              'requested_racks': shot_count, 'background_resume_same_process': True,
               'sampling': 'SurfaceFlinger presented timestamps: short windows sampled every 10s, not a continuous frame trace',
               'median_sample_fps': statistics.median(s['fps'] for s in samples) if samples else None,
               'minimum_sample_fps': min(s['fps'] for s in samples) if samples else None,

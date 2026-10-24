@@ -2,6 +2,7 @@ package io.github.ffeltrinelli.pool.opponent
 
 import io.github.ffeltrinelli.pool.model.GameSession
 import io.github.ffeltrinelli.pool.model.Player
+import io.github.ffeltrinelli.pool.model.Point
 import io.github.ffeltrinelli.pool.model.ShotCommand
 import io.github.ffeltrinelli.pool.physics.TableSnapshot
 
@@ -37,17 +38,18 @@ class ComputerTurn(
         session: GameSession,
         table: () -> TableSnapshot,
         seconds: Float,
-        difficulty: OpponentDifficulty = OpponentDifficulty.MEDIUM
+        difficulty: OpponentDifficulty = OpponentDifficulty.MEDIUM,
+        placeCue: (Point) -> Unit = {}
     ): ShotCommand? {
         val delta = seconds.coerceAtLeast(0f)
         if (blocksShot) {
             advanceFoulNotice(delta)
             return null
         }
-        if (!session.canShoot || session.player != Player.COMPUTER) return null
+        if ((!session.canShoot && session.placement == null) || session.player != Player.COMPUTER) return null
         val current = state
         if (current is State.Stroking) return advanceStroke(current, delta)
-        advancePlanning(table, delta)
+        advancePlanning(table, delta, placeCue)
         val selected = state as? State.Selected ?: return null
         if (selected.elapsed >= OpponentTuning.THINK_SECONDS) {
             val executed = ExecutionAccuracy.apply(selected.shot, difficulty, seed)
@@ -61,7 +63,7 @@ class ComputerTurn(
         if (foulSeconds == 0f) foulPlayer = null
     }
 
-    private fun advancePlanning(table: () -> TableSnapshot, delta: Float) {
+    private fun advancePlanning(table: () -> TableSnapshot, delta: Float, placeCue: (Point) -> Unit) {
         if (state == State.Idle) {
             planning.start(table(), ++seed)
             state = State.Planning(0f)
@@ -72,6 +74,7 @@ class ComputerTurn(
                 val result = planning.poll()
                 if (result == null) State.Planning(elapsed)
                 else {
+                    result.cuePosition?.let(placeCue)
                     reportPlan(result)
                     State.Selected(result.shot, elapsed)
                 }

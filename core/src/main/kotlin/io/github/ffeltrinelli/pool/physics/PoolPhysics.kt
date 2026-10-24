@@ -39,6 +39,7 @@ class PoolPhysics(
     private val restStability = RestStability()
     private var quietSeconds = 0f
     private var wasSettled = true
+    private var ruleContacts = emptySet<Pair<Int, Int>>()
     var interpolation = 0f
         private set
 
@@ -68,6 +69,7 @@ class PoolPhysics(
 
     fun reset(layout: List<Pair<Int, Point>> = TableGeometry.rack()) {
         contactImpacts.reset()
+        ruleContacts = emptySet()
         balls.forEach(::disposeBall)
         ownedBalls.clear()
         layout.forEach { (id, point) -> addBall(id, point) }
@@ -114,15 +116,20 @@ class PoolPhysics(
         }
     }
 
-    fun replaceCueBall() {
-        val point = CueReplacement.position(balls.filter { it.id != 0 && !it.pocketed }.map { it.point })
-        balls.firstOrNull { it.id == 0 }?.let {
+    fun placeBall(id: Int, point: Point) {
+        balls.firstOrNull { it.id == id }?.let {
             disposeBall(it)
             ownedBalls.remove(it)
         }
         contactImpacts.reset()
-        addBall(0, point)
+        ruleContacts = emptySet()
+        addBall(id, point)
         interpolation = 0f
+    }
+
+    fun spotBall(id: Int) {
+        val objects = balls.filter { it.id != id && !it.pocketed }.map { it.point }
+        placeBall(id, BallPlacement.spot(objects))
     }
 
     fun strike(shot: ShotCommand) {
@@ -187,7 +194,7 @@ class PoolPhysics(
             pocketDrops(PocketDrop(ball.id, pocket.id))
         } else if (kotlin.math.abs(ball.position.x) > 0.80f || kotlin.math.abs(ball.position.z) > 1.36f || ball.position.y < -0.40f) {
             com.badlogic.gdx.Gdx.app?.error("PoolPhysics", "Ball ${ball.id} escaped table at ${ball.position}")
-            capture(ball)
+            capture(ball, offTable = true)
         }
     }
 
@@ -202,6 +209,9 @@ class PoolPhysics(
     }
 
     private fun collectImpactContacts() {
+        val touching = mutableSetOf<Pair<Int, Int>>()
+        val targets = mutableSetOf<Int>()
+        val rails = mutableSetOf<Int>()
         for (index in 0 until dispatcher.numManifolds) {
             val manifold = dispatcher.getManifoldByIndexInternal(index)
             val first = manifold.body0.userValue
@@ -211,17 +221,33 @@ class PoolPhysics(
                 // CCD can resolve an impact while a small positive separation remains.
                 if (point.distance <= 0f || point.appliedImpulse > 0f) {
                     contactImpacts.contact(first, second, point.appliedImpulse)
+                    val pair = minOf(first, second) to maxOf(first, second)
+                    touching.add(pair)
+                    if (pair !in ruleContacts && point.appliedImpulse > 0.000001f) {
+                        if (first == 0 && second in 1..15) targets.add(second)
+                        if (second == 0 && first in 1..15) targets.add(first)
+                        if (first in CollisionIds.BALLS && second in CollisionIds.CUSHIONS) rails.add(first)
+                        if (second in CollisionIds.BALLS && first in CollisionIds.CUSHIONS) rails.add(second)
+                    }
                 }
             }
         }
+        ruleContacts = touching
         contactImpacts.finishStep()
+        val cue = balls.firstOrNull { it.id == 0 && !it.pocketed }
+        val cueZ = cue?.body?.worldTransform?.getTranslation(Vector3())?.z
+        val crossed = cue != null && cueZ != null && cue.previousPosition.z > TableGeometry.HEAD_STRING && cueZ <= TableGeometry.HEAD_STRING
+        if (targets.isNotEmpty() || rails.isNotEmpty() || crossed) {
+            val behind = targets.all { id -> balls.first { it.id == id }.body.worldTransform.getTranslation(Vector3()).z > TableGeometry.HEAD_STRING }
+            events(PhysicsEvent.Contacts(targets, rails, crossed, behind))
+        }
     }
 
-    private fun capture(ball: Ball) {
+    private fun capture(ball: Ball, offTable: Boolean = false) {
         if (ball.pocketed) return
         ball.pocketed = true
         world.removeRigidBody(ball.body)
-        events(PhysicsEvent.Pocketed(ball.id))
+        events(if (offTable) PhysicsEvent.OffTable(ball.id) else PhysicsEvent.Pocketed(ball.id))
     }
 
     private fun readTransform(ball: Ball) {

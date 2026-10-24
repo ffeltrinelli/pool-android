@@ -186,7 +186,8 @@ class GameViews {
     private val player = PlayerView()
     var mode = ViewMode.TOP
         private set
-    val active: GameView get() = when (mode) { ViewMode.TOP -> top; ViewMode.PLAYER -> player }
+    var placing = false
+    val active: GameView get() = if (placing) top else when (mode) { ViewMode.TOP -> top; ViewMode.PLAYER -> player }
 
     fun select(mode: ViewMode) { this.mode = mode }
     fun reset() { player.reset() }

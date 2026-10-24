@@ -45,7 +45,7 @@ object VisualSmoke {
         private lateinit var renderer: PoolRenderer
         private lateinit var physics: PoolPhysics
         private lateinit var framebuffer: FrameBuffer
-        private val session = GameSession()
+        private var session = GameSession()
         private val gesture = CueGesture()
         private var tablePresentation = TablePresentation()
         private var hudPresentation = HudPresentation()
@@ -53,7 +53,7 @@ object VisualSmoke {
         override fun create() {
             renderer = PoolRenderer()
             renderer.resize(1080, 2400)
-            physics = PoolPhysics(session::accept)
+            physics = PoolPhysics({ session.accept(it) })
             framebuffer = FrameBuffer(Pixmap.Format.RGBA8888, 1080, 2400, true)
         }
         override fun render() {
@@ -103,13 +103,43 @@ object VisualSmoke {
                 ScenarioGroup.VIEW -> viewFixture(name)
                 ScenarioGroup.POCKET -> pocketFixture(name)
                 ScenarioGroup.TABLE -> tableFixture(name)
+                ScenarioGroup.RULES -> rulesFixture(name)
             }
+            if (session.placement != null && session.player == Player.HUMAN && tablePresentation.placement == null)
+                tablePresentation = tablePresentation.copy(humanCanAim = false, placement = TableGeometry.CUE_START,
+                    placementRegion = session.placement)
+        }
+
+        private fun readyMatch(player: Player = Player.HUMAN): GameSession {
+            val match = GameSession()
+            match.confirmPlacement()
+            match.beginShot()
+            match.accept(PhysicsEvent.Contacts(setOf(1), setOf(1, 2, 3, 4)))
+            match.accept(PhysicsEvent.Settled)
+            if (player == Player.HUMAN) {
+                match.beginShot()
+                match.accept(PhysicsEvent.Contacts(setOf(1), setOf(1)))
+                match.accept(PhysicsEvent.Settled)
+            }
+            return match
+        }
+
+        private fun finishMatch(winner: Player) {
+            session = readyMatch(winner)
+            session.beginShot()
+            session.accept(PhysicsEvent.Contacts(setOf(1), emptySet()))
+            (1..7).forEach { session.accept(PhysicsEvent.Pocketed(it)) }
+            session.accept(PhysicsEvent.Settled)
+            session.beginShot()
+            session.accept(PhysicsEvent.Contacts(setOf(8), emptySet()))
+            session.accept(PhysicsEvent.Pocketed(8))
+            session.accept(PhysicsEvent.Settled)
         }
 
         private fun resetFixture() {
-            physics.reset()
-            session.restart()
-            gesture.resetForRack(Point(0f, 0.58f), Point(0f, -0.38f))
+            physics.reset(TableGeometry.rack(42))
+            session = readyMatch()
+            gesture.resetForRack(Point(0f, 0.58f), Point(0f, TableGeometry.FOOT_SPOT))
             renderer.views.select(ViewMode.TOP)
             renderer.views.reset()
             tablePresentation = TablePresentation()
@@ -126,10 +156,51 @@ object VisualSmoke {
             check(renderer.hud.layout.aidedAim.width == renderer.hud.layout.top.width)
         }
 
+        private fun rulesFixture(name: String) {
+            renderer.views.select(if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP)
+            when {
+                "placement" in name -> {
+                    session = GameSession()
+                    if ("anywhere" in name) {
+                        session.confirmPlacement(); session.beginShot()
+                        session.accept(PhysicsEvent.Contacts(setOf(1), setOf(1, 2, 3, 4)))
+                        session.accept(PhysicsEvent.Settled)
+                        session.beginShot(); session.accept(PhysicsEvent.Pocketed(0)); session.accept(PhysicsEvent.Settled)
+                    }
+                    val point = if ("invalid" in name) physics.balls.first { it.id == 8 }.point else TableGeometry.CUE_START
+                    tablePresentation = tablePresentation.copy(humanCanAim = false, placement = point,
+                        placementRegion = session.placement, placementValid = "invalid" !in name, activeSeconds = 1f)
+                    hudPresentation = hudPresentation.copy(placementError = "Too close to another ball".takeIf { "invalid" in name })
+                    check(session.placement != null && session.player == Player.HUMAN)
+                }
+                "assigned" in name || "on-eight" in name -> {
+                    session.beginShot()
+                    session.accept(PhysicsEvent.Contacts(setOf(1), emptySet()))
+                    val pots = if ("on-eight" in name) (1..7).toList() else listOf(1)
+                    pots.forEach { session.accept(PhysicsEvent.Pocketed(it)) }
+                    session.accept(PhysicsEvent.Settled)
+                    physics.reset(physics.snapshot().balls.filter { it.id !in pots }.map { it.id to it.point })
+                    check(session.group(Player.HUMAN) != null)
+                }
+                "wrong-first" in name -> {
+                    hudPresentation = hudPresentation.copy(notice = "You: Foul - wrong ball hit first")
+                }
+                "mixed" in name -> {
+                    session.beginShot(); session.accept(PhysicsEvent.Contacts(setOf(1), emptySet()))
+                    listOf(1, 9).forEach { session.accept(PhysicsEvent.Pocketed(it)) }
+                    session.accept(PhysicsEvent.Settled)
+                    hudPresentation = hudPresentation.copy(notice = "Solid and stripe pocketed - table stays open")
+                    check(session.group(Player.HUMAN) == null && session.humanTurn)
+                }
+            }
+            check(renderer.views.mode == if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP)
+        }
+
         private fun tableFixture(name: String) {
             when {
                 name == "initial-rack" -> {
-                    check(physics.balls.size == 16 && session.canShoot)
+                    session = GameSession()
+                    check(physics.balls.size == 16 && session.state == RoundState.PLACING)
                 }
                 name == "cue-and-aim" -> {
                     val cue = physics.balls.first { it.id == 0 }.point
@@ -181,19 +252,17 @@ object VisualSmoke {
                     check(physics.balls.none { it.pocketed })
                 }
                 name == "scratch-foul" -> {
-                    physics.reset()
+                    physics.reset(TableGeometry.rack(42))
                     session.beginShot()
                     session.accept(PhysicsEvent.Pocketed(0))
                     session.accept(PhysicsEvent.Settled)
                     check(!session.finished)
-                    hudPresentation = hudPresentation.copy(foulPlayer = Player.HUMAN)
+                    hudPresentation = hudPresentation.copy(foulPlayer = Player.HUMAN, notice = "You: Foul - cue ball pocketed")
                     tablePresentation = tablePresentation.copy(humanCanAim = false)
                 }
                 name == "cleared-result" -> {
                     physics.reset(listOf(0 to Point(0f, 0.58f)))
-                    session.beginShot()
-                    (1..15).forEach { session.accept(PhysicsEvent.Pocketed(it)) }
-                    session.accept(PhysicsEvent.Settled)
+                    finishMatch(Player.HUMAN)
                     check(session.state == RoundState.FINISHED)
                 }
             }
@@ -215,9 +284,7 @@ object VisualSmoke {
                 check(abs(gesture.tipGap - expectedGap) < 0.0001f)
             }
             if (name.endsWith("computer")) {
-                session.restart()
-                session.beginShot()
-                session.accept(PhysicsEvent.Settled)
+                session = readyMatch(Player.COMPUTER)
                 check(session.player == Player.COMPUTER)
                 tablePresentation = tablePresentation.copy(humanCanAim = false)
                 tablePresentation = tablePresentation.copy(computerPose = CuePose(direction, 0.05f))
@@ -236,7 +303,7 @@ object VisualSmoke {
             }
             val probe = cue - gesture.direction * distance
             val screen = renderer.views.active.camera.project(
-                Vector3(probe.x, TableGeometry.BALL_RADIUS, probe.z), 0f, 0f, 1080f, 2400f)
+                Vector3(probe.x, TableGeometry.BALL_RADIUS, probe.z), 0f, 0f, 1080f, renderer.hud.layout.gameHeight.toFloat())
             check(screen.x in 6f..1073f && screen.y in 6f..2393f)
             val withCue = Pixmap.createFromFrameBuffer(screen.x.toInt() - 5, screen.y.toInt() - 5, 11, 11)
             val humanCanAim = tablePresentation.humanCanAim
@@ -262,21 +329,22 @@ object VisualSmoke {
         }
 
         private fun computerFixture(name: String) {
-            session.restart()
+            session = readyMatch()
             val playerView = name.startsWith("player")
             renderer.views.select(if (playerView) ViewMode.PLAYER else ViewMode.TOP)
             renderer.views.update(Point(0f, 0.58f), gesture.direction, true)
             fun shot(ids: List<Int>) {
+                if (session.placement != null) session.confirmPlacement()
                 session.beginShot()
+                session.accept(PhysicsEvent.Contacts(setOf(1), setOf(1)))
                 ids.forEach { session.accept(PhysicsEvent.Pocketed(it)) }
                 session.accept(PhysicsEvent.Settled)
             }
             when {
-                name.endsWith("human-win") -> { shot((1..8).toList()); shot((9..15).toList()) }
-                name.endsWith("computer-win") -> { shot(listOf(1)); shot((2..15).toList()) }
-                name.endsWith("draw") -> shot((1..15).toList() + 0)
-                name.endsWith("foul-human") -> { shot(listOf(0)); hudPresentation = hudPresentation.copy(foulPlayer = Player.HUMAN) }
-                name.endsWith("foul-computer") -> { shot(emptyList()); shot(listOf(0)); hudPresentation = hudPresentation.copy(foulPlayer = Player.COMPUTER) }
+                name.endsWith("human-win") -> finishMatch(Player.HUMAN)
+                name.endsWith("computer-win") -> finishMatch(Player.COMPUTER)
+                name.endsWith("foul-human") -> { shot(listOf(0)); hudPresentation = hudPresentation.copy(foulPlayer = Player.HUMAN, notice = "You: Foul - cue ball pocketed") }
+                name.endsWith("foul-computer") -> { shot(emptyList()); shot(listOf(0)); hudPresentation = hudPresentation.copy(foulPlayer = Player.COMPUTER, notice = "Computer: Foul - cue ball pocketed") }
                 !name.endsWith("human") && !name.endsWith("settings") -> shot(emptyList())
             }
             if (session.finished) physics.reset(listOf(0 to Point(0f, 0.58f)))
@@ -350,7 +418,7 @@ object VisualSmoke {
 
         private fun capturePocketDetail(name: String) {
             val pocket = if ("corner" in name) PocketGeometry.pockets[3] else PocketGeometry.pockets[5]
-            val projected = renderer.views.active.camera.project(Vector3(pocket.center.x, 0f, pocket.center.z), 0f, 0f, 1080f, 2400f)
+            val projected = renderer.views.active.camera.project(Vector3(pocket.center.x, 0f, pocket.center.z), 0f, 0f, 1080f, renderer.hud.layout.gameHeight.toFloat())
             val x = (projected.x.toInt() - 210).coerceIn(0, 660)
             val y = (projected.y.toInt() - 210).coerceIn(0, 1980)
             val pixels = Pixmap.createFromFrameBuffer(x, y, 420, 420)
@@ -378,7 +446,7 @@ object VisualSmoke {
                 name.endsWith("reset") -> {
                     gesture.begin(PointerSample(0, cue + Point(0.3f, 0f), 0.0), cue)
                     renderer.views.update(cue, gesture.direction, false, 0.65f)
-                    gesture.resetForRack(cue, Point(0f, -0.38f))
+                    gesture.resetForRack(cue, Point(0f, TableGeometry.FOOT_SPOT))
                     renderer.views.reset()
                     check(gesture.direction == direction && gesture.tipGap == 0.05f)
                 }
@@ -431,10 +499,8 @@ object VisualSmoke {
                 check(view.camera.position.y > 1f)
                 if (name == "player-return-to-aim") {
                     repeat(6000) { if (!session.canShoot) physics.step() }
-                    check(session.canShoot)
-                    // Complete the computer's turn before showing the human's return to aim.
-                    session.beginShot()
-                    session.accept(PhysicsEvent.Settled)
+                    check(session.state != RoundState.MOVING)
+                    session = readyMatch()
                     check(session.humanTurn)
                     renderer.views.update(physics.balls.first { it.id == 0 }.point, direction, true, 0.225f)
                 }
@@ -442,13 +508,13 @@ object VisualSmoke {
             if (name == "player-foul" || name == "player-cleared") {
                 session.beginShot()
                 if (name == "player-foul") session.accept(PhysicsEvent.Pocketed(0))
-                else (1..15).forEach { session.accept(PhysicsEvent.Pocketed(it)) }
+                else { finishMatch(Player.HUMAN); return }
                 session.accept(PhysicsEvent.Settled)
-                if (name == "player-foul") physics.reset()
+                if (name == "player-foul") physics.reset(TableGeometry.rack(42))
                 else physics.reset(listOf(0 to cue))
                 if (name == "player-foul") {
                     check(!session.finished)
-                    hudPresentation = hudPresentation.copy(foulPlayer = Player.HUMAN)
+                    hudPresentation = hudPresentation.copy(foulPlayer = Player.HUMAN, notice = "You: Foul - cue ball pocketed")
                     tablePresentation = tablePresentation.copy(humanCanAim = false)
                 } else check(session.finished)
             }

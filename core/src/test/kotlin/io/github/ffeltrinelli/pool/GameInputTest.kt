@@ -61,7 +61,7 @@ class GameInputTest {
         session.beginShot()
         session.accept(io.github.ffeltrinelli.pool.model.PhysicsEvent.Settled)
         assertFalse(input.touchDown(210, 700, 0, Input.Buttons.LEFT))
-        assertTrue(input.touchDown(372, 72, 0, Input.Buttons.LEFT))
+        assertTrue(input.touchDown(372, 48, 0, Input.Buttons.LEFT))
         assertTrue(controls.settingsOpen)
         assertEquals(CuePhase.IDLE, gesture.phase)
         assertTrue(shots.isEmpty())
@@ -89,7 +89,30 @@ class GameInputTest {
         assertTrue(shots.single().impulse > 0f)
     }
 
-    private fun withInput(check: (GameInput, GameControls, CueGesture, GameSession, List<ShotCommand>) -> Unit) {
+    @Test fun `placement blocks strokes rejects invalid confirmation and restores aiming only on confirm`() =
+        withInput(placing = true) { input, _, gesture, session, shots ->
+            assertTrue(input.touchDown(210, 466, 0, Input.Buttons.LEFT))
+            input.touchUp(210, 466, 0, Input.Buttons.LEFT)
+            assertEquals(CuePhase.IDLE, gesture.phase)
+            input.touchDown(210, 104, 0, Input.Buttons.LEFT)
+            assertNotNull(session.placement)
+            input.touchDown(210, 630, 0, Input.Buttons.LEFT)
+            input.touchDragged(240, 680, 0)
+            input.touchUp(240, 680, 0, Input.Buttons.LEFT)
+            assertNotNull(session.placement)
+            input.touchDown(210, 104, 0, Input.Buttons.LEFT)
+            assertNull(session.placement)
+            assertTrue(session.humanTurn)
+            assertTrue(shots.isEmpty())
+        }
+
+    @Test fun `header touches never start a gameplay gesture`() = withInput { input, _, gesture, _, shots ->
+        assertTrue(input.touchDown(100, 40, 0, Input.Buttons.LEFT))
+        assertEquals(CuePhase.IDLE, gesture.phase)
+        assertTrue(shots.isEmpty())
+    }
+
+    private fun withInput(placing: Boolean = false, check: (GameInput, GameControls, CueGesture, GameSession, List<ShotCommand>) -> Unit) {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
         val previousInput = Gdx.input
         var timestamp = 0L
@@ -101,11 +124,20 @@ class GameInputTest {
         val physics = PoolPhysics()
         try {
             val controls = GameControls(Settings(), Effects())
-            val session = GameSession()
+            val session = GameSession().apply { if (!placing) confirmPlacement() }
             val gesture = CueGesture()
             val shots = mutableListOf<ShotCommand>()
-            val views = GameViews().apply { resize(420, 933) }
-            val input = GameInput(controls, session, { HudLayout(420, 933) }, views, physics, gesture, { session.humanTurn }, shots::add)
+            val views = GameViews().apply { resize(420, HudLayout(420, 933, placing).gameHeight) }
+            val placement = io.github.ffeltrinelli.pool.input.CueBallPlacement()
+            views.placing = placing
+            val input = GameInput(controls, session, { HudLayout(420, 933, placing) }, views, physics, gesture, { session.humanTurn }, shots::add, placement) {
+                val region = session.placement
+                if (region != null && placement.invalidReason(physics.snapshot(), region) == null) {
+                    physics.placeBall(0, placement.point)
+                    session.confirmPlacement()
+                    views.placing = false
+                }
+            }
             check(input, controls, gesture, session, shots)
         } finally {
             physics.dispose()
