@@ -16,8 +16,11 @@ import io.github.ffeltrinelli.pool.opponent.*
 import io.github.ffeltrinelli.pool.render.PoolRenderer
 import io.github.ffeltrinelli.pool.render.TablePresentation
 import io.github.ffeltrinelli.pool.ui.HudPresentation
+import io.github.ffeltrinelli.pool.ui.UiFonts
+import io.github.ffeltrinelli.pool.ui.TextStyle
 import java.io.File
 import io.github.ffeltrinelli.pool.view.ViewMode
+import io.github.ffeltrinelli.pool.startup.SplashScreen
 
 /** Test-only fixtures render through the same renderer as Android; no production test switches. */
 object VisualSmoke {
@@ -79,7 +82,14 @@ object VisualSmoke {
             try {
                 fixture(name)
                 framebuffer.begin(); bound = true
-                renderer.render(physics, session, gesture, 1080, 2400, table = tablePresentation, hudState = hudPresentation)
+                if (name == "gallery-splash") {
+                    verifyTypography()
+                    val splash = SplashScreen()
+                    try { splash.resize(1080, 2400); splash.render(1080) }
+                    finally { splash.dispose() }
+                } else {
+                    renderer.render(physics, session, gesture, 1080, 2400, table = tablePresentation, hudState = hudPresentation)
+                }
                 capture(name)
                 if (VisualScenarios.named(name).group == ScenarioGroup.CUE_VISIBILITY) verifyCueVisibility(name)
                 if (name.startsWith("rolling-markings-")) captureDetail(name)
@@ -93,6 +103,37 @@ object VisualSmoke {
                 report.write()
             }
         }
+        private fun verifyTypography() {
+            val fonts = UiFonts(TextStyle.BODY, TextStyle.SPLASH_TITLE)
+            try {
+                fonts.resize(420)
+                val original = fonts[TextStyle.BODY]
+                val logicalHeight = original.data.getGlyph('H').height.toFloat()
+                fonts.resize(420)
+                check(fonts[TextStyle.BODY] === original) { "Unchanged render width must reuse fonts" }
+                for (width in listOf(720, 1080, 1440)) {
+                    val oldTexture = fonts[TextStyle.BODY].region.texture
+                    fonts.resize(width)
+                    check(oldTexture.textureObjectHandle == 0) { "Resize leaked the previous atlas" }
+                    for (style in listOf(TextStyle.BODY, TextStyle.SPLASH_TITLE)) {
+                        val font = fonts[style]
+                        check(abs(font.data.scaleX - 420f / width) < 0.0001f)
+                        check(font.region.texture.magFilter == com.badlogic.gdx.graphics.Texture.TextureFilter.Linear)
+                    }
+                    val body = fonts[TextStyle.BODY]
+                    val height = body.data.getGlyph('H').height
+                    check(height > logicalHeight) { "High-density glyphs must be rasterized larger" }
+                    check(abs(height * body.data.scaleY - logicalHeight) <= 1.5f) {
+                        "Font resize changed the logical text size at $width pixels"
+                    }
+                }
+            } finally {
+                val texture = fonts[TextStyle.BODY].region.texture
+                fonts.dispose()
+                check(texture.textureObjectHandle == 0) { "Disposal leaked the font atlas" }
+            }
+        }
+
         private fun fixture(name: String) {
             resetFixture()
             when (VisualScenarios.named(name).group) {
@@ -104,10 +145,32 @@ object VisualSmoke {
                 ScenarioGroup.POCKET -> pocketFixture(name)
                 ScenarioGroup.TABLE -> tableFixture(name)
                 ScenarioGroup.RULES -> rulesFixture(name)
+                ScenarioGroup.GALLERY -> galleryFixture(name)
             }
             if (session.placement != null && session.player == Player.HUMAN && tablePresentation.placement == null)
                 tablePresentation = tablePresentation.copy(humanCanAim = false, placement = TableGeometry.CUE_START,
                     placementRegion = session.placement)
+        }
+
+        private fun galleryFixture(name: String) {
+            session = GameSession()
+            if (name == "gallery-placement" || name == "gallery-splash") return
+            session.confirmPlacement()
+            gesture.resetForRack(TableGeometry.CUE_START, Point(0f, TableGeometry.FOOT_SPOT))
+            if (name == "gallery-player") renderer.views.select(ViewMode.PLAYER)
+            if (name == "gallery-settings") hudPresentation = hudPresentation.copy(settingsOpen = true)
+            if (name == "gallery-result") {
+                finishMatch(Player.HUMAN)
+                physics.reset(listOf(0 to Point(0f, 0.58f)) + (9..15).map { id ->
+                    id to Point(if (id % 2 == 0) -0.3f else 0.3f, (id - 12) * 0.25f)
+                })
+                check(session.finished && physics.balls.none { it.id in 1..8 })
+            }
+            if (name == "gallery-player" || name == "gallery-top") {
+                check(session.breaking && session.canShoot && physics.balls.size == 16)
+                check(gesture.direction == (Point(0f, TableGeometry.FOOT_SPOT) - TableGeometry.CUE_START).normalized())
+                check(gesture.tipGap == 0.05f)
+            }
         }
 
         private fun readyMatch(player: Player = Player.HUMAN): GameSession {

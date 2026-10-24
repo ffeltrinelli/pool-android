@@ -18,12 +18,28 @@ class GameViewsTest {
     @Test fun `top view retains overhead framing and touch mapping`() {
         val view = TopView()
         view.resize(1080, 2400)
-        assertEquals(1.92f, view.camera.viewportWidth, 0.0001f)
+        assertEquals(1.92f / 1.15f, view.camera.viewportWidth, 0.0001f)
         assertEquals(Vector3(0f, -1f, 0f), view.camera.direction)
         val center = view.beginInput(540, 1200, cue, forward)
         assertEquals(0f, center.x, 0.0001f)
         assertEquals(0f, center.z, 0.0001f)
         assertTrue(view.moveInput(540, 1300, CuePhase.AIMING, forward).z > center.z)
+    }
+
+    @Test fun `top framing preserves outer rails across aspect ratios and HUD heights`() {
+        for ((width, height) in listOf(1080 to 2400, 1080 to 1920, 720 to 1600, 1600 to 1080)) {
+            for (placing in listOf(false, true)) {
+                val layout = io.github.ffeltrinelli.pool.ui.HudLayout(width, height, placing)
+                val view = TopView().apply { resize(width, layout.gameHeight) }
+                for (x in listOf(-TableGeometry.OUTER_HALF_WIDTH, TableGeometry.OUTER_HALF_WIDTH)) {
+                    for (z in listOf(-TableGeometry.OUTER_HALF_LENGTH, TableGeometry.OUTER_HALF_LENGTH)) {
+                        val projected = Vector3(x, 0f, z).prj(view.camera.combined)
+                        assertTrue(abs(projected.x) < 1f && abs(projected.y) < 1f)
+                    }
+                }
+                assertTrue(view.cueLength(Point(0f, 0f), forward) <= CueGeometry.DISPLAY_LENGTH)
+            }
+        }
     }
 
     @Test fun `player camera follows aim at fixed elevation even near every rail`() {
@@ -35,7 +51,7 @@ class GameViewsTest {
             assertEquals(0f, offset.nor().dst(view.camera.direction), 0.0001f)
             assertEquals(0.95f, hypot(view.camera.position.x - point.x, view.camera.position.z - point.z), 0.0001f)
             assertEquals(-sqrt(0.5f), view.camera.direction.y, 0.0001f)
-            assertTrue(view.cueLength(point - direction * 0.279f, direction) in 0.04f..0.65f)
+            assertTrue(view.cueLength(point - direction * 0.279f, direction) in 0.04f..CueGeometry.DISPLAY_LENGTH)
         }
     }
 
@@ -183,19 +199,17 @@ class GameViewsTest {
         assertTrue(input.gesture.tipGap > 0.06f)
     }
 
-    @Test fun `equal forward speeds yield same power across view input mappings`() {
+    @Test fun `equal world forward speeds yield same power across view input mappings`() {
         val player = Input()
-        player.move(540, 1390)
-        player.move(540, 1380)
-        val actual = player.move(540, 1370)!!
+        val actual = listOf(20, 40, 60).mapNotNull { player.move(540, 1400 - it) }.single()
         val gesture = CueGesture()
         val top = TopView().apply { resize(1080, 2400) }
         val start = top.beginInput(540, 1600, cue, forward)
         val ball = start + forward * 0.3f
         gesture.begin(PointerSample(0, start, 0.0), ball)
-        gesture.move(PointerSample(0, top.moveInput(540, 1590, gesture.phase, gesture.direction), 0.05))
-        gesture.move(PointerSample(0, top.moveInput(540, 1580, gesture.phase, gesture.direction), 0.10))
-        val expected = gesture.move(PointerSample(0, top.moveInput(540, 1570, gesture.phase, gesture.direction), 0.15))!!
+        val expected = listOf(23, 46, 69).mapIndexedNotNull { index, pixels ->
+            gesture.move(PointerSample(0, top.moveInput(540, 1600 - pixels, gesture.phase, gesture.direction), (index + 1) * 0.05))
+        }.single()
         assertEquals(expected.impulse, actual.impulse, 0.0001f)
     }
 }

@@ -69,9 +69,9 @@ object PocketGeometry {
             for (i in listOf(0, 2)) add(CushionGeometry(size, listOf(pairs[i].first, pairs[i + 1].first, pairs[i + 1].second, pairs[i].second)))
         }
     }
-    val support = cutOpenings(listOf(rectangle(0.73f, 1.29f)))
+    val support = cutOpenings(listOf(rectangle(TableGeometry.OUTER_HALF_WIDTH, TableGeometry.OUTER_HALF_LENGTH)))
     val cloth = cutOpenings(listOf(rectangle(0.61f, 1.17f)))
-    val wood = cutOpenings(subtract(rectangle(0.73f, 1.29f), rectangle(0.61f, 1.17f)))
+    val wood = cutOpenings(subtract(rectangle(TableGeometry.OUTER_HALF_WIDTH, TableGeometry.OUTER_HALF_LENGTH), rectangle(0.61f, 1.17f)))
 
     fun rectangle(x: Float, z: Float) = listOf(Point(-x, -z), Point(x, -z), Point(x, z), Point(-x, z))
     private fun cutOpenings(polygons: List<List<Point>>): List<List<Point>> =

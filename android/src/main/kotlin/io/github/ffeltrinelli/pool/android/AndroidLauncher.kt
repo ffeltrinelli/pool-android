@@ -5,7 +5,7 @@ import android.os.Build
 import android.view.WindowManager
 import com.badlogic.gdx.backends.android.AndroidApplication
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration
-import io.github.ffeltrinelli.pool.PoolGame
+import io.github.ffeltrinelli.pool.StartupGame
 
 class AndroidLauncher : AndroidApplication() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -17,7 +17,7 @@ class AndroidLauncher : AndroidApplication() {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER
             }
         }
-        initialize(PoolGame(), AndroidApplicationConfiguration().apply {
+        initialize(StartupGame(), AndroidApplicationConfiguration().apply {
             useImmersiveMode = true
             useAccelerometer = false
             useCompass = false

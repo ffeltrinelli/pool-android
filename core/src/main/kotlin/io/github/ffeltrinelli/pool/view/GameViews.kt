@@ -7,6 +7,7 @@ import com.badlogic.gdx.math.Vector3
 import io.github.ffeltrinelli.pool.input.CuePhase
 import io.github.ffeltrinelli.pool.model.Point
 import io.github.ffeltrinelli.pool.model.TableGeometry
+import io.github.ffeltrinelli.pool.model.CueGeometry
 import kotlin.math.*
 
 enum class ViewMode { TOP, PLAYER }
@@ -37,7 +38,7 @@ interface GameView {
     fun cueLength(tip: Point, direction: Point): Float
 }
 
-private fun worldWidth(width: Int, height: Int) = max(1.92f, 3.5f * width / height.coerceAtLeast(1))
+private fun gestureWorldWidth(width: Int, height: Int) = max(1.92f, 3.5f * width / height.coerceAtLeast(1))
 
 class TopView : GameView {
     override val camera = OrthographicCamera()
@@ -47,7 +48,12 @@ class TopView : GameView {
     override fun resize(width: Int, height: Int) {
         this.width = width.coerceAtLeast(1)
         this.height = height.coerceAtLeast(1)
-        camera.viewportWidth = worldWidth(this.width, this.height)
+        val aspect = this.width.toFloat() / this.height
+        val margin = 0.08f
+        val preferredWidth = max(1.92f, 3.5f * aspect) / 1.15f
+        val fittedWidth = max(2 * TableGeometry.OUTER_HALF_WIDTH + margin,
+            (2 * TableGeometry.OUTER_HALF_LENGTH + margin) * aspect)
+        camera.viewportWidth = max(preferredWidth, fittedWidth)
         camera.viewportHeight = camera.viewportWidth * this.height / this.width
         camera.position.set(0f, 4f, 0f)
         camera.direction.set(0f, -1f, 0f)
@@ -67,7 +73,7 @@ class TopView : GameView {
     }
 
     override fun cueLength(tip: Point, direction: Point): Float {
-        var length = 0.65f
+        var length = CueGeometry.DISPLAY_LENGTH
         if (abs(direction.x) > 0.001f) length = min(length, (camera.viewportWidth / 2 - 0.03f + sign(direction.x) * tip.x) / abs(direction.x))
         if (abs(direction.z) > 0.001f) length = min(length, (camera.viewportHeight / 2 - 0.13f + sign(direction.z) * tip.z) / abs(direction.z))
         return length.coerceAtLeast(0.04f)
@@ -92,7 +98,7 @@ class PlayerView(private val tuning: ViewTuning = ViewTuning()) : GameView {
     override fun resize(width: Int, height: Int) {
         val w = width.coerceAtLeast(1)
         val h = height.coerceAtLeast(1)
-        metresPerPixel = worldWidth(w, h) / w
+        metresPerPixel = gestureWorldWidth(w, h) / w
         camera.viewportWidth = w.toFloat()
         camera.viewportHeight = h.toFloat()
         placeCamera()
@@ -176,8 +182,8 @@ class PlayerView(private val tuning: ViewTuning = ViewTuning()) : GameView {
         val front = camera.direction
         val depth = Vector3(tip.x, TableGeometry.BALL_RADIUS, tip.z).sub(camera.position).dot(front)
         val rearwardDepth = direction.x * front.x + direction.z * front.z
-        if (rearwardDepth <= 0.001f) return 0.65f
-        return ((depth - camera.near - 0.02f) / rearwardDepth).coerceIn(0.04f, 0.65f)
+        if (rearwardDepth <= 0.001f) return CueGeometry.DISPLAY_LENGTH
+        return ((depth - camera.near - 0.02f) / rearwardDepth).coerceIn(0.04f, CueGeometry.DISPLAY_LENGTH)
     }
 }
 

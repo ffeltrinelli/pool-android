@@ -15,7 +15,7 @@ internal object TableModel {
         builder.begin()
         val wood = part(builder, "wood", "664533")
         surface(wood, PocketGeometry.wood, PocketGeometry.RAIL_HEIGHT)
-        walls(wood, PocketGeometry.rectangle(0.73f, 1.29f), PocketGeometry.RAIL_HEIGHT, -0.12f)
+        walls(wood, PocketGeometry.rectangle(TableGeometry.OUTER_HALF_WIDTH, TableGeometry.OUTER_HALF_LENGTH), PocketGeometry.RAIL_HEIGHT, -0.12f)
         val cloth = part(builder, "cloth", "197765")
         surface(cloth, PocketGeometry.cloth, 0f)
         val cushion = part(builder, "cushions", "10564e")
