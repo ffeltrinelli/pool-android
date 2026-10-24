@@ -8,6 +8,7 @@ import org.junit.Test
 
 class RackAimTest {
     @Test fun `fresh rack clears pending strokes and aligns cue and both cameras with apex`() {
+        com.badlogic.gdx.utils.GdxNativesLoader.load()
         val rack = TableGeometry.rack().toMap()
         val cue = rack.getValue(0)
         val gesture = CueGesture()
@@ -21,7 +22,7 @@ class RackAimTest {
             gesture.move(PointerSample(0, start + Point(-0.05f, 0f), 0.1))
             if (fired) gesture.move(PointerSample(0, start + Point(0.1f, 0f), 0.2))
             views.update(cue, gesture.direction, false, 0.65f)
-            gesture.resetForRack(cue, rack.getValue(1))
+            gesture.resetForRack(cue, Point(0f, TableGeometry.FOOT_SPOT))
             views.reset()
             views.update(cue, gesture.direction, true)
             assertEquals(Point(0f, -1f), gesture.direction)

@@ -7,5 +7,7 @@ data class HudPresentation(
     val settingsOpen: Boolean = false,
     val computerThinking: Boolean = false,
     val foulPlayer: Player? = null,
-    val difficulty: OpponentDifficulty = OpponentDifficulty.MEDIUM
+    val difficulty: OpponentDifficulty = OpponentDifficulty.MEDIUM,
+    val notice: String? = null,
+    val placementError: String? = null
 )

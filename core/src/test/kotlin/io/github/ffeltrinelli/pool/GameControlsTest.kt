@@ -111,7 +111,7 @@ class GameControlsTest {
             val controls = GameControls(SavedSettingsPreference(preferences), Effects())
             assertEquals(ViewMode.PLAYER, controls.viewMode)
             assertFalse(controls.aidedAim)
-            assertTrue(io.github.ffeltrinelli.pool.model.GameSession().humanTurn)
+            assertEquals(io.github.ffeltrinelli.pool.model.Player.HUMAN, io.github.ffeltrinelli.pool.model.GameSession().player)
         }
         assertEquals(OpponentDifficulty.MEDIUM, store.loadDifficulty())
         values["opponent-difficulty"] = "obsolete"

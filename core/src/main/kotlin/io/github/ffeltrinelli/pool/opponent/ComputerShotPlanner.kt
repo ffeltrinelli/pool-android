@@ -20,7 +20,7 @@ object OpponentTuning {
     const val FOUL_SECONDS = 3f
 }
 
-data class PlanningResult(val shot: ShotCommand, val evaluations: Int, val elapsedMillis: Long, val usedFallback: Boolean)
+data class PlanningResult(val shot: ShotCommand, val evaluations: Int, val elapsedMillis: Long, val usedFallback: Boolean, val cuePosition: Point? = null)
 interface ComputerShotPlanner : AutoCloseable {
     fun plan(table: TableSnapshot, seed: Long, cancelled: () -> Boolean): PlanningResult
     override fun close()
@@ -38,23 +38,27 @@ class BulletShotPlanner(
         if (cancelled() || Thread.currentThread().isInterrupted) throw CancellationException()
         val world = simulation ?: ShotSimulation().also { simulation = it }
         val geometry = ShotCandidates()
-        val search = ShotSearch(table, geometry.fallback(table), world, maxEvaluations, deadlineMillis, cancelled, started)
-        val seeds = geometry.generate(table).take(4).map { it.shot }.ifEmpty { listOf(geometry.fallback(table)) }
+        val positions = PlanningPositions.candidates(table)
+        val initialTable = table.withCue(positions.first())
+        val search = ShotSearch(initialTable, geometry.fallback(initialTable), world, maxEvaluations, deadlineMillis, cancelled, started)
+        val seeds = positions.flatMap { position ->
+            geometry.generate(table.withCue(position)).take(2).map { it.shot to position }
+        }.take(8).ifEmpty { listOf(geometry.fallback(initialTable) to positions.first()) }
         try {
-            seeds.forEach { if (search.remaining > 0) search.evaluate(it) }
+            seeds.forEach { if (search.remaining > 0) search.evaluate(it.first, it.second) }
             for ((index, initial) in seeds.withIndex()) {
                 val remainingSeeds = seeds.size - index
                 val budget = search.remaining / remainingSeeds
                 if (budget < 6) break
-                val angle = atan2(initial.direction.x.toDouble(), -initial.direction.z.toDouble())
+                val angle = atan2(initial.first.direction.x.toDouble(), -initial.first.direction.z.toDouble())
                 val optimizer = CMAESOptimizer(16, Double.POSITIVE_INFINITY, true, 0, 10, Well19937c(seed + index), false, null)
                 try {
                     optimizer.optimize(MaxEval(budget), GoalType.MAXIMIZE,
-                        InitialGuess(doubleArrayOf(angle, initial.impulse.toDouble())),
+                        InitialGuess(doubleArrayOf(angle, initial.first.impulse.toDouble())),
                         SimpleBounds(doubleArrayOf(angle - 0.14, OpponentTuning.MIN_IMPULSE.toDouble()),
                             doubleArrayOf(angle + 0.14, OpponentTuning.MAX_IMPULSE.toDouble())),
                         CMAESOptimizer.Sigma(doubleArrayOf(0.035, 0.12)), CMAESOptimizer.PopulationSize(6),
-                        ObjectiveFunction { point -> search.evaluate(ShotCommand(Point(sin(point[0]).toFloat(), -cos(point[0]).toFloat()), point[1].toFloat())) })
+                        ObjectiveFunction { point -> search.evaluate(ShotCommand(Point(sin(point[0]).toFloat(), -cos(point[0]).toFloat()), point[1].toFloat()), initial.second) })
                 } catch (_: TooManyEvaluationsException) { /* Best completed evaluation is retained across starts. */ }
             }
         } catch (_: ShotSearch.DeadlineReached) { /* Keep the best complete simulation; partial outcomes are never scored. */ }

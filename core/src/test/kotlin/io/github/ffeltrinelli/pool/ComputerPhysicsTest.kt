@@ -30,24 +30,6 @@ class ComputerPhysicsTest {
             }
         } finally { a.dispose(); b.dispose() }
     }
-    @Test fun `cue replacement finds nearest clear starting half location and preserves objects`() {
-        val p = PoolPhysics()
-        try {
-            p.reset(listOf(1 to Point(0f, 0.58f), 2 to Point(0.1f, 0.6f)))
-            repeat(100) { p.step() }
-            val objects = p.snapshot().balls
-            p.replaceCueBall()
-            assertEquals(objects, p.snapshot().balls.filter { it.id != 0 })
-            val cue = p.balls.first { it.id == 0 }
-            assertTrue(cue.point.z > 0)
-            assertTrue((cue.point - Point(0f, 0.58f)).length() < 0.065f)
-            assertTrue(p.balls.filter { it.id != 0 }.all { (it.point - cue.point).length() > TableGeometry.BALL_RADIUS * 2 })
-            repeat(10) { p.replaceCueBall() }
-            assertEquals(3, p.balls.size)
-            assertEquals(1, p.balls.count { it.id == 0 })
-        } finally { p.dispose() }
-        assertEquals(Point(0f, 0.58f), CueReplacement.position(emptyList()))
-    }
     @Test fun `ghost ball candidates include a straight pot and reject an obstructed path`() {
         val generator = ShotCandidates()
         val clear = TableSnapshot(listOf(BallSnapshot(0, Point(0f, 0f)), BallSnapshot(1, Point(0.3f, 0f))))

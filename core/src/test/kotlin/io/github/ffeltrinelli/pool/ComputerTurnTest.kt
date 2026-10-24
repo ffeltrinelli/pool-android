@@ -17,7 +17,9 @@ class ComputerTurnTest {
         override fun close() { closed = true }
     }
     private fun computerSession() = GameSession().apply {
+        confirmPlacement()
         beginShot()
+        accept(PhysicsEvent.Contacts(setOf(1), setOf(1, 2, 3, 4)))
         accept(PhysicsEvent.Settled)
     }
     private val snapshot = TableSnapshot(listOf(BallSnapshot(0, Point(0f, 0.5f)), BallSnapshot(1, Point(0f, 0f))))
@@ -132,10 +134,30 @@ class ComputerTurnTest {
         turn.close()
         assertTrue(service.closed)
     }
+    @Test fun `computer confirms selected placement once before animating and pause cannot place twice`() {
+        val service = Service()
+        val turn = ComputerTurn(service)
+        val session = GameSession().apply { restart() }
+        val point = Point(0.2f, 0.7f)
+        val placements = mutableListOf<Point>()
+        val place: (Point) -> Unit = { placements.add(it); session.confirmPlacement() }
+        service.result = PlanningResult(shot, 4, 20, false, point)
+        turn.advance(session, { snapshot }, 1f, placeCue = place)
+        assertEquals(listOf(point), placements)
+        assertTrue(session.canShoot)
+        assertNotNull(turn.pose)
+        turn.suspend()
+        turn.advance(session, { snapshot }, 1f, placeCue = place)
+        assertEquals(listOf(point), placements)
+        assertNotNull(turn.advance(session, { snapshot }, 0.8f, placeCue = place))
+        session.beginShot()
+        assertNull(turn.advance(session, { snapshot }, 1f, placeCue = place))
+    }
+
     @Test fun `human and moving turns never request computer work`() {
         val service = Service()
         val turn = ComputerTurn(service)
-        val human = GameSession()
+        val human = GameSession().apply { confirmPlacement() }
         turn.advance(human, { error("No snapshot needed") }, 2f)
         human.beginShot()
         turn.advance(human, { error("No snapshot needed") }, 2f)

@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputAdapter
 import io.github.ffeltrinelli.pool.model.GameSession
+import io.github.ffeltrinelli.pool.model.Player
 import io.github.ffeltrinelli.pool.model.Point
 import io.github.ffeltrinelli.pool.model.ShotCommand
 import io.github.ffeltrinelli.pool.physics.PoolPhysics
@@ -19,7 +20,9 @@ internal class GameInput(
     private val physics: PoolPhysics,
     private val gesture: CueGesture,
     private val canShoot: () -> Boolean,
-    private val deliverShot: (ShotCommand) -> Unit
+    private val deliverShot: (ShotCommand) -> Unit,
+    private val placement: CueBallPlacement = CueBallPlacement(),
+    private val confirmPlacement: () -> Unit = {}
 ) : InputAdapter() {
     private val difficultySlider = DifficultySliderInput()
     private var gameplayPointer: Int? = null
@@ -43,6 +46,14 @@ internal class GameInput(
         }
         val action = layout().hit(x, y, controls.settingsOpen, session.finished)
         if (action != null) { controls.handle(action); return true }
+        if (controls.acceptsGameplay && session.placement != null && session.player == Player.HUMAN) {
+            if (layout().confirmsPlacement(x, y)) confirmPlacement()
+            else {
+                placement.move(views.active.beginInput(x, y, placement.point, gesture.direction))
+                gameplayPointer = pointer
+            }
+            return true
+        }
         if (!controls.acceptsGameplay || !canShoot() || gameplayPointer != null) return false
         val cue = physics.balls.firstOrNull { it.id == 0 && !it.pocketed } ?: return false
         val point = views.active.beginInput(x, y, cue.point, gesture.direction)
@@ -56,7 +67,12 @@ internal class GameInput(
             difficultySlider.selection(layout(), x, pointer)?.let(controls::selectDifficulty)
             return true
         }
-        if (pointer != gameplayPointer || !controls.acceptsGameplay || !canShoot()) return false
+        if (pointer != gameplayPointer || !controls.acceptsGameplay) return false
+        if (session.placement != null) {
+            placement.move(views.active.moveInput(x, y, CuePhase.AIMING, gesture.direction))
+            return true
+        }
+        if (!canShoot()) return false
         val point = views.active.moveInput(x, y, gesture.phase, gesture.direction)
         gesture.move(sample(pointer, point))?.let(deliverShot)
         return true

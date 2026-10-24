@@ -20,6 +20,8 @@ class HudLayout(width: Int, height: Int) {
     }
     val restart = Rectangle(60f, uiHeight / 2 - 187.5f, 146f, 48f)
     val exit = Rectangle(214f, uiHeight / 2 - 187.5f, 146f, 48f)
+    val confirmPlacement = Rectangle(100f, 56f, 220f, 48f)
+    fun confirmsPlacement(x: Int, y: Int) = confirmPlacement.contains(x * 420f / width, uiHeight - y * uiHeight / height)
     val playAgain = Rectangle(100f, uiHeight / 2 - 85f, 220f, 48f)
 
     fun difficultyAt(screenX: Int): OpponentDifficulty {

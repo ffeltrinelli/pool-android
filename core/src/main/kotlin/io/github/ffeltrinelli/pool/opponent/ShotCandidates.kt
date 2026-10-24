@@ -14,7 +14,9 @@ class ShotCandidates {
         val cue = table.balls.first { it.id == 0 }.point
         val balls = table.balls.map { AimBall(it.id, it.point) }
         val candidates = mutableListOf<ShotCandidate>()
-        for (ball in table.balls.filter { it.id != 0 }) for (pocket in PocketGeometry.pockets) {
+        if (table.rulesContext().breaking) return listOf(ShotCandidate(
+            ShotCommand((Point(0f, TableGeometry.FOOT_SPOT) - cue).normalized(), 1.10f), 0f))
+        for (ball in table.balls.filter { it.id in table.rulesContext().targets }) for (pocket in PocketGeometry.pockets) {
             val outgoing = (pocket.center - ball.point).normalized()
             val ghost = ball.point - outgoing * (2 * TableGeometry.BALL_RADIUS)
             if (abs(ghost.x) > TableGeometry.HALF_WIDTH - TableGeometry.BALL_RADIUS ||
@@ -36,7 +38,8 @@ class ShotCandidates {
 
     fun fallback(table: TableSnapshot): ShotCommand {
         val cue = table.balls.first { it.id == 0 }.point
-        val target = table.balls.filter { it.id != 0 }.minByOrNull { (it.point - cue).length() }
+        if (table.rulesContext().breaking) return ShotCommand((Point(0f, TableGeometry.FOOT_SPOT) - cue).normalized(), 1.10f)
+        val target = table.balls.filter { it.id in table.rulesContext().targets }.minByOrNull { (it.point - cue).length() }
         return ShotCommand(target?.let { (it.point - cue).normalized() } ?: Point(0f, -1f), 0.55f)
     }
 }

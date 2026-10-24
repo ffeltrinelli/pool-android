@@ -128,7 +128,7 @@ class ImpactAudioTest {
             audio.queue(PocketDrop(0, pocket))
             audio.flush(1f)
             assertEquals(pocket + 2, player.played.size)
-            audio.cueBallReplaced()
+            audio.ballReturnedToTable(0)
             // Replacing the cue must not re-enable an already removed object ball.
             audio.queue(PocketDrop(1, 2)); audio.flush(0f)
             assertEquals(pocket + 2, player.played.size)
@@ -136,11 +136,22 @@ class ImpactAudioTest {
         audio.dispose()
     }
 
+    @Test fun `spotted eight can sound again without rearming other object balls`() {
+        val player = Player()
+        val audio = PoolAudio(player)
+        audio.queue(PocketDrop(8, 0)); audio.queue(PocketDrop(1, 0)); audio.flush(0f)
+        audio.ballReturnedToTable(8)
+        audio.queue(PocketDrop(8, 1)); audio.queue(PocketDrop(8, 1)); audio.queue(PocketDrop(1, 1))
+        audio.flush(1f)
+        assertEquals(3, player.played.size)
+        audio.dispose()
+    }
+
     @Test fun `replacement does not stop a pocket clip or replay sounds after pause`() {
         val player = Player()
         val audio = PoolAudio(player)
         audio.queue(PocketDrop(0, 2)); audio.flush(0f)
-        audio.cueBallReplaced()
+        audio.ballReturnedToTable(0)
         assertTrue(player.stopped.isEmpty())
         audio.pause(); audio.resume(); audio.flush(0f)
         assertEquals(1, player.played.size)

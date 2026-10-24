@@ -16,6 +16,7 @@ internal class ShotSearch(
 ) {
     private val deadline = if (deadlineMillis == Long.MAX_VALUE) Long.MAX_VALUE else started + deadlineMillis * 1_000_000
     private var best = fallback
+    private var bestPosition = table.balls.first { it.id == 0 }.point
     private var bestScore = Double.NEGATIVE_INFINITY
     private var completed = 0
     private var attempted = 0
@@ -30,20 +31,21 @@ internal class ShotSearch(
         if (System.nanoTime() >= deadline) throw DeadlineReached()
     }
 
-    fun evaluate(shot: ShotCommand): Double {
+    fun evaluate(shot: ShotCommand, position: io.github.ffeltrinelli.pool.model.Point = bestPosition): Double {
         checkBudget()
         attempted++
-        val evaluation = simulation.evaluate(table, shot, ::checkBudget) ?: return -1000.0
+        val evaluation = simulation.evaluate(table.withCue(position), shot, ::checkBudget) ?: return -1000000.0
         completed++
         val score = evaluation.score
         if (score > bestScore) {
             bestScore = score
             best = shot
+            bestPosition = position
         }
         return score
     }
 
-    fun result() = PlanningResult(best, completed, (System.nanoTime() - started) / 1_000_000, completed == 0)
+    fun result() = PlanningResult(best, completed, (System.nanoTime() - started) / 1_000_000, completed == 0, bestPosition)
 
     class DeadlineReached : RuntimeException()
 }

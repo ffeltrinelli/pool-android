@@ -46,11 +46,14 @@ class PlanningWorkerTest {
         var failure: Throwable? = null
         val service = WorkerShotPlanningService(planner) { failure = it }
         try {
-            service.start(table, 1)
+            val placement = table.copy(balls = table.balls.filter { it.id != 0 }, placement = io.github.ffeltrinelli.pool.rules.PlacementRegion.ANYWHERE)
+            service.start(placement, 1)
             val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
             var result: PlanningResult? = null
             while (result == null && System.nanoTime() < deadline) { result = service.poll(); Thread.yield() }
             assertTrue(requireNotNull(result).usedFallback)
+            assertNotNull(result!!.cuePosition)
+            assertNull(BallPlacement.invalidReason(result!!.cuePosition!!, placement.balls.map { it.point }, placement.placement!!))
             assertEquals("test failure", failure!!.message)
             assertNull(service.poll())
         } finally { service.close() }

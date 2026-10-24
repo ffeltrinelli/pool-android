@@ -1,76 +1,81 @@
 package io.github.ffeltrinelli.pool
 
 import io.github.ffeltrinelli.pool.model.*
+import io.github.ffeltrinelli.pool.rules.*
+import io.github.ffeltrinelli.pool.physics.*
 import org.junit.Assert.*
 import org.junit.Test
 
 class ComputerSessionTest {
-    private fun shot(session: GameSession, balls: List<Int> = emptyList()) {
-        session.beginShot()
-        balls.forEach { session.accept(PhysicsEvent.Pocketed(it)) }
-        session.accept(PhysicsEvent.Settled)
+    private fun facts(first: Set<Int> = setOf(1), rails: Set<Int> = emptySet(), pots: Set<Int> = emptySet()) = ShotFacts().apply {
+        accept(PhysicsEvent.Contacts(first, rails))
+        pots.forEach { accept(PhysicsEvent.Pocketed(it)) }
     }
-    @Test fun `human breaks and turns alternate even on a successful pot`() {
-        val session = GameSession()
-        assertTrue(session.humanTurn)
-        shot(session, listOf(1, 8))
-        assertEquals(2, session.humanScore)
-        assertEquals(Player.COMPUTER, session.player)
-        assertFalse(session.humanTurn)
-        shot(session)
-        assertTrue(session.humanTurn)
+    @Test fun `first contact and cushion requirements are separate fouls`() {
+        val context = RulesContext(group = BallGroup.SOLIDS)
+        assertEquals(FoulReason.NO_CONTACT, EightBallRules.resolve(context, facts(emptySet())).foul)
+        assertEquals(FoulReason.WRONG_FIRST, EightBallRules.resolve(context, facts(setOf(9))).foul)
+        assertEquals(FoulReason.NO_RAIL, EightBallRules.resolve(context, facts()).foul)
+        assertNull(EightBallRules.resolve(context, facts(rails = setOf(0))).foul)
+        assertNull(EightBallRules.resolve(context, facts(pots = setOf(9))).foul)
+        assertNull(EightBallRules.resolve(context, facts(setOf(1, 9), setOf(0))).foul)
     }
-    @Test fun `points wait for settling and duplicate or idle events do not score`() {
-        val session = GameSession()
-        session.accept(PhysicsEvent.Pocketed(1))
-        assertEquals(15, session.remaining)
-        session.beginShot()
-        repeat(2) { session.accept(PhysicsEvent.Pocketed(1)) }
-        assertEquals(0, session.humanScore)
-        session.accept(PhysicsEvent.Settled)
-        session.accept(PhysicsEvent.Settled)
-        assertEquals(1, session.humanScore)
-        assertEquals(Player.COMPUTER, session.player)
+    @Test fun `cushion before contact does not satisfy rule`() {
+        val f = ShotFacts()
+        f.accept(PhysicsEvent.Contacts(emptySet(), setOf(0)))
+        f.accept(PhysicsEvent.Contacts(setOf(1), emptySet()))
+        assertEquals(FoulReason.NO_RAIL, EightBallRules.resolve(RulesContext(), f).foul)
     }
-    @Test fun `scratch by either player removes objects without scoring and passes turn`() {
-        for (computerFouls in listOf(false, true)) {
-            val session = GameSession()
-            if (computerFouls) shot(session)
-            val shooter = session.player
-            shot(session, listOf(1, 2, 0, 0))
-            assertEquals(13, session.remaining)
-            assertEquals(0, session.humanScore + session.computerScore)
-            assertEquals(shooter.opponent, session.player)
-            assertEquals(ShotOutcome(shooter, 2, true), session.outcome)
-            assertFalse(session.finished)
-            shot(session, listOf(3))
-            assertEquals(1, session.humanScore + session.computerScore)
+    @Test fun `head string must cross before restricted contact behind line`() {
+        val context = RulesContext(restricted = true)
+        val f = ShotFacts().apply { accept(PhysicsEvent.Contacts(setOf(1), setOf(1), targetsBehindHeadString = true)) }
+        assertEquals(FoulReason.HEAD_STRING, EightBallRules.resolve(context, f).foul)
+        val crossed = ShotFacts().apply {
+            accept(PhysicsEvent.Contacts(emptySet(), emptySet(), crossedHeadString = true))
+            accept(PhysicsEvent.Contacts(setOf(1), setOf(1), targetsBehindHeadString = true))
+        }
+        assertNull(EightBallRules.resolve(context, crossed).foul)
+    }
+    @Test fun `off table eight loses while other off table balls foul`() {
+        for (id in listOf(0, 1, 8)) {
+            val f = facts(rails = setOf(1)).apply { accept(PhysicsEvent.OffTable(id)) }
+            val result = EightBallRules.resolve(RulesContext(), f)
+            assertEquals(FoulReason.OFF_TABLE, result.foul)
+            assertEquals(id == 8, result.loss != null)
         }
     }
-    @Test fun `final scratch cancels only that shot and can produce a draw`() {
-        val session = GameSession()
-        shot(session, (1..15).toList() + 0)
-        assertEquals(MatchResult.DRAW, session.result)
-        assertTrue(session.finished)
-        assertEquals(0, session.humanScore)
+    @Test fun `break needs four distinct object balls not cue ball`() {
+        assertTrue(EightBallRules.resolve(RulesContext(breaking = true), facts(rails = setOf(0, 1, 2, 3))).rerack)
+        assertFalse(EightBallRules.resolve(RulesContext(breaking = true), facts(rails = setOf(1, 2, 3, 4))).rerack)
     }
-    @Test fun `winner follows scores instead of the player clearing the table`() {
-        val humanWins = GameSession()
-        shot(humanWins, (1..8).toList())
-        shot(humanWins, (9..15).toList())
-        assertEquals(MatchResult.HUMAN_WINS, humanWins.result)
-        val computerWins = GameSession()
-        shot(computerWins, listOf(1))
-        shot(computerWins, (2..15).toList())
-        assertEquals(MatchResult.COMPUTER_WINS, computerWins.result)
+    @Test fun `placement rejects overlaps rails pockets and restricted line`() {
+        assertNull(BallPlacement.invalidReason(TableGeometry.CUE_START, emptyList(), PlacementRegion.BEHIND_HEAD_STRING))
+        assertNotNull(BallPlacement.invalidReason(Point(0f, TableGeometry.HEAD_STRING), emptyList(), PlacementRegion.BEHIND_HEAD_STRING))
+        assertNotNull(BallPlacement.invalidReason(Point(0f, 0f), listOf(Point(0.03f, 0f)), PlacementRegion.ANYWHERE))
+        assertNotNull(BallPlacement.invalidReason(Point(0.55f, 0f), emptyList(), PlacementRegion.ANYWHERE))
+        assertNotNull(BallPlacement.invalidReason(PocketGeometry.pockets.first().center, emptyList(), PlacementRegion.ANYWHERE))
+        assertNotNull(BallPlacement.invalidReason(Point(Float.NaN, 0f), emptyList(), PlacementRegion.ANYWHERE))
+        val positions = BallPlacement.candidates(listOf(TableGeometry.CUE_START), PlacementRegion.BEHIND_HEAD_STRING)
+        assertTrue(positions.isNotEmpty())
+        assertEquals(positions, BallPlacement.candidates(listOf(TableGeometry.CUE_START), PlacementRegion.BEHIND_HEAD_STRING))
+        assertTrue(positions.all { it.z > TableGeometry.HEAD_STRING })
     }
-    @Test fun `restart resets scores shooter and outcomes`() {
-        val session = GameSession()
-        shot(session, listOf(1, 2))
-        session.restart()
-        assertTrue(session.humanTurn)
-        assertEquals(0, session.humanScore)
-        assertEquals(15, session.remaining)
-        assertNull(session.outcome)
+    @Test fun `restricted placement spots nearest eligible ball with deterministic ties only when all are behind`() {
+        val table = TableSnapshot(listOf(BallSnapshot(1, Point(0.1f, 0.7f)), BallSnapshot(2, Point(-0.1f, 0.7f)),
+            BallSnapshot(9, Point(0f, 0f))))
+        assertEquals(1, BallPlacement.restrictedTargetToSpot(table, setOf(1, 2)))
+        assertNull(BallPlacement.restrictedTargetToSpot(table, setOf(1, 9)))
+        assertNull(BallPlacement.restrictedTargetToSpot(table.copy(balls = listOf(BallSnapshot(1, Point(0f, TableGeometry.HEAD_STRING)))), setOf(1)))
+    }
+    @Test fun `rack constraints hold across seeds and positions match official spots`() {
+        for (seed in 0L..50L) {
+            val rack = TableGeometry.rack(seed)
+            assertEquals((0..15).toSet(), rack.map { it.first }.toSet())
+            assertEquals(TableGeometry.FOOT_SPOT, rack[1].second.z, 0f)
+            assertEquals(8, rack[5].first)
+            assertTrue((rack[11].first in 1..7) != (rack[15].first in 1..7))
+            assertEquals(rack, TableGeometry.rack(seed))
+        }
+        assertNotEquals(TableGeometry.rack(1), TableGeometry.rack(2))
     }
 }

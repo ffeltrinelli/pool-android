@@ -20,11 +20,11 @@ class WorkerShotPlanningService(
 ) : ShotPlanningService {
     private val executor = Executors.newSingleThreadExecutor { task -> Thread(task, "pool-shot-planner").apply { isDaemon = true } }
     private val generation = AtomicLong()
-    private data class Request(val future: Future<PlanningResult>, val fallback: ShotCommand)
+    private data class Request(val future: Future<PlanningResult>, val fallback: PlanningResult)
     private var pending: Request? = null
     override fun start(table: TableSnapshot, seed: Long) {
         cancel()
-        val fallback = ShotCandidates().fallback(table)
+        val fallback = PlanningPositions.fallback(table)
         val token = generation.get()
         val future = executor.submit<PlanningResult> { planner.plan(table, seed) { generation.get() != token } }
         pending = Request(future, fallback)
@@ -35,7 +35,7 @@ class WorkerShotPlanningService(
         pending = null
         return try { request.future.get() } catch (failure: ExecutionException) {
             reportFailure(failure.cause ?: failure)
-            PlanningResult(request.fallback, 0, 0, true)
+            request.fallback
         } catch (_: CancellationException) { null }
     }
     override fun cancel() {

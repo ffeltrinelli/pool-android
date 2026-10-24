@@ -39,6 +39,7 @@ class DifficultyCalibrationTest {
         val replay = PoolPhysics(events = { event ->
             when (event) {
                 is PhysicsEvent.Pocketed -> if (event.ballId == 0) scratch = true else pocketed++
+                is PhysicsEvent.Contacts, is PhysicsEvent.OffTable -> Unit
                 PhysicsEvent.Settled -> settled = true
             }
         })

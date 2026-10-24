@@ -48,12 +48,34 @@ class GameHud : Disposable {
         sprites.projectionMatrix = camera.combined
         sprites.begin()
         text("POOL", 28f, h - 34f, 1.9f, "f2e5c8")
-        text("YOU ${session.humanScore}   /   COMPUTER ${session.computerScore}", 29f, h - 57f, 0.78f, "d5e5dd")
-        val status = if (presentation.computerThinking) "Computer thinking..." else if (session.player == Player.HUMAN) "Your turn" else "Computer's turn"
-        text(status, 29f, h - 86f, 0.85f, "d5e5dd")
-        if (presentation.foulPlayer != null && !session.finished) {
-            text("${presentation.foulPlayer.label}: Foul - cue ball pocketed.", 210f, h - 123f, 0.8f, "f2d295", true)
-            text("No points for this shot.", 210f, h - 143f, 0.8f, "f2d295", true)
+        fun groupLabel(player: Player): String = session.group(player)?.let {
+            "${it.label}: ${session.remaining(player)} left"
+        } ?: "Unassigned"
+        text("You: ${groupLabel(Player.HUMAN)}", 29f, h - 57f, 0.78f, "d5e5dd")
+        text("Computer: ${groupLabel(Player.COMPUTER)}", 29f, h - 75f, 0.78f, "d5e5dd")
+        val status = when {
+            presentation.computerThinking -> "Computer thinking..."
+            session.placement != null -> if (session.player == Player.HUMAN) "Place the cue ball" else "Computer placing cue ball"
+            session.group(session.player) == null -> "${if (session.player == Player.HUMAN) "Your turn" else "Computer's turn"} - open table"
+            session.remaining(session.player) == 0 -> if (session.player == Player.HUMAN) "You're on the 8-ball" else "Computer is on the 8-ball"
+            session.player == Player.HUMAN -> "Your turn"
+            else -> "Computer's turn"
+        }
+        text(status, 29f, h - 103f, 0.80f, "d5e5dd")
+        if (session.group(session.player) == null && !session.finished)
+            text("Open table - groups not assigned", 210f, h - 124f, 0.68f, "b8ccca", true)
+        if (presentation.notice != null && !session.finished) {
+            font.data.setScale(0.72f)
+            font.color = Color.valueOf("f2d295")
+            font.draw(sprites, presentation.notice, 30f, h - 146f, 360f, com.badlogic.gdx.utils.Align.center, true)
+        }
+        if (session.placement != null && session.player == Player.HUMAN) {
+            val instruction = if (session.placement == io.github.ffeltrinelli.pool.rules.PlacementRegion.ANYWHERE)
+                "Anywhere on the table" else "Behind the head string"
+            text(instruction, 210f, 163f, 0.95f, "f2e5c8", true)
+            text(presentation.placementError ?: "Tap or drag the highlighted ball", 210f, 137f, 0.78f,
+                if (presentation.placementError == null) "b8ccca" else "f29b91", true)
+            button(layout.confirmPlacement, "Confirm placement", presentation.placementError == null)
         }
         if (session.finished) drawResult(session)
         drawGear()
@@ -104,10 +126,10 @@ class GameHud : Disposable {
         val result = when (session.result) {
             MatchResult.HUMAN_WINS -> "You win"
             MatchResult.COMPUTER_WINS -> "Computer wins"
-            else -> "Draw"
+            null -> ""
         }
         text(result, 210f, center + 40f, 1.35f, "f2e5c8", true)
-        text("You ${session.humanScore} - Computer ${session.computerScore}", 210f, center + 6f, 0.9f, "b8ccca", true)
+        text(session.outcome?.decision?.loss ?: "Eight legally pocketed", 210f, center + 6f, 0.7f, "b8ccca", true)
         button(layout.playAgain, "PLAY AGAIN")
     }
 

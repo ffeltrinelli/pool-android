@@ -20,13 +20,21 @@ object TableGeometry {
     const val BALL_RADIUS = 0.028575f
     const val BALL_MASS = 0.17f
     val pockets get() = PocketGeometry.pockets.map { it.center }
-    fun rack(): List<Pair<Int, Point>> = buildList {
-        add(0 to Point(0f, 0.58f))
-        val spacing = BALL_RADIUS * 2f + 0.0008f
-        val numbers = listOf(1, 9, 2, 3, 8, 10, 11, 4, 12, 5, 6, 13, 7, 14, 15)
+    const val HEAD_STRING = HALF_LENGTH / 2
+    const val FOOT_SPOT = -HALF_LENGTH / 2
+    val CUE_START = Point(0f, 0.58f)
+    fun rack(seed: Long = kotlin.random.Random.nextLong()): List<Pair<Int, Point>> = buildList {
+        add(0 to CUE_START)
+        val spacing = BALL_RADIUS * 2f + 0.0001f
+        val random = kotlin.random.Random(seed)
+        val solid = (1..7).random(random)
+        val stripe = (9..15).random(random)
+        val corners = listOf(solid, stripe).shuffled(random)
+        val others = (1..15).filter { it !in listOf(8, solid, stripe) }.shuffled(random).iterator()
+        val numbers = (0..14).map { when (it) { 4 -> 8; 10 -> corners[0]; 14 -> corners[1]; else -> others.next() } }
         var index = 0
         for (row in 0..4) for (column in 0..row) {
-            add(numbers[index++] to Point((column - row / 2f) * spacing, -0.38f - row * spacing * 0.8660254f))
+            add(numbers[index++] to Point((column - row / 2f) * spacing, FOOT_SPOT - row * spacing * 0.8660254f))
         }
     }
 }

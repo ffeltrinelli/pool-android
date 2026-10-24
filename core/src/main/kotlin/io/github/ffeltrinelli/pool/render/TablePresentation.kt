@@ -7,5 +7,9 @@ data class TablePresentation(
     val humanCanAim: Boolean = true,
     val computerPose: CuePose? = null,
     val holdOverview: Boolean = false,
-    val aidedAim: Boolean = true
+    val aidedAim: Boolean = true,
+    val placement: io.github.ffeltrinelli.pool.model.Point? = null,
+    val placementRegion: io.github.ffeltrinelli.pool.rules.PlacementRegion? = null,
+    val placementValid: Boolean = true,
+    val activeSeconds: Float = 0f
 )

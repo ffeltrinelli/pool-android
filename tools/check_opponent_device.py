@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Explicit OnePlus 1080x2400 opponent smoke check; resets the rack and leaves Vs computer ready."""
+"""Explicit OnePlus 1080x2400 opponent smoke check; resets the rack and leaves eight-ball placement ready."""
 import argparse
 import json
 import subprocess
