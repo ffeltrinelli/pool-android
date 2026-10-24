@@ -29,7 +29,7 @@ An offline 3D eight-ball game for Android. Play solids versus stripes against a 
 </tr>
 </table>
 
-Click the video preview to watch a human break and computer turns, with cue, ball, cushion, and pocket sounds. Both captures use the production desktop game; the video uses scripted pointer gestures through normal input, with the real physics and computer opponent. No music or narration. [Audio credits](assets/audio/README.md), including the pocket effect by freesman (CC BY 3.0).
+Play the video and unmute it to watch a human break and computer turns, with cue, ball, cushion, and pocket sounds. Both captures use the production desktop game; the video uses scripted pointer gestures through normal input, with the real physics and computer opponent. No music or narration. [Audio credits](assets/audio/README.md), including the pocket effect by freesman (CC BY 3.0).
 
 See the [screenshot gallery](docs/images/) and [media refresh procedure](docs/gallery.md).
 

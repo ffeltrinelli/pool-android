@@ -48,4 +48,6 @@ Watch the entire clip with sound: check natural pacing, readable HUD, cue and ca
 gh pr edit NUMBER --attach build/reports/gameplay-demo/gameplay.mp4
 ```
 
+GitHub renders the attachment link as an inline video player beside the screenshot; its audio starts muted until the viewer unmutes it. The linked poster remains a fallback for other Markdown viewers.
+
 Keep only the poster in Git; the MP4 and capture intermediates stay in ignored build reports. Commit the README link and poster together. Keep before/after media in accessible PR attachments. Review the video whenever a PR changes depicted visuals, gameplay, or audio; re-record when it becomes outdated, not for unrelated changes. CI tests the audio mixer and retains existing screenshot/audio reports, but does not record or compare videos.
