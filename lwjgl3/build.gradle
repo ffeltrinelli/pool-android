@@ -5,6 +5,7 @@ dependencies {
     implementation project(':core')
     implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
     implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+    implementation "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
     implementation "com.badlogicgames.gdx:gdx-bullet-platform:$gdxVersion:natives-desktop"
 }
 run {
@@ -30,6 +31,19 @@ tasks.register('audioTest', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     mainClass = 'io.github.ffeltrinelli.pool.lwjgl3.AudioSmoke'
     args rootProject.file('build/reports/audio/results.txt').absolutePath
+    workingDir rootProject.file('assets')
+    if (System.getProperty('os.name').toLowerCase().contains('mac')) jvmArgs '-XstartOnFirstThread'
+    outputs.upToDateWhen { false }
+}
+
+// Opt-in README recording; regular visual checks and CI do not encode video.
+tasks.register('gameplayDemo', JavaExec) {
+    group = 'documentation'
+    description = 'Record 30 seconds of production gameplay and its sound events (requires OpenGL and ffmpeg).'
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'io.github.ffeltrinelli.pool.lwjgl3.GameplayDemo'
+    args rootProject.file('build/reports/gameplay-demo').absolutePath
     workingDir rootProject.file('assets')
     if (System.getProperty('os.name').toLowerCase().contains('mac')) jvmArgs '-XstartOnFirstThread'
     outputs.upToDateWhen { false }

@@ -1,5 +1,6 @@
 dependencies {
     api "com.badlogicgames.gdx:gdx:$gdxVersion"
+    implementation "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
     api "com.badlogicgames.gdx:gdx-bullet:$gdxVersion"
     implementation 'org.apache.commons:commons-math3:3.6.1'
     testImplementation 'junit:junit:4.13.2'

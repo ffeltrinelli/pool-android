@@ -63,7 +63,15 @@ Use the committed Gradle wrapper with JDK 21. Follow [build setup](README.md#bui
 - Preserve settled ball position/rotation when evaluating ordinary shots; reconstruct the cue only for actual placement. Render ball markings from the interpolated Bullet transform, without separate visual rotation.
 - Give every native/graphics/audio allocation an explicit owner and cleanup path. Dispose bodies before their shared collision shapes and world dependencies; restart must clear per-rack state without leaking resources or replaying pending audio. Settings/background suspension must stop simulation and resume without accumulated time.
 - Use shared `TableGeometry`/`PocketGeometry` definitions for visible geometry, colliders, placement validation, and prediction. Keep tuning centralized; avoid incidental physics, camera, or AI tuning changes during unrelated work.
+- Keep both standard and round Android launcher icons adaptive. Verify branding in the actual launcher drawer/search as well as App info; follow [branding asset guidance](assets/branding/README.md).
+- Generate UI fonts through `UiFonts` at the actual render-target pixel width; do not enlarge the small default bitmap font. Keep font generation outside drawing queries and dispose replaced atlases. See [font ownership and attribution](assets/fonts/README.md).
 
 ## Pull request descriptions
 
 Include screenshots of the game in PR descriptions when relevant to the changes. For changes to existing visuals, include before-and-after screenshots where practical. Briefly caption screenshots to identify what they demonstrate. Screenshots are optional for changes without a relevant visual effect. Use accessible image attachments or links, not local filesystem paths.
+
+## Current documentation gallery
+
+- Visual changes must review the current gallery and refresh affected images and captions in the same PR. Remove obsolete media; keep historical comparisons in PR attachments.
+- Review the README gameplay video and preview when changing depicted visuals, gameplay, or audio. Re-record them in the same PR when outdated; unrelated changes do not require a new recording.
+- Follow [gallery capture and refresh](docs/gallery.md). CI uploads fresh reports but does not update committed gallery images.

@@ -101,7 +101,7 @@ class PoolRenderer : Disposable {
         hudState: HudPresentation = HudPresentation()
     ) {
         val previousGameHeight = hud.layout.gameHeight
-        hud.prepare(session, hudState)
+        hud.prepare(session, hudState, pixelWidth)
         if (hud.layout.gameHeight != previousGameHeight) {
             views.resize(hud.layout.width, hud.layout.gameHeight)
         }

@@ -14,7 +14,13 @@ data class Point(val x: Float, val z: Float) {
     }
 }
 
+object CueGeometry {
+    const val DISPLAY_LENGTH = 0.50f
+}
+
 object TableGeometry {
+    const val OUTER_HALF_WIDTH = 0.73f
+    const val OUTER_HALF_LENGTH = 1.29f
     const val HALF_WIDTH = 0.56f
     const val HALF_LENGTH = 1.12f
     const val BALL_RADIUS = 0.028575f

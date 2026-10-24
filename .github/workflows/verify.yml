@@ -21,6 +21,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Install rendering dependencies
         run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri
+      - name: Verify documentation audio mixing
+        run: python3 -m unittest discover -s tools -p 'test_*.py' -v
       - name: Unit tests, Bullet integration, Android lint and APK
         run: ./gradlew :core:test :android:lintDebug :android:assembleDebug --console=plain
       - name: Render game screenshots

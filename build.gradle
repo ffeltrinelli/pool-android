@@ -8,7 +8,7 @@ buildscript {
 allprojects {
     repositories { google(); mavenCentral() }
     version = projectVersion
-    ext.appName = 'Pool'
+    ext.appName = 'Feltri 8-Ball'
 }
 configure(subprojects - project(':android')) {
     apply plugin: 'java-library'
