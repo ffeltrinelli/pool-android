@@ -47,33 +47,34 @@ class GameHud : Disposable {
         val h = layout.uiHeight
         sprites.projectionMatrix = camera.combined
         sprites.begin()
-        text("POOL", 28f, h - 34f, 1.9f, "f2e5c8")
+        val headerHeight = if (presentation.notice != null && !session.finished) 220f else 154f
+        rectangle(Rectangle(0f, h - headerHeight, 420f, headerHeight), "08161ced")
         fun groupLabel(player: Player): String = session.group(player)?.let {
             "${it.label}: ${session.remaining(player)} left"
         } ?: "Unassigned"
-        text("You: ${groupLabel(Player.HUMAN)}", 29f, h - 57f, 0.78f, "d5e5dd")
-        text("Computer: ${groupLabel(Player.COMPUTER)}", 29f, h - 75f, 0.78f, "d5e5dd")
+        text("You: ${groupLabel(Player.HUMAN)}", 29f, h - 34f, 1.10f, "d5e5dd")
+        text("Computer: ${groupLabel(Player.COMPUTER)}", 29f, h - 64f, 1.10f, "d5e5dd")
         val status = when {
             presentation.computerThinking -> "Computer thinking..."
             session.placement != null -> if (session.player == Player.HUMAN) "Place the cue ball" else "Computer placing cue ball"
-            session.group(session.player) == null -> "${if (session.player == Player.HUMAN) "Your turn" else "Computer's turn"} - open table"
+            session.group(session.player) == null -> if (session.player == Player.HUMAN) "Your turn" else "Computer's turn"
             session.remaining(session.player) == 0 -> if (session.player == Player.HUMAN) "You're on the 8-ball" else "Computer is on the 8-ball"
             session.player == Player.HUMAN -> "Your turn"
             else -> "Computer's turn"
         }
-        text(status, 29f, h - 103f, 0.80f, "d5e5dd")
+        text(status, 29f, h - 103f, 1.15f, "d5e5dd")
         if (session.group(session.player) == null && !session.finished)
-            text("Open table - groups not assigned", 210f, h - 124f, 0.68f, "b8ccca", true)
+            text("Open table - groups not assigned", 210f, h - 133f, 1.00f, "b8ccca", true)
         if (presentation.notice != null && !session.finished) {
-            font.data.setScale(0.72f)
+            font.data.setScale(1.05f)
             font.color = Color.valueOf("f2d295")
-            font.draw(sprites, presentation.notice, 30f, h - 146f, 360f, com.badlogic.gdx.utils.Align.center, true)
+            font.draw(sprites, presentation.notice, 30f, h - 161f, 360f, com.badlogic.gdx.utils.Align.center, true)
         }
         if (session.placement != null && session.player == Player.HUMAN) {
             val instruction = if (session.placement == io.github.ffeltrinelli.pool.rules.PlacementRegion.ANYWHERE)
                 "Anywhere on the table" else "Behind the head string"
-            text(instruction, 210f, 163f, 0.95f, "f2e5c8", true)
-            text(presentation.placementError ?: "Tap or drag the highlighted ball", 210f, 137f, 0.78f,
+            text(instruction, 210f, 163f, 1.2f, "f2e5c8", true)
+            text(presentation.placementError ?: "Tap or drag the highlighted ball", 210f, 133f, 1.05f,
                 if (presentation.placementError == null) "b8ccca" else "f29b91", true)
             button(layout.confirmPlacement, "Confirm placement", presentation.placementError == null)
         }
@@ -92,12 +93,12 @@ class GameHud : Disposable {
     private fun drawSettings(mode: ViewMode, aidedAim: Boolean, difficulty: OpponentDifficulty) {
         shade()
         rectangle(layout.panel, "163039")
-        text("SETTINGS", 60f, layout.uiHeight / 2 + 202.5f, 1.35f, "f2e5c8")
+        text("SETTINGS", 60f, layout.uiHeight / 2 + 202.5f, 1.5f, "f2e5c8")
         button(layout.close, "X")
-        text("View mode", 60f, layout.uiHeight / 2 + 157.5f, 0.92f, "b8ccca")
+        text("View mode", 60f, layout.uiHeight / 2 + 163.5f, 1.1f, "b8ccca")
         button(layout.top, "Top view", mode == ViewMode.TOP)
         button(layout.player, "Player view", mode == ViewMode.PLAYER)
-        text("Aided aim", 60f, layout.uiHeight / 2 + 72.5f, 0.92f, "b8ccca")
+        text("Aided aim", 60f, layout.uiHeight / 2 + 78.5f, 1.1f, "b8ccca")
         button(layout.aidedAim, if (aidedAim) "On" else "Off", aidedAim)
         drawDifficulty(difficulty)
         button(layout.restart, "Restart")
@@ -106,7 +107,7 @@ class GameHud : Disposable {
 
     private fun drawDifficulty(difficulty: OpponentDifficulty) {
         val track = layout.difficulty
-        text("Difficulty: ${difficulty.label}", 60f, track.y + 67f, 0.92f, "b8ccca")
+        text("Difficulty: ${difficulty.label}", 60f, track.y + 73f, 1.1f, "b8ccca")
         rectangle(Rectangle(track.x + 50f, track.y + 22f, 200f, 4f), "527e70")
         for ((index, level) in OpponentDifficulty.entries.withIndex()) {
             val stop = layout.difficultyStops[index]
@@ -114,7 +115,7 @@ class GameHud : Disposable {
             val selected = level == difficulty
             rectangle(Rectangle(center - 5f, stop.y + 18f, 10f, 12f), "8ba6a8")
             if (selected) rectangle(Rectangle(center - 10f, stop.y + 14f, 20f, 20f), "d9bd83")
-            text(level.label, center, stop.y - 10f, 0.82f, if (selected) "f2e5c8" else "b8ccca", true)
+            text(level.label, center, stop.y - 10f, 1.05f, if (selected) "f2e5c8" else "b8ccca", true)
         }
     }
 
@@ -122,14 +123,17 @@ class GameHud : Disposable {
         val center = layout.uiHeight / 2
         shade()
         rectangle(Rectangle(30f, center - 112f, 360f, 225f), "163039")
-        text("MATCH COMPLETE", 210f, center + 80f, 0.72f, "9dbbb7", true)
+        text("MATCH COMPLETE", 210f, center + 80f, 1.0f, "9dbbb7", true)
         val result = when (session.result) {
             MatchResult.HUMAN_WINS -> "You win"
             MatchResult.COMPUTER_WINS -> "Computer wins"
             null -> ""
         }
-        text(result, 210f, center + 40f, 1.35f, "f2e5c8", true)
-        text(session.outcome?.decision?.loss ?: "Eight legally pocketed", 210f, center + 6f, 0.7f, "b8ccca", true)
+        text(result, 210f, center + 40f, 1.6f, "f2e5c8", true)
+        font.data.setScale(1f)
+        font.color = Color.valueOf("b8ccca")
+        font.draw(sprites, session.outcome?.decision?.loss ?: "Eight legally pocketed", 50f, center + 8f,
+            320f, com.badlogic.gdx.utils.Align.center, true)
         button(layout.playAgain, "PLAY AGAIN")
     }
 
@@ -146,7 +150,7 @@ class GameHud : Disposable {
     private fun button(rect: Rectangle, label: String, selected: Boolean = false) {
         rectangle(rect, if (selected) "527e70" else "32504f")
         if (selected) rectangle(Rectangle(rect.x, rect.y, rect.width, 3f), "d9bd83")
-        text(label, rect.x + rect.width / 2, rect.y + rect.height / 2 + 5f, 0.88f, "f2e5c8", true)
+        text(label, rect.x + rect.width / 2, rect.y + rect.height / 2 + 5f, 1.08f, "f2e5c8", true)
     }
 
     private fun text(value: String, x: Float, y: Float, scale: Float, hex: String, centered: Boolean = false) {

@@ -215,7 +215,7 @@ flowchart LR
     O -->|Intended object-ball path| P[Pocket]
 ```
 
-A fixed-position shot shortlists two geometric candidates. Ball in hand considers up to eight valid positions, including direct-pot seeds and a safe grid, and up to two shots per position, capped at eight starting pairs. All share one search budget. Breaks seed a strong 1.10 N·s shot at the apex. The initial impulse in N·s is `clamp(0.18 + 0.16 × sqrt(cueDistance + objectDistance / cutCosine²), 0.08, 1.15)`, with distances in metres. This is a rough seed, not a second physics model. If no direct pot is available, seed a 0.55 N·s shot toward the nearest legal target.
+A fixed-position shot shortlists up to four geometric candidates. Ball in hand prioritizes valid positions aligned behind direct pots, ordered by object-to-pocket distance, ahead of safe grid fallbacks. It considers up to eight positions and evaluates a seed from every shortlisted position before optimization, rather than discarding later placements. All share one search budget. Breaks seed a strong 1.10 N·s shot at the apex. The initial impulse in N·s is `clamp(0.18 + 0.16 × sqrt(cueDistance + objectDistance / cutCosine²), 0.08, 1.15)`, with distances in metres. This is a rough seed, not a second physics model. If no direct pot is available, seed a 0.55 N·s shot toward the nearest legal target.
 
 ### What CMA-ES searches
 

@@ -254,7 +254,7 @@ The debug APK installed and cold-launched on the **OnePlus 8T / Android 14 / API
 
 Replaced ball-count scoring with the simplified WPA rules in the [README](../README.md#rules-of-this-game). Fresh breaks and fouls now require valid cue-ball placement; new requested racks alternate breakers. Added explicit open-table/group messages and eight-ball results.
 
-Local verification: **157 passed tests, one opt-in calibration skipped, zero failures; 135 rendered scenarios passed**. Audio assets and production lifecycle passed through OpenAL's null backend. Android lint and debug APK build passed. Existing lint warnings were not introduced by this change. See the [implementation/documentation review](eight-ball-review.md).
+Local verification: **158 passed tests, one opt-in calibration skipped, zero failures; 135 rendered scenarios passed**. Audio assets and production lifecycle passed through OpenAL's null backend. Android lint and debug APK build passed. Existing lint warnings were not introduced by this change. See the [implementation/documentation review](eight-ball-review.md).
 
 Installed the debug APK on the OnePlus 8T KB2003, Android 14 / API 34, retaining view, aided-aim and difficulty preferences. Observed:
 
@@ -268,3 +268,7 @@ Installed the debug APK on the OnePlus 8T KB2003, Android 14 / API 34, retaining
 Phone evidence is generated under `build/reports/device-eight-ball`. The final confirmation-alignment correction also has automated rack/gesture coverage; the final APK is reinstalled before delivery.
 
 Not claimed as completed: a full human-played rack through its result, deliberate phone scratch/ball-in-hand recovery, all rare break/head-string exceptions on the phone, a new ten-minute performance soak, or subjective user acceptance of the new placement interaction. Automated rule/native/rendered tests cover these rule outcomes; earlier device records remain historical evidence, not acceptance of this build.
+
+### Feedback and revisions
+
+The user requested removal of the Pool heading, larger text, and reported a poor Hard-difficulty placement when the computer only needed the eight. Removed the heading, enlarged HUD/settings/placement/result text, and added a dark HUD backing for readability over Player view. The placement shortlist had favored proximity to the break spot and could omit later positions from seed evaluation; it now prioritizes pot-aligned positions and evaluates every shortlisted position before optimization. Five deterministic native layouts, including remaining opponent blockers, now verify a winning Hard placement/shot with the 64-evaluation budget. This regression establishes those cases, not a guarantee of every possible pot. The revised build is installed for further human acceptance.

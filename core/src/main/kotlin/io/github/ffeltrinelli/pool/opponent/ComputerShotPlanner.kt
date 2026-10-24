@@ -40,10 +40,14 @@ class BulletShotPlanner(
         val geometry = ShotCandidates()
         val positions = PlanningPositions.candidates(table)
         val initialTable = table.withCue(positions.first())
-        val search = ShotSearch(initialTable, geometry.fallback(initialTable), world, maxEvaluations, deadlineMillis, cancelled, started)
-        val seeds = positions.flatMap { position ->
-            geometry.generate(table.withCue(position)).take(2).map { it.shot to position }
-        }.take(8).ifEmpty { listOf(geometry.fallback(initialTable) to positions.first()) }
+        val search = ShotSearch(initialTable, (geometry.generate(initialTable).firstOrNull()?.shot ?: geometry.fallback(initialTable)), world, maxEvaluations, deadlineMillis, cancelled, started)
+        val seeds = if (table.placement == null) {
+            geometry.generate(initialTable).take(4).map { it.shot to positions.first() }
+                .ifEmpty { listOf(geometry.fallback(initialTable) to positions.first()) }
+        } else positions.map { position ->
+            val positioned = table.withCue(position)
+            (geometry.generate(positioned).firstOrNull()?.shot ?: geometry.fallback(positioned)) to position
+        }
         try {
             seeds.forEach { if (search.remaining > 0) search.evaluate(it.first, it.second) }
             for ((index, initial) in seeds.withIndex()) {
