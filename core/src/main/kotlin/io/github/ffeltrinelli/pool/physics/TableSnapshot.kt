@@ -8,6 +8,10 @@ data class BallSnapshot(val id: Int, val point: Point, val height: Float = Table
 data class TableSnapshot(val balls: List<BallSnapshot>,
     val rules: RulesContext? = null,
     val placement: PlacementRegion? = null) {
-    fun withCue(point: Point) = copy(balls = balls.filter { it.id != 0 } + BallSnapshot(0, point))
+    fun withCue(point: Point): TableSnapshot {
+        // An ordinary shot must retain the settled cue's height, rotation and body order.
+        if (placement == null && balls.firstOrNull { it.id == 0 }?.point == point) return this
+        return copy(balls = balls.filter { it.id != 0 } + BallSnapshot(0, point))
+    }
     fun rulesContext() = rules ?: RulesContext(balls.filter { it.id != 0 }.map { it.id }.toSet())
 }

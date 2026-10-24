@@ -66,12 +66,12 @@ class ComputerPhysicsTest {
         } finally { planner.close(); live.dispose() }
     }
     @Test fun `scoring cancels foul points and prefers safe shots before proximity`() {
-        val scratch = ShotEvaluation(5, true, 0f, 0.04f).score
-        val safeMiss = ShotEvaluation(0, false, 3f, 1.15f).score
-        val safePot = ShotEvaluation(1, false, 3f, 1.15f).score
+        val scratch = ShotEvaluation(5, io.github.ffeltrinelli.pool.rules.FoulReason.SCRATCH, 0f, 0.04f).score
+        val safeMiss = ShotEvaluation(0, null, 3f, 1.15f).score
+        val safePot = ShotEvaluation(1, null, 3f, 1.15f).score
         assertTrue(safeMiss > scratch)
-        assertTrue(safePot > ShotEvaluation(0, false, 0f, 0.04f).score)
-        assertTrue(ShotEvaluation(1, false, 1f, 0.1f).score > ShotEvaluation(1, false, 1f, 1f).score)
+        assertTrue(safePot > ShotEvaluation(0, null, 0f, 0.04f).score)
+        assertTrue(ShotEvaluation(1, null, 1f, 0.1f).score > ShotEvaluation(1, null, 1f, 1f).score)
     }
     @Test fun `native simulation checks cancellation during physics stepping and remains reusable`() {
         val planner = BulletShotPlanner(deadlineMillis = Long.MAX_VALUE, maxEvaluations = 8)

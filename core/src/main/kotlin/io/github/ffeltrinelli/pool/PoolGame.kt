@@ -34,7 +34,7 @@ class PoolGame : ApplicationAdapter() {
         audio = PoolAudio(LibGdxSoundPlayer())
         physics = PoolPhysics(physicsEvents::add, audio::queue, audio::queue)
         computer = ComputerTurn(WorkerShotPlanningService(reportFailure = { Gdx.app.error("PoolAI", "Planning failed; using fallback", it) })) {
-            Gdx.app.log("PoolAI", "${it.evaluations} evaluations in ${it.elapsedMillis} ms; fallback=${it.usedFallback}")
+            Gdx.app.log("PoolAI", "${it.evaluations} evaluations in ${it.elapsedMillis} ms; fallback=${it.usedFallback}; predictedFoul=${it.predictedFoul}; shot=${it.shot}")
         }
         renderer = PoolRenderer()
         resetRackAim()

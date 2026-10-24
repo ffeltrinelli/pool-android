@@ -18,6 +18,7 @@ internal class ShotSearch(
     private var best = fallback
     private var bestPosition = table.balls.first { it.id == 0 }.point
     private var bestScore = Double.NEGATIVE_INFINITY
+    private var bestEvaluation: ShotEvaluation? = null
     private var completed = 0
     private var attempted = 0
     val remaining get() = maxEvaluations - attempted
@@ -38,6 +39,7 @@ internal class ShotSearch(
         completed++
         val score = evaluation.score
         if (score > bestScore) {
+            bestEvaluation = evaluation
             bestScore = score
             best = shot
             bestPosition = position
@@ -45,7 +47,7 @@ internal class ShotSearch(
         return score
     }
 
-    fun result() = PlanningResult(best, completed, (System.nanoTime() - started) / 1_000_000, completed == 0, bestPosition)
+    fun result() = PlanningResult(best, completed, (System.nanoTime() - started) / 1_000_000, completed == 0, bestPosition, bestEvaluation?.foul)
 
     class DeadlineReached : RuntimeException()
 }
