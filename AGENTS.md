@@ -1,18 +1,18 @@
 # Agent instructions
 
+## OBEY Clean Code by Robert C. Martin
+
 Source: https://github.com/ciembor/agent-rules-books/blob/main/clean-code/clean-code.nano.md
 
-# OBEY Clean Code by Robert C. Martin
-
-## When to use
+### When to use
 
 Use when you need a small always-on bias toward readable, low-surprise code.
 
-## Primary bias to correct
+### Primary bias to correct
 
 Working code is not automatically clean code.
 
-## Decision rules
+### Decision rules
 
 - Preserve behavior, write for the next reader, and leave touched code cleaner within scope.
 - Write for local reasoning and use precise names with one term per concept.
@@ -22,19 +22,18 @@ Working code is not automatically clean code.
 - Use comments only for rationale or contracts, not to explain confusing code.
 - When touching code, remove the smell most likely to make the next change risky or unclear.
 
-## Trigger rules
+### Trigger rules
 
 - When a function both mutates and answers, split it.
 - When a comment explains the flow, simplify the code first.
 - When async, concurrency, or framework quirks spread the change, reduce shared mutable state and add the right boundary instead of more branching.
 
-## Final checklist
+### Final checklist
 
 - Local reasoning preserved?
 - Clear names?
 - Clear mutation boundaries?
 - One smell removed?
-
 
 ## Repository orientation
 
