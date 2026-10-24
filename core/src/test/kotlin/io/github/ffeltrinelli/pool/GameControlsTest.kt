@@ -69,16 +69,16 @@ class GameControlsTest {
         val controls = GameControls(preference, effects)
         controls.handle(HudAction.SETTINGS)
         controls.handle(HudAction.PLAYER_VIEW)
-        assertEquals(ViewMode.PLAYER, controls.mode)
+        assertEquals(ViewMode.PLAYER, controls.viewMode)
         assertEquals(ViewMode.PLAYER, effects.selected)
         assertEquals(2, effects.cancelled)
         assertEquals(0, effects.restarts)
         assertTrue(effects.paused)
         val relaunched = GameControls(preference, Effects())
-        assertEquals(ViewMode.PLAYER, relaunched.mode)
+        assertEquals(ViewMode.PLAYER, relaunched.viewMode)
         controls.handle(HudAction.RESTART)
         assertEquals(1, effects.restarts)
-        assertEquals(ViewMode.PLAYER, controls.mode)
+        assertEquals(ViewMode.PLAYER, controls.viewMode)
         assertFalse(controls.settingsOpen || controls.suspended)
     }
 
@@ -109,7 +109,7 @@ class GameControlsTest {
         for (legacy in listOf("SOLO", "COMPUTER", "obsolete")) {
             values["play-mode"] = legacy
             val controls = GameControls(SavedSettingsPreference(preferences), Effects())
-            assertEquals(ViewMode.PLAYER, controls.mode)
+            assertEquals(ViewMode.PLAYER, controls.viewMode)
             assertFalse(controls.aidedAim)
             assertTrue(io.github.ffeltrinelli.pool.model.GameSession().humanTurn)
         }
@@ -138,7 +138,7 @@ class GameControlsTest {
         assertFalse(controls.aidedAim)
         val relaunched = GameControls(preference, Effects())
         assertFalse(relaunched.aidedAim)
-        assertEquals(ViewMode.PLAYER, relaunched.mode)
+        assertEquals(ViewMode.PLAYER, relaunched.viewMode)
     }
 
     @Test fun `difficulty persists without restarting resuming or saving duplicate selections`() {

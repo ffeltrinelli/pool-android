@@ -12,10 +12,10 @@ import com.badlogic.gdx.utils.Disposable
 import io.github.ffeltrinelli.pool.aim.*
 import io.github.ffeltrinelli.pool.input.CueGesture
 import io.github.ffeltrinelli.pool.opponent.CuePose
-import io.github.ffeltrinelli.pool.opponent.OpponentDifficulty
 import io.github.ffeltrinelli.pool.model.*
 import io.github.ffeltrinelli.pool.physics.PoolPhysics
 import io.github.ffeltrinelli.pool.view.GameViews
+import io.github.ffeltrinelli.pool.ui.HudPresentation
 import io.github.ffeltrinelli.pool.ui.GameHud
 
 class PoolRenderer : Disposable {
@@ -28,16 +28,10 @@ class PoolRenderer : Disposable {
     private val attributes = (VertexAttributes.Usage.Position or VertexAttributes.Usage.Normal or VertexAttributes.Usage.TextureCoordinates).toLong()
     val views = GameViews()
     val hud = GameHud()
-    var humanCanAim = true
     var computerPose: CuePose? = null
-    var holdOverview = false
-    var computerThinking = false
     var foulPlayer: Player? = null
-    var difficulty = OpponentDifficulty.MEDIUM
-    var aidedAim = true
     private val aimPredictor = AimPredictor()
     private val aimGuide = AimGuideRenderer()
-    var settingsOpen = false
     private val environment = Environment().apply {
         set(ColorAttribute(ColorAttribute.AmbientLight, 0.60f, 0.65f, 0.68f, 1f))
         add(DirectionalLight().set(0.95f, 0.94f, 0.86f, -0.4f, -1f, -0.3f))
@@ -92,20 +86,29 @@ class PoolRenderer : Disposable {
         hud.resize(width, height)
     }
 
-    fun render(physics: PoolPhysics, session: GameSession, gesture: CueGesture, pixelWidth: Int = Gdx.graphics.backBufferWidth, pixelHeight: Int = Gdx.graphics.backBufferHeight, viewDelta: Float = 0f) {
+    fun render(
+        physics: PoolPhysics,
+        session: GameSession,
+        gesture: CueGesture,
+        pixelWidth: Int = Gdx.graphics.backBufferWidth,
+        pixelHeight: Int = Gdx.graphics.backBufferHeight,
+        viewDelta: Float = 0f,
+        table: TablePresentation = TablePresentation(),
+        hudState: HudPresentation = HudPresentation()
+    ) {
         Gdx.gl.glViewport(0, 0, pixelWidth, pixelHeight)
         Gdx.gl.glClearColor(0.035f, 0.075f, 0.095f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
         val cuePoint = physics.balls.firstOrNull { it.id == 0 && !it.pocketed }?.point
-        views.update(cuePoint, gesture.direction, session.canShoot && !holdOverview, viewDelta)
+        views.update(cuePoint, gesture.direction, session.canShoot && !table.holdOverview, viewDelta)
         renderTable(physics)
         val cueBall = physics.balls.firstOrNull { it.id == 0 && !it.pocketed }
-        if (aidedAim && !settingsOpen && session.humanTurn && humanCanAim && cueBall != null) {
+        if (table.aidedAim && !hudState.settingsOpen && session.humanTurn && table.humanCanAim && cueBall != null) {
             renderAidedAim(physics, cueBall.point, gesture.direction)
         }
-        val cuePose = if (session.humanTurn && humanCanAim) CuePose(gesture.direction, gesture.tipGap) else computerPose
+        val cuePose = if (session.humanTurn && table.humanCanAim) CuePose(gesture.direction, gesture.tipGap) else table.computerPose
         if (session.canShoot && cueBall != null && cuePose != null) renderCue(cueBall.point, cuePose)
-        hud.render(session, settingsOpen, views.mode, aidedAim, computerThinking, foulPlayer, difficulty)
+        hud.render(session, views.mode, table.aidedAim, hudState)
     }
 
     private fun renderTable(physics: PoolPhysics) {

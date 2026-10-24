@@ -17,7 +17,8 @@ class ComputerTurnTest {
         override fun close() { closed = true }
     }
     private fun computerSession() = GameSession().apply {
-        beginShot(); accept(PhysicsEvent.Settled)
+        beginShot()
+        accept(PhysicsEvent.Settled)
     }
     private val snapshot = TableSnapshot(listOf(BallSnapshot(0, Point(0f, 0.5f)), BallSnapshot(1, Point(0f, 0f))))
 
@@ -40,7 +41,9 @@ class ComputerTurnTest {
         assertEquals(listOf(shot), deliveries)
     }
     @Test fun `thinking lasts one active second then exactly one contact shot is delivered`() {
-        val service = Service(); val turn = ComputerTurn(service); val session = computerSession()
+        val service = Service()
+        val turn = ComputerTurn(service)
+        val session = computerSession()
         assertNull(turn.advance(session, { snapshot }, 0.1f))
         assertEquals(1, service.starts)
         assertNull(turn.pose)
@@ -55,7 +58,9 @@ class ComputerTurnTest {
         assertEquals(1, service.starts)
     }
     @Test fun `pause before contact resets the stroke but retains the selected shot`() {
-        val service = Service(); val turn = ComputerTurn(service); val session = computerSession()
+        val service = Service()
+        val turn = ComputerTurn(service)
+        val session = computerSession()
         service.result = PlanningResult(shot, 6, 10, false)
         turn.advance(session, { snapshot }, 1f)
         turn.advance(session, { snapshot }, 0.7f)
@@ -67,7 +72,9 @@ class ComputerTurnTest {
         assertEquals(ExecutionAccuracy.apply(shot, OpponentDifficulty.MEDIUM, 1), turn.advance(session, { snapshot }, 0.8f))
     }
     @Test fun `difficulty changes reuse raw selection without compounding and cue matches contact`() {
-        val service = Service(); val turn = ComputerTurn(service); val session = computerSession()
+        val service = Service()
+        val turn = ComputerTurn(service)
+        val session = computerSession()
         service.result = PlanningResult(shot, 6, 10, false)
         turn.advance(session, { snapshot }, 1f, OpponentDifficulty.EASY)
         assertEquals(ExecutionAccuracy.apply(shot, OpponentDifficulty.EASY, 1).direction, turn.pose!!.direction)
@@ -90,7 +97,9 @@ class ComputerTurnTest {
     }
 
     @Test fun `pending work is cancelled and new result uses current difficulty including fallback`() {
-        val service = Service(); val turn = ComputerTurn(service); val session = computerSession()
+        val service = Service()
+        val turn = ComputerTurn(service)
+        val session = computerSession()
         turn.advance(session, { snapshot }, 0.3f, OpponentDifficulty.EASY)
         turn.suspend()
         assertEquals(1, service.cancellations)
@@ -104,7 +113,8 @@ class ComputerTurnTest {
     }
 
     @Test fun `foul delay blocks either player and reset discards selected work`() {
-        val service = Service(); val turn = ComputerTurn(service)
+        val service = Service()
+        val turn = ComputerTurn(service)
         for (player in Player.entries) {
             turn.foul(player)
             assertTrue(turn.blocksShot)
@@ -123,7 +133,8 @@ class ComputerTurnTest {
         assertTrue(service.closed)
     }
     @Test fun `human and moving turns never request computer work`() {
-        val service = Service(); val turn = ComputerTurn(service)
+        val service = Service()
+        val turn = ComputerTurn(service)
         val human = GameSession()
         turn.advance(human, { error("No snapshot needed") }, 2f)
         human.beginShot()

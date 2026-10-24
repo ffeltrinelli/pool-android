@@ -5,7 +5,7 @@ import io.github.ffeltrinelli.pool.model.*
 import io.github.ffeltrinelli.pool.physics.TableSnapshot
 import kotlin.math.*
 
-data class ShotCandidate(val shot: ShotCommand, val difficulty: Float)
+data class ShotCandidate(val shot: ShotCommand, val rankingCost: Float)
 
 /** Ghost-ball geometry only seeds the search; Bullet decides whether a pot actually works. */
 class ShotCandidates {
@@ -31,7 +31,7 @@ class ShotCandidates {
             val impulse = (0.18f + 0.16f * sqrt(cueDistance + objectDistance / (cut * cut))).coerceIn(0.08f, OpponentTuning.MAX_IMPULSE)
             candidates.add(ShotCandidate(ShotCommand(incoming, impulse), cueDistance + objectDistance + (1 - cut) * 3))
         }
-        return candidates.sortedBy { it.difficulty }
+        return candidates.sortedBy { it.rankingCost }
     }
 
     fun fallback(table: TableSnapshot): ShotCommand {

@@ -1,0 +1,10 @@
+{
+  "difficulty_taps_save_all_levels": true,
+  "difficulty_drag_snaps_and_clamps": true,
+  "outside_tap_preserves_difficulty": true,
+  "background_resume_same_process": true,
+  "background_preserves_open_settings": true,
+  "difficulty_persists_after_process_restart": true,
+  "exit_finishes_activity": true,
+  "medium_saved_before_exit": true
+}

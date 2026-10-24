@@ -54,19 +54,25 @@ class GameSession {
                 if (event.ballId == 0) scratched = true
                 else if (remainingIds.remove(event.ballId)) shotPockets++
             }
-            PhysicsEvent.Settled -> {
-                val completed = ShotOutcome(player, shotPockets, scratched)
-                outcome = completed
-                if (!completed.foul) {
-                    if (player == Player.HUMAN) humanScore += completed.pocketed
-                    else computerScore += completed.pocketed
-                }
-                if (remaining == 0) state = RoundState.FINISHED
-                else {
-                    player = player.opponent
-                    state = RoundState.READY
-                }
-            }
+            PhysicsEvent.Settled -> finishShot()
+        }
+    }
+
+    private fun finishShot() {
+        val completed = ShotOutcome(player, shotPockets, scratched)
+        outcome = completed
+        if (!completed.foul) awardPoints(completed)
+        if (remaining == 0) state = RoundState.FINISHED
+        else {
+            player = player.opponent
+            state = RoundState.READY
+        }
+    }
+
+    private fun awardPoints(completed: ShotOutcome) {
+        when (completed.player) {
+            Player.HUMAN -> humanScore += completed.pocketed
+            Player.COMPUTER -> computerScore += completed.pocketed
         }
     }
 
@@ -81,5 +87,4 @@ class GameSession {
         outcome = null
         state = RoundState.READY
     }
-
 }

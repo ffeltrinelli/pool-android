@@ -8,7 +8,10 @@ data class Point(val x: Float, val z: Float) {
     operator fun times(scale: Float) = Point(x * scale, z * scale)
     fun dot(other: Point) = x * other.x + z * other.z
     fun length() = sqrt(dot(this))
-    fun normalized() = if (length() > 0.00001f) this * (1f / length()) else Point(0f, -1f)
+    fun normalized(): Point {
+        val magnitude = length()
+        return if (magnitude > 0.00001f) this * (1f / magnitude) else Point(0f, -1f)
+    }
 }
 
 object TableGeometry {

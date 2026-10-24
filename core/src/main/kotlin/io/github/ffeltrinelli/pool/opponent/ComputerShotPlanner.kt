@@ -31,56 +31,20 @@ class BulletShotPlanner(
     private val maxEvaluations: Int = OpponentTuning.EVALUATIONS,
     private val deadlineMillis: Long = OpponentTuning.DEADLINE_MILLIS
 ) : ComputerShotPlanner {
-    private var simulation: PoolPhysics? = null
-    private var settled = false
-    private var scratch = false
-    private var pocketed = 0
+    private var simulation: ShotSimulation? = null
 
     override fun plan(table: TableSnapshot, seed: Long, cancelled: () -> Boolean): PlanningResult {
         val started = System.nanoTime()
-        val deadline = if (deadlineMillis == Long.MAX_VALUE) Long.MAX_VALUE else started + deadlineMillis * 1_000_000
-        fun checkBudget() {
-            if (cancelled() || Thread.currentThread().isInterrupted) throw CancellationException()
-            if (System.nanoTime() >= deadline) throw SearchDeadline()
-        }
         if (cancelled() || Thread.currentThread().isInterrupted) throw CancellationException()
-        val world = simulation ?: PoolPhysics(events = { event ->
-            when (event) {
-                PhysicsEvent.Settled -> settled = true
-                is PhysicsEvent.Pocketed -> if (event.ballId == 0) scratch = true else pocketed++
-            }
-        }).also { simulation = it }
+        val world = simulation ?: ShotSimulation().also { simulation = it }
         val geometry = ShotCandidates()
+        val search = ShotSearch(table, geometry.fallback(table), world, maxEvaluations, deadlineMillis, cancelled, started)
         val seeds = geometry.generate(table).take(4).map { it.shot }.ifEmpty { listOf(geometry.fallback(table)) }
-        var best = geometry.fallback(table)
-        var bestScore = Double.NEGATIVE_INFINITY
-        var completed = 0
-        var attempted = 0
-        fun evaluate(shot: ShotCommand): Double {
-            checkBudget()
-            attempted++
-            world.restore(table)
-            settled = false; scratch = false; pocketed = 0
-            world.strike(shot)
-            var steps = 0
-            while (!settled && steps++ < (OpponentTuning.SIMULATION_SECONDS / PoolPhysics.STEP).toInt()) {
-                checkBudget()
-                world.step()
-            }
-            if (!settled) return -1000.0
-            completed++
-            val closest = world.balls.filter { it.id != 0 && !it.pocketed }.minOfOrNull { ball ->
-                PocketGeometry.pockets.minOf { (it.mouthCenter - ball.point).length() }
-            } ?: 0f
-            val score = ShotEvaluation(pocketed, scratch, closest, shot.impulse).score
-            if (score > bestScore) { bestScore = score; best = shot }
-            return score
-        }
         try {
-            seeds.forEach { if (attempted < maxEvaluations) evaluate(it) }
+            seeds.forEach { if (search.remaining > 0) search.evaluate(it) }
             for ((index, initial) in seeds.withIndex()) {
                 val remainingSeeds = seeds.size - index
-                val budget = (maxEvaluations - attempted) / remainingSeeds
+                val budget = search.remaining / remainingSeeds
                 if (budget < 6) break
                 val angle = atan2(initial.direction.x.toDouble(), -initial.direction.z.toDouble())
                 val optimizer = CMAESOptimizer(16, Double.POSITIVE_INFINITY, true, 0, 10, Well19937c(seed + index), false, null)
@@ -90,14 +54,13 @@ class BulletShotPlanner(
                         SimpleBounds(doubleArrayOf(angle - 0.14, OpponentTuning.MIN_IMPULSE.toDouble()),
                             doubleArrayOf(angle + 0.14, OpponentTuning.MAX_IMPULSE.toDouble())),
                         CMAESOptimizer.Sigma(doubleArrayOf(0.035, 0.12)), CMAESOptimizer.PopulationSize(6),
-                        ObjectiveFunction { point -> evaluate(ShotCommand(Point(sin(point[0]).toFloat(), -cos(point[0]).toFloat()), point[1].toFloat())) })
+                        ObjectiveFunction { point -> search.evaluate(ShotCommand(Point(sin(point[0]).toFloat(), -cos(point[0]).toFloat()), point[1].toFloat())) })
                 } catch (_: TooManyEvaluationsException) { /* Best completed evaluation is retained across starts. */ }
             }
-        } catch (_: SearchDeadline) { /* Keep the best complete simulation; partial outcomes are never scored. */ }
-        if (cancelled() || Thread.currentThread().isInterrupted) throw CancellationException()
-        return PlanningResult(best, completed, (System.nanoTime() - started) / 1_000_000, completed == 0)
+        } catch (_: ShotSearch.DeadlineReached) { /* Keep the best complete simulation; partial outcomes are never scored. */ }
+        search.checkCancellation()
+        return search.result()
     }
 
-    override fun close() { simulation?.dispose(); simulation = null }
-    private class SearchDeadline : RuntimeException()
+    override fun close() { simulation?.close(); simulation = null }
 }

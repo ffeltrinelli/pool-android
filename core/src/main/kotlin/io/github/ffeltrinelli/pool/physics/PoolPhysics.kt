@@ -17,7 +17,7 @@ class Ball internal constructor(val id: Int, val body: btRigidBody) {
     val point: Point get() = Point(position.x, position.z)
 }
 
-/** Owns every Bullet allocation. All calls and event delivery happen on the game thread. */
+/** Owns every Bullet allocation. All calls and event delivery stay on the owning thread. */
 class PoolPhysics(
     private val events: (PhysicsEvent) -> Unit = {},
     private val impacts: (Impact) -> Unit = {},
@@ -30,7 +30,8 @@ class PoolPhysics(
     private val world: btDiscreteDynamicsWorld
     private val ballShape: btSphereShape
     private val table: TablePhysics
-    val balls = mutableListOf<Ball>()
+    private val ownedBalls = mutableListOf<Ball>()
+    val balls: List<Ball> get() = ownedBalls
     private val contactImpacts = ContactImpacts(impacts)
     private val transform = Matrix4()
     private val velocity = Vector3()
@@ -67,8 +68,8 @@ class PoolPhysics(
 
     fun reset(layout: List<Pair<Int, Point>> = TableGeometry.rack()) {
         contactImpacts.reset()
-        balls.forEach { if (!it.pocketed) world.removeRigidBody(it.body); it.body.dispose() }
-        balls.clear()
+        balls.forEach(::disposeBall)
+        ownedBalls.clear()
         layout.forEach { (id, point) -> addBall(id, point) }
         accumulator = 0f
         quietSeconds = 0f
@@ -92,7 +93,7 @@ class PoolPhysics(
         body.ccdSweptSphereRadius = TableGeometry.BALL_RADIUS * 0.8f
         world.addRigidBody(body)
         val ball = Ball(id, body).also { readTransform(it); it.previousPosition.set(it.position); it.previousRotation.set(it.rotation) }
-        balls.add(ball)
+        ownedBalls.add(ball)
         return ball
     }
 
@@ -116,9 +117,8 @@ class PoolPhysics(
     fun replaceCueBall() {
         val point = CueReplacement.position(balls.filter { it.id != 0 && !it.pocketed }.map { it.point })
         balls.firstOrNull { it.id == 0 }?.let {
-            if (!it.pocketed) world.removeRigidBody(it.body)
-            it.body.dispose()
-            balls.remove(it)
+            disposeBall(it)
+            ownedBalls.remove(it)
         }
         contactImpacts.reset()
         addBall(0, point)
@@ -148,40 +148,57 @@ class PoolPhysics(
     }
 
     fun step() {
-        balls.forEach { it.previousPosition.set(it.position); it.previousRotation.set(it.rotation) }
+        savePreviousTransforms()
         world.stepSimulation(STEP, 0)
         collectImpactContacts()
+        observeBalls()
+        updateSettling()
+    }
+
+    private fun savePreviousTransforms() {
+        balls.forEach {
+            it.previousPosition.set(it.position)
+            it.previousRotation.set(it.rotation)
+        }
+    }
+
+    private fun observeBalls() {
         var moving = false
         restStability.beginStep()
-        balls.forEach { ball ->
-            if (!ball.pocketed) {
-                readTransform(ball)
-                velocity.set(ball.body.linearVelocity)
-                val linearSpeed2 = velocity.len2()
-                val angularSpeed2 = ball.body.angularVelocity.len2()
-                if (linearSpeed2 > PhysicsTuning.LINEAR_SLEEP_SPEED * PhysicsTuning.LINEAR_SLEEP_SPEED ||
-                    angularSpeed2 > PhysicsTuning.ANGULAR_SLEEP_SPEED * PhysicsTuning.ANGULAR_SLEEP_SPEED) moving = true
-                restStability.observe(ball.id, ball.position, ball.rotation, linearSpeed2, angularSpeed2)
-                val pocket = PocketGeometry.pockets.firstOrNull { it.containsDrop(ball.point) }
-                if (ball.position.y < PocketGeometry.CAPTURE_DEPTH && pocket != null) {
-                    capture(ball)
-                    pocketDrops(PocketDrop(ball.id, pocket.id))
-                } else if (kotlin.math.abs(ball.position.x) > 0.80f || kotlin.math.abs(ball.position.z) > 1.36f || ball.position.y < -0.40f) {
-                    com.badlogic.gdx.Gdx.app?.error("PoolPhysics", "Ball ${ball.id} escaped table at ${ball.position}")
-                    capture(ball)
-                }
-            }
+        for (ball in balls) {
+            if (ball.pocketed) continue
+            readTransform(ball)
+            velocity.set(ball.body.linearVelocity)
+            val linearSpeed2 = velocity.len2()
+            val angularSpeed2 = ball.body.angularVelocity.len2()
+            if (linearSpeed2 > PhysicsTuning.LINEAR_SLEEP_SPEED * PhysicsTuning.LINEAR_SLEEP_SPEED ||
+                angularSpeed2 > PhysicsTuning.ANGULAR_SLEEP_SPEED * PhysicsTuning.ANGULAR_SLEEP_SPEED) moving = true
+            restStability.observe(ball.id, ball.position, ball.rotation, linearSpeed2, angularSpeed2)
+            captureIfDropped(ball)
         }
         restStability.finishStep(STEP)
         quietSeconds = if (moving) 0f else quietSeconds + STEP
-        if (!wasSettled && (quietSeconds >= PhysicsTuning.SETTLED_SECONDS || restStability.settled)) {
-            balls.filter { !it.pocketed }.forEach {
-                it.body.linearVelocity = Vector3.Zero
-                it.body.angularVelocity = Vector3.Zero
-            }
-            wasSettled = true
-            events(PhysicsEvent.Settled)
+    }
+
+    private fun captureIfDropped(ball: Ball) {
+        val pocket = PocketGeometry.pockets.firstOrNull { it.containsDrop(ball.point) }
+        if (ball.position.y < PocketGeometry.CAPTURE_DEPTH && pocket != null) {
+            capture(ball)
+            pocketDrops(PocketDrop(ball.id, pocket.id))
+        } else if (kotlin.math.abs(ball.position.x) > 0.80f || kotlin.math.abs(ball.position.z) > 1.36f || ball.position.y < -0.40f) {
+            com.badlogic.gdx.Gdx.app?.error("PoolPhysics", "Ball ${ball.id} escaped table at ${ball.position}")
+            capture(ball)
         }
+    }
+
+    private fun updateSettling() {
+        if (wasSettled || (quietSeconds < PhysicsTuning.SETTLED_SECONDS && !restStability.settled)) return
+        balls.filter { !it.pocketed }.forEach {
+            it.body.linearVelocity = Vector3.Zero
+            it.body.angularVelocity = Vector3.Zero
+        }
+        wasSettled = true
+        events(PhysicsEvent.Settled)
     }
 
     private fun collectImpactContacts() {
@@ -213,8 +230,13 @@ class PoolPhysics(
         transform.getRotation(ball.rotation)
     }
 
+    private fun disposeBall(ball: Ball) {
+        if (!ball.pocketed) world.removeRigidBody(ball.body)
+        ball.body.dispose()
+    }
+
     override fun dispose() {
-        balls.forEach { if (!it.pocketed) world.removeRigidBody(it.body); it.body.dispose() }
+        balls.forEach(::disposeBall)
         ballShape.dispose()
         table.dispose()
         world.dispose()
