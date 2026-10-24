@@ -73,4 +73,5 @@ Include screenshots of the game in PR descriptions when relevant to the changes.
 ## Current documentation gallery
 
 - Visual changes must review the current gallery and refresh affected images and captions in the same PR. Remove obsolete media; keep historical comparisons in PR attachments.
+- Review the README gameplay video and preview when changing depicted visuals, gameplay, or audio. Re-record them in the same PR when outdated; unrelated changes do not require a new recording.
 - Follow [gallery capture and refresh](docs/gallery.md). CI uploads fresh reports but does not update committed gallery images.

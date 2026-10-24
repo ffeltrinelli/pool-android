@@ -21,9 +21,17 @@ An offline 3D eight-ball game for Android. Play solids versus stripes against a 
 
 ## Screenshots
 
-<img src="docs/images/player-view-start.png" width="360" alt="Player view at the start of a game, with the resting cue aimed toward the fresh rack before the break.">
+<table>
+<tr><th>Player view before the break</th><th>30-second gameplay · sound on</th></tr>
+<tr>
+<td><img src="docs/images/player-view-start.png" width="300" alt="Player view at the start of a game, with the resting cue aimed toward the fresh rack before the break."></td>
+<td><a href="https://github.com/user-attachments/assets/2940a819-5630-4c08-ab38-d9160b0c0a5f"><img src="docs/images/gameplay-preview.png" width="300" alt="Watch 30 seconds of Feltri 8-Ball gameplay with sound: the break and computer turns."></a></td>
+</tr>
+</table>
 
-Player view before the break, captured with the production desktop renderer. See the [screenshot gallery](docs/images/) and [refresh procedure](docs/gallery.md).
+Click the video preview to watch a human break and computer turns, with cue, ball, cushion, and pocket sounds. Both captures use the production desktop game; the video uses scripted pointer gestures through normal input, with the real physics and computer opponent. No music or narration. [Audio credits](assets/audio/README.md), including the pocket effect by freesman (CC BY 3.0).
+
+See the [screenshot gallery](docs/images/) and [media refresh procedure](docs/gallery.md).
 
 ## Build and run
 

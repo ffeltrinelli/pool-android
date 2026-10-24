@@ -12,8 +12,10 @@ import io.github.ffeltrinelli.pool.render.TablePresentation
 import io.github.ffeltrinelli.pool.ui.*
 import io.github.ffeltrinelli.pool.view.ViewMode
 
-class PoolGame : ApplicationAdapter() {
-    private val session = GameSession()
+class PoolGame(
+    private val session: GameSession = GameSession(),
+    private val soundPlayer: () -> SoundPlayer = { LibGdxSoundPlayer() }
+) : ApplicationAdapter() {
     private val gesture = CueGesture()
     private lateinit var input: GameInput
     private lateinit var audio: PoolAudio
@@ -31,7 +33,7 @@ class PoolGame : ApplicationAdapter() {
     private var rerackPending = false
 
     override fun create() {
-        audio = PoolAudio(LibGdxSoundPlayer())
+        audio = PoolAudio(soundPlayer())
         physics = PoolPhysics(physicsEvents::add, audio::queue, audio::queue)
         computer = ComputerTurn(WorkerShotPlanningService(reportFailure = { Gdx.app.error("PoolAI", "Planning failed; using fallback", it) })) {
             Gdx.app.log("PoolAI", "${it.evaluations} evaluations in ${it.elapsedMillis} ms; fallback=${it.usedFallback}; predictedFoul=${it.predictedFoul}; shot=${it.shot}")

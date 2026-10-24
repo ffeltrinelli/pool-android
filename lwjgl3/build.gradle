@@ -35,3 +35,16 @@ tasks.register('audioTest', JavaExec) {
     if (System.getProperty('os.name').toLowerCase().contains('mac')) jvmArgs '-XstartOnFirstThread'
     outputs.upToDateWhen { false }
 }
+
+// Opt-in README recording; regular visual checks and CI do not encode video.
+tasks.register('gameplayDemo', JavaExec) {
+    group = 'documentation'
+    description = 'Record 30 seconds of production gameplay and its sound events (requires OpenGL and ffmpeg).'
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'io.github.ffeltrinelli.pool.lwjgl3.GameplayDemo'
+    args rootProject.file('build/reports/gameplay-demo').absolutePath
+    workingDir rootProject.file('assets')
+    if (System.getProperty('os.name').toLowerCase().contains('mac')) jvmArgs '-XstartOnFirstThread'
+    outputs.upToDateWhen { false }
+}
