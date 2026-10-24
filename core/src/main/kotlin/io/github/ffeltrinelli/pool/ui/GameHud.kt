@@ -47,27 +47,7 @@ class GameHud : Disposable {
         val h = layout.uiHeight
         sprites.projectionMatrix = camera.combined
         sprites.begin()
-        val headerHeight = if (presentation.notice != null && !session.finished) 190f else 120f
-        rectangle(Rectangle(0f, h - headerHeight, 420f, headerHeight), "08161ced")
-        fun groupLabel(player: Player): String = session.group(player)?.let {
-            "${it.label}: ${session.remaining(player)} left"
-        } ?: "Unassigned"
-        text("You: ${groupLabel(Player.HUMAN)}", 29f, h - 34f, 1.10f, "d5e5dd")
-        text("Computer: ${groupLabel(Player.COMPUTER)}", 29f, h - 64f, 1.10f, "d5e5dd")
-        val status = when {
-            presentation.computerThinking -> "Computer thinking..."
-            session.placement != null -> if (session.player == Player.HUMAN) "Place the cue ball" else "Computer placing cue ball"
-            session.group(session.player) == null -> if (session.player == Player.HUMAN) "Your turn" else "Computer's turn"
-            session.remaining(session.player) == 0 -> if (session.player == Player.HUMAN) "You're on the 8-ball" else "Computer is on the 8-ball"
-            session.player == Player.HUMAN -> "Your turn"
-            else -> "Computer's turn"
-        }
-        text(status, 29f, h - 103f, 1.15f, "d5e5dd")
-        if (presentation.notice != null && !session.finished) {
-            font.data.setScale(1.05f)
-            font.color = Color.valueOf("f2d295")
-            font.draw(sprites, presentation.notice, 30f, h - 140f, 360f, com.badlogic.gdx.utils.Align.center, true)
-        }
+        drawHeader(session, presentation)
         if (session.placement != null && session.player == Player.HUMAN) {
             val instruction = if (session.placement == io.github.ffeltrinelli.pool.rules.PlacementRegion.ANYWHERE)
                 "Anywhere on the table" else "Behind the head string"
@@ -80,6 +60,31 @@ class GameHud : Disposable {
         drawGear()
         if (presentation.settingsOpen) drawSettings(mode, aidedAim, presentation.difficulty)
         sprites.end()
+    }
+
+    private fun drawHeader(session: GameSession, presentation: HudPresentation) {
+        val h = layout.uiHeight
+        rectangle(Rectangle(0f, h - layout.headerHeight, 420f, layout.headerHeight), "08161c")
+        fun groupLabel(player: Player): String = session.group(player)?.let {
+            "${it.label}: ${session.remaining(player)} left"
+        } ?: "Unassigned"
+        if (presentation.notice != null && !session.finished) {
+            font.data.setScale(1.05f)
+            font.color = Color.valueOf("f2d295")
+            font.draw(sprites, presentation.notice, 29f, h - 18f, 300f, com.badlogic.gdx.utils.Align.left, true)
+        } else {
+            text("You: ${groupLabel(Player.HUMAN)}", 29f, h - 20f, 1.10f, "d5e5dd")
+            text("Computer: ${groupLabel(Player.COMPUTER)}", 29f, h - 45f, 1.10f, "d5e5dd")
+        }
+        val status = when {
+            presentation.computerThinking -> "Computer thinking..."
+            session.placement != null -> if (session.player == Player.HUMAN) "Place the cue ball" else "Computer placing cue ball"
+            session.group(session.player) == null -> if (session.player == Player.HUMAN) "Your turn" else "Computer's turn"
+            session.remaining(session.player) == 0 -> if (session.player == Player.HUMAN) "You're on the 8-ball" else "Computer is on the 8-ball"
+            session.player == Player.HUMAN -> "Your turn"
+            else -> "Computer's turn"
+        }
+        text(status, 29f, h - 74f, 1.15f, "d5e5dd")
     }
 
     private fun drawGear() {

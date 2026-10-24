@@ -61,7 +61,7 @@ class GameInputTest {
         session.beginShot()
         session.accept(io.github.ffeltrinelli.pool.model.PhysicsEvent.Settled)
         assertFalse(input.touchDown(210, 700, 0, Input.Buttons.LEFT))
-        assertTrue(input.touchDown(372, 72, 0, Input.Buttons.LEFT))
+        assertTrue(input.touchDown(372, 48, 0, Input.Buttons.LEFT))
         assertTrue(controls.settingsOpen)
         assertEquals(CuePhase.IDLE, gesture.phase)
         assertTrue(shots.isEmpty())
@@ -97,14 +97,20 @@ class GameInputTest {
             input.touchDown(210, 853, 0, Input.Buttons.LEFT)
             assertNotNull(session.placement)
             input.touchDown(210, 630, 0, Input.Buttons.LEFT)
-            input.touchDragged(240, 650, 0)
-            input.touchUp(240, 650, 0, Input.Buttons.LEFT)
+            input.touchDragged(240, 680, 0)
+            input.touchUp(240, 680, 0, Input.Buttons.LEFT)
             assertNotNull(session.placement)
             input.touchDown(210, 853, 0, Input.Buttons.LEFT)
             assertNull(session.placement)
             assertTrue(session.humanTurn)
             assertTrue(shots.isEmpty())
         }
+
+    @Test fun `header touches never start a gameplay gesture`() = withInput { input, _, gesture, _, shots ->
+        assertTrue(input.touchDown(100, 40, 0, Input.Buttons.LEFT))
+        assertEquals(CuePhase.IDLE, gesture.phase)
+        assertTrue(shots.isEmpty())
+    }
 
     private fun withInput(placing: Boolean = false, check: (GameInput, GameControls, CueGesture, GameSession, List<ShotCommand>) -> Unit) {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
@@ -121,7 +127,7 @@ class GameInputTest {
             val session = GameSession().apply { if (!placing) confirmPlacement() }
             val gesture = CueGesture()
             val shots = mutableListOf<ShotCommand>()
-            val views = GameViews().apply { resize(420, 933) }
+            val views = GameViews().apply { resize(420, HudLayout(420, 933).gameHeight) }
             val placement = io.github.ffeltrinelli.pool.input.CueBallPlacement()
             views.placing = placing
             val input = GameInput(controls, session, { HudLayout(420, 933) }, views, physics, gesture, { session.humanTurn }, shots::add, placement) {

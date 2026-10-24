@@ -254,7 +254,7 @@ The debug APK installed and cold-launched on the **OnePlus 8T / Android 14 / API
 
 Replaced ball-count scoring with the simplified WPA rules in the [README](../README.md#rules-of-this-game). Fresh breaks and fouls now require valid cue-ball placement; new requested racks alternate breakers. Added explicit open-table/group messages and eight-ball results.
 
-Local verification: **158 passed tests, one opt-in calibration skipped, zero failures; 135 rendered scenarios passed**. Audio assets and production lifecycle passed through OpenAL's null backend. Android lint and debug APK build passed. Existing lint warnings were not introduced by this change. See the [implementation/documentation review](eight-ball-review.md).
+Local verification: **161 passed tests, one opt-in calibration skipped, zero failures; 135 rendered scenarios passed**. Audio assets and production lifecycle passed through OpenAL's null backend. Android lint and debug APK build passed. Existing lint warnings were not introduced by this change. See the [implementation/documentation review](eight-ball-review.md).
 
 Installed the debug APK on the OnePlus 8T KB2003, Android 14 / API 34, retaining view, aided-aim and difficulty preferences. Observed:
 
@@ -274,3 +274,13 @@ Not claimed as completed: a full human-played rack through its result, deliberat
 The user requested removal of the Pool heading, larger text, and reported a poor Hard-difficulty placement when the computer only needed the eight. Removed the heading, enlarged HUD/settings/placement/result text, and added a dark HUD backing for readability over Player view. The placement shortlist had favored proximity to the break spot and could omit later positions from seed evaluation; it now prioritizes pot-aligned positions and evaluates every shortlisted position before optimization. Five deterministic native layouts, including remaining opponent blockers, now verify a winning Hard placement/shot with the 64-evaluation budget. This regression establishes those cases, not a guarantee of every possible pot. The revised build is installed for further human acceptance.
 
 The user accepted the enlarged font sizes, then reported top-view ball glare and asked to remove the redundant “Open table — groups not assigned” line. Removed that line (the two ownership rows retain “Unassigned”), reduced the header's unused height, and removed the balls' specular material component and softened their diffuse illumination to prevent number-patch clipping. Font sizes are unchanged. The user subsequently confirmed that the ball numbers are readable in Top view; the larger fonts and glare reduction are accepted.
+
+### Reserved HUD viewport
+
+The user observed that the HUD's dark backing obscured far-table balls while aiming in Player view. The scene now renders in a separate viewport below a fixed 92-logical-pixel HUD strip. Notices temporarily replace the ownership rows inside that strip instead of extending over the table. The accepted font sizes, camera tuning and gesture sensitivity remain unchanged. Shared layout supplies viewport bounds, density scaling and the touch Y offset. Header touches cannot begin gameplay.
+
+Local verification: 161 passed tests, one opt-in calibration skipped, 135 rendered scenarios passed, audio smoke/lint/debug APK passed. Added viewport partition/density and projected-touch regression tests. The revised APK is installed on the OnePlus; device captures are under `build/reports/device-eight-ball/viewport-*`. The before screenshot shows the user's actual rack; the rendered after screenshot uses a deterministic rail-adjacent fixture, not the same rack. Subjective acceptance of this layout change is pending.
+
+Following further feedback, moved the ownership rows, turn label and gear upward and reduced the reserved strip from 120 to 92 logical pixels without reducing fonts. This returns approximately 72 physical vertical pixels on the 1080-pixel-wide OnePlus. Updated device-script gear coordinates accordingly.
+
+On the revised OnePlus build, the gear at its new location opened Settings and Android Back dismissed it. Captures confirm the compact header and unobstructed scene; the preceding viewport build also exercised valid placement and a cancelled backswing without changing the selected font sizes.

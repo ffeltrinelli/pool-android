@@ -46,17 +46,18 @@ internal class GameInput(
         }
         val action = layout().hit(x, y, controls.settingsOpen, session.finished)
         if (action != null) { controls.handle(action); return true }
+        if (!layout().containsGame(x, y)) return true
         if (controls.acceptsGameplay && session.placement != null && session.player == Player.HUMAN) {
             if (layout().confirmsPlacement(x, y)) confirmPlacement()
             else {
-                placement.move(views.active.beginInput(x, y, placement.point, gesture.direction))
+                placement.move(views.active.beginInput(x, layout().gameScreenY(y), placement.point, gesture.direction))
                 gameplayPointer = pointer
             }
             return true
         }
         if (!controls.acceptsGameplay || !canShoot() || gameplayPointer != null) return false
         val cue = physics.balls.firstOrNull { it.id == 0 && !it.pocketed } ?: return false
-        val point = views.active.beginInput(x, y, cue.point, gesture.direction)
+        val point = views.active.beginInput(x, layout().gameScreenY(y), cue.point, gesture.direction)
         gesture.begin(sample(pointer, point), cue.point)
         if (gesture.phase == CuePhase.AIMING) gameplayPointer = pointer
         return true
@@ -69,11 +70,11 @@ internal class GameInput(
         }
         if (pointer != gameplayPointer || !controls.acceptsGameplay) return false
         if (session.placement != null) {
-            placement.move(views.active.moveInput(x, y, CuePhase.AIMING, gesture.direction))
+            placement.move(views.active.moveInput(x, layout().gameScreenY(y), CuePhase.AIMING, gesture.direction))
             return true
         }
         if (!canShoot()) return false
-        val point = views.active.moveInput(x, y, gesture.phase, gesture.direction)
+        val point = views.active.moveInput(x, layout().gameScreenY(y), gesture.phase, gesture.direction)
         gesture.move(sample(pointer, point))?.let(deliverShot)
         return true
     }

@@ -303,7 +303,7 @@ object VisualSmoke {
             }
             val probe = cue - gesture.direction * distance
             val screen = renderer.views.active.camera.project(
-                Vector3(probe.x, TableGeometry.BALL_RADIUS, probe.z), 0f, 0f, 1080f, 2400f)
+                Vector3(probe.x, TableGeometry.BALL_RADIUS, probe.z), 0f, 0f, 1080f, renderer.hud.layout.gameHeight.toFloat())
             check(screen.x in 6f..1073f && screen.y in 6f..2393f)
             val withCue = Pixmap.createFromFrameBuffer(screen.x.toInt() - 5, screen.y.toInt() - 5, 11, 11)
             val humanCanAim = tablePresentation.humanCanAim
@@ -418,7 +418,7 @@ object VisualSmoke {
 
         private fun capturePocketDetail(name: String) {
             val pocket = if ("corner" in name) PocketGeometry.pockets[3] else PocketGeometry.pockets[5]
-            val projected = renderer.views.active.camera.project(Vector3(pocket.center.x, 0f, pocket.center.z), 0f, 0f, 1080f, 2400f)
+            val projected = renderer.views.active.camera.project(Vector3(pocket.center.x, 0f, pocket.center.z), 0f, 0f, 1080f, renderer.hud.layout.gameHeight.toFloat())
             val x = (projected.x.toInt() - 210).coerceIn(0, 660)
             val y = (projected.y.toInt() - 210).coerceIn(0, 1980)
             val pixels = Pixmap.createFromFrameBuffer(x, y, 420, 420)

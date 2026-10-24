@@ -60,7 +60,7 @@ def main():
             # OnePlus API 34 safe viewport starts at y=103; coordinates include that cutout inset.
             # Back dismisses any open settings before opening a fresh modal.
             shell('input keyevent KEYCODE_BACK')
-            shell('input tap 956 288')
+            shell('input tap 956 226')
             shell('input tap ' + ('342' if args.view == 'top' else '738') + ' 939')
             shell('input tap 342 1672')
             time.sleep(0.3)

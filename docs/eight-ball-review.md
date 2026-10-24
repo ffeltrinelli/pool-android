@@ -9,7 +9,7 @@ The current game implements the simplified WPA variant described in [the README]
 - Human placement has an independent preview and confirmation. Shared geometry validation rejects balls, bounds, jaws, cushions and pocket openings. The computer evaluates bounded placement/shot pairs under its existing budget.
 - The eight is spotted by a focused physics operation that preserves every other body's transform. The obsolete automatic starting-half replacement search was removed.
 - Ball-in-hand positions prioritize pot-aligned locations before break-spot grid fallbacks, and every shortlisted position gets an evaluated seed. A native Hard regression wins from five eight-ball-only-target layouts, including opponent blockers.
-- The HUD omits the Pool title and redundant open-table line, retaining Unassigned in the ownership rows. It uses user-accepted larger text with a dark backing for Player-view readability. Balls use matte materials and softer diffuse illumination below clipping to reduce number-obscuring glare.
+- The HUD omits the Pool title and redundant open-table line, retaining Unassigned in the ownership rows. It uses user-accepted larger text inside a reserved strip above the scene for Player-view readability. A shared layout defines the game viewport and touch offset; messages stay inside the strip. Balls use matte materials and softer diffuse illumination below clipping to reduce number-obscuring glare.
 - The computer worker retains its cancellation/resource boundary. Selected placement is applied once before animation; suspension retains the selected shot without duplicating placement or contact.
 - Physics material/solver tuning, human gestures, camera tuning, execution-error levels and audio assets are unchanged. Rack positions/packing intentionally follow the corrected rack.
 
@@ -34,7 +34,7 @@ Local delivery command:
 ALSOFT_DRIVERS=null ./gradlew :core:test :lwjgl3:visualTest :lwjgl3:audioTest :android:lintDebug :android:assembleDebug --console=plain --no-parallel
 ```
 
-JDK 21. **158 tests passed; one opt-in calibration test skipped; zero failures/errors.** All **135** rendered scenarios passed at 1080 × 2400. Four WAVs and production audio lifecycle passed the OpenAL null-backend smoke suite. Android lint and debug APK build passed; pre-existing lint warnings remain.
+JDK 21. **161 tests passed; one opt-in calibration test skipped; zero failures/errors.** All **135** rendered scenarios passed at 1080 × 2400. Four WAVs and production audio lifecycle passed the OpenAL null-backend smoke suite. Android lint and debug APK build passed; pre-existing lint warnings remain.
 
 Rules coverage includes groups, mixed pots, first contact/cushion order, break counting, scratches, eight-ball eligibility, final scratches, duplicate events, placement and requested-break alternation. Native coverage includes contact facts across frame partitions, silent off-table removal, non-disruptive spotting, legal computer targets and placement search budgets. Input/coordination tests cover invalid confirmation, placement input isolation, selected-placement delivery once, suspension, stale worker results and failure fallback with a cue position.
 

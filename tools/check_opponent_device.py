@@ -42,7 +42,7 @@ def main():
 
     def hud_visible():
         pixels = subprocess.check_output(['ffmpeg', '-v', 'error', '-i', 'pipe:0',
-            '-vf', 'crop=110:110:900:245', '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'],
+            '-vf', 'crop=110:110:900:170', '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'],
             input=adb('exec-out', 'screencap', '-p'), timeout=10)
         # Require Pool's green gear button and cream icon, not arbitrary bright launcher pixels.
         green = sum(1 for i in range(0, len(pixels), 3)
@@ -73,7 +73,7 @@ def main():
     shell('am start -W -n ' + ACTIVITY)
     wait_for(lambda: pool_is_foreground() and hud_visible(), 'first foreground game frame')
     capture('reopened')
-    shell('input tap 956 288')
+    shell('input tap 956 226')
     capture('settings')
     for level, x in [('EASY', 283), ('MEDIUM', 540), ('HARD', 797)]:
         select_difficulty(level, x)
@@ -88,13 +88,13 @@ def main():
     checks['outside_tap_preserves_difficulty'] = preference('opponent-difficulty') == 'HARD'
     shell('input tap 926 718')  # X dismisses the modal.
     capture('x-dismissed')
-    shell('input tap 956 288')
+    shell('input tap 956 226')
     select_difficulty('MEDIUM', 540)
     capture('difficulty-medium-restored')
     shell('input keyevent KEYCODE_BACK')
     capture('back-dismissed')
     pid = shell('pidof ' + PACKAGE).strip()
-    shell('input tap 956 288')  # Suspend with Settings still open through Home/resume.
+    shell('input tap 956 226')  # Suspend with Settings still open through Home/resume.
     capture('before-background')
     shell('input keyevent KEYCODE_HOME')
     shell('am start -W -n ' + ACTIVITY)
@@ -105,7 +105,7 @@ def main():
     checks['background_preserves_open_settings'] = preference('opponent-difficulty') == 'HARD'
     shell('input keyevent KEYCODE_BACK')
     for index in range(3):
-        shell('input tap 956 288')
+        shell('input tap 956 226')
         shell('input tap 342 1672')
         time.sleep(.1)
         capture('restart-' + str(index))
@@ -113,7 +113,7 @@ def main():
     shell('am start -W -n ' + ACTIVITY)
     wait_for(lambda: pool_is_foreground() and hud_visible(), 'new process foreground frame')
     checks['difficulty_persists_after_process_restart'] = preference('opponent-difficulty') == 'HARD'
-    shell('input tap 956 288')
+    shell('input tap 956 226')
     select_difficulty('MEDIUM', 540)
     shell('input tap 738 1672')
     wait_for(lambda: not pool_is_foreground(), 'Exit finishing the activity')

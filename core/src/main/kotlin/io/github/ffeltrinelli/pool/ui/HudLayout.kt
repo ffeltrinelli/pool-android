@@ -8,7 +8,13 @@ class HudLayout(width: Int, height: Int) {
     private val width = width.coerceAtLeast(1)
     private val height = height.coerceAtLeast(1)
     val uiHeight = 420f * this.height / this.width
-    val gear = Rectangle(348f, uiHeight - 96f, 48f, 48f)
+    val headerHeight = 92f
+    val gameTop = kotlin.math.ceil(headerHeight * this.width / 420f).toInt().coerceAtMost(this.height - 1)
+    val gameHeight = this.height - gameTop
+    fun gameScreenY(screenY: Int) = screenY - gameTop
+    fun containsGame(screenX: Int, screenY: Int) = screenX in 0 until width && screenY in gameTop until height
+    fun renderHeight(backBufferHeight: Int) = (backBufferHeight.toLong() * gameHeight / height).toInt().coerceAtLeast(1)
+    val gear = Rectangle(348f, uiHeight - 72f, 48f, 48f)
     val panel = Rectangle(30f, uiHeight / 2 - 237.5f, 360f, 475f)
     val close = Rectangle(336f, panel.y + panel.height - 54f, 48f, 48f)
     val top = Rectangle(60f, uiHeight / 2 + 97.5f, 146f, 48f)
