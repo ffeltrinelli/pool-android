@@ -5,12 +5,12 @@ import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Vector3
 import io.github.ffeltrinelli.pool.input.CuePhase
+import io.github.ffeltrinelli.pool.model.GameSession
+import io.github.ffeltrinelli.pool.model.Player
 import io.github.ffeltrinelli.pool.model.Point
 import io.github.ffeltrinelli.pool.model.TableGeometry
 import io.github.ffeltrinelli.pool.model.CueGeometry
 import kotlin.math.*
-
-enum class ViewMode { TOP, PLAYER }
 
 data class ViewTuning(
     val elevationDegrees: Float = 45f,
@@ -50,10 +50,9 @@ class TopView : GameView {
         this.height = height.coerceAtLeast(1)
         val aspect = this.width.toFloat() / this.height
         val margin = 0.08f
-        val preferredWidth = max(1.92f, 3.5f * aspect) / 1.15f
         val fittedWidth = max(2 * TableGeometry.OUTER_HALF_WIDTH + margin,
             (2 * TableGeometry.OUTER_HALF_LENGTH + margin) * aspect)
-        camera.viewportWidth = max(preferredWidth, fittedWidth)
+        camera.viewportWidth = fittedWidth
         camera.viewportHeight = camera.viewportWidth * this.height / this.width
         camera.position.set(0f, 4f, 0f)
         camera.direction.set(0f, -1f, 0f)
@@ -190,14 +189,18 @@ class PlayerView(private val tuning: ViewTuning = ViewTuning()) : GameView {
 class GameViews {
     private val top = TopView()
     private val player = PlayerView()
-    var mode = ViewMode.TOP
+    var active: GameView = top
         private set
-    var placing = false
-    val active: GameView get() = if (placing) top else when (mode) { ViewMode.TOP -> top; ViewMode.PLAYER -> player }
 
-    fun select(mode: ViewMode) { this.mode = mode }
-    fun reset() { player.reset() }
+    fun follow(session: GameSession) {
+        val next = if (session.placement != null || session.player == Player.COMPUTER) top else player
+        if (active !== next && next === player) player.reset()
+        active = next
+    }
+
+    fun reset() = player.reset()
     fun resize(width: Int, height: Int) { top.resize(width, height); player.resize(width, height) }
-    // Keep the last aiming pose even while top view is selected, so switching during a shot is stable.
-    fun update(cueBall: Point?, direction: Point, canAim: Boolean, deltaSeconds: Float = 0f) { player.update(cueBall, direction, canAim, deltaSeconds) }
+    fun update(cueBall: Point?, direction: Point, canAim: Boolean, deltaSeconds: Float = 0f) {
+        player.update(cueBall, direction, canAim, deltaSeconds)
+    }
 }

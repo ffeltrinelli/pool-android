@@ -1,6 +1,6 @@
 # Current screenshots and gameplay video
 
-The README embeds the player-view start alongside a linked gameplay-video preview and links to the [gallery folder](images/). Gallery captures use the production desktop renderer at 1080 × 2400; they are not Android device captures. The start fixture confirms break placement and aims the resting cue toward the fresh rack before any shot.
+The README embeds the player-view start alongside the current gameplay-video preview and links to the [gallery folder](images/). Gallery captures use the production desktop renderer at 1080 × 2400; they are not Android device captures. Top view depicts a computer turn; placement uses the same overhead framing. Settings contains Aided aim, Difficulty, Restart and Exit game. The start fixture confirms break placement and aims the resting cue toward the fresh rack before any shot.
 
 ## Refresh procedure
 

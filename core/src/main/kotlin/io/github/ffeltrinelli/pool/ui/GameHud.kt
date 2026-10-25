@@ -5,7 +5,6 @@ import com.badlogic.gdx.graphics.g2d.*
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.utils.Disposable
 import io.github.ffeltrinelli.pool.model.*
-import io.github.ffeltrinelli.pool.view.ViewMode
 import io.github.ffeltrinelli.pool.opponent.OpponentDifficulty
 import kotlin.math.*
 
@@ -63,7 +62,7 @@ class GameHud : Disposable {
         updateLayout(next.placementVisible, glyphs.height)
     }
 
-    fun render(session: GameSession, mode: ViewMode, aidedAim: Boolean, presentation: HudPresentation) {
+    fun render(session: GameSession, aidedAim: Boolean, presentation: HudPresentation) {
         sprites.projectionMatrix = camera.combined
         sprites.begin()
         drawHeader(session, presentation)
@@ -72,7 +71,7 @@ class GameHud : Disposable {
         }
         if (session.finished) drawResult(session)
         drawGear()
-        if (presentation.settingsOpen) drawSettings(mode, aidedAim, presentation.difficulty)
+        if (presentation.settingsOpen) drawSettings(aidedAim, presentation.difficulty)
         sprites.end()
     }
 
@@ -113,15 +112,12 @@ class GameHud : Disposable {
         sprites.draw(gearIcon, layout.gear.x + 8f, layout.gear.y + 8f, 32f, 32f)
     }
 
-    private fun drawSettings(mode: ViewMode, aidedAim: Boolean, difficulty: OpponentDifficulty) {
+    private fun drawSettings(aidedAim: Boolean, difficulty: OpponentDifficulty) {
         shade()
         rectangle(layout.panel, "163039")
-        text("SETTINGS", 60f, layout.uiHeight / 2 + 202.5f, TextStyle.HEADING, "f2e5c8")
+        text("SETTINGS", 60f, layout.panel.y + layout.panel.height - 35f, TextStyle.HEADING, "f2e5c8")
         button(layout.close, "X")
-        text("View mode", 60f, layout.uiHeight / 2 + 163.5f, TextStyle.BODY, "b8ccca")
-        button(layout.top, "Top view", mode == ViewMode.TOP)
-        button(layout.player, "Player view", mode == ViewMode.PLAYER)
-        text("Aided aim", 60f, layout.uiHeight / 2 + 78.5f, TextStyle.BODY, "b8ccca")
+        text("Aided aim", 60f, layout.aidedAim.y + 66f, TextStyle.BODY, "b8ccca")
         button(layout.aidedAim, if (aidedAim) "On" else "Off", aidedAim)
         drawDifficulty(difficulty)
         button(layout.restart, "Restart")

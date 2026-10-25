@@ -3,13 +3,12 @@ package io.github.ffeltrinelli.pool
 import com.badlogic.gdx.Preferences
 import io.github.ffeltrinelli.pool.opponent.OpponentDifficulty
 import io.github.ffeltrinelli.pool.ui.*
-import io.github.ffeltrinelli.pool.view.ViewMode
 import org.junit.Assert.*
 import org.junit.Test
 import java.lang.reflect.Proxy
 
 class GameControlsTest {
-    private class Preference(var saved: ViewMode = ViewMode.TOP) : SettingsPreference {
+    private class Preference : SettingsPreference {
         var difficulty = OpponentDifficulty.MEDIUM
         var difficultySaves = 0
         override fun loadDifficulty() = difficulty
@@ -17,8 +16,6 @@ class GameControlsTest {
         var aided = true
         override fun loadAidedAim() = aided
         override fun saveAidedAim(enabled: Boolean) { aided = enabled }
-        override fun loadViewMode() = saved
-        override fun saveViewMode(mode: ViewMode) { saved = mode }
     }
     private class Effects : ControlEffects {
         var exits = 0
@@ -26,12 +23,10 @@ class GameControlsTest {
         var cancelled = 0
         var paused = false
         var restarts = 0
-        var selected = ViewMode.TOP
         override fun cancelGesture() { cancelled++ }
         override fun pauseGame() { paused = true }
         override fun resumeGame() { paused = false }
         override fun restartGame() { restarts++ }
-        override fun selectView(mode: ViewMode) { selected = mode }
     }
 
     @Test fun `settings blocks gameplay cancels stroke and pauses until closed`() {
@@ -63,32 +58,13 @@ class GameControlsTest {
         assertFalse(controls.suspended || effects.paused)
     }
 
-    @Test fun `mode selection persists cancels input and leaves rack untouched`() {
-        val preference = Preference()
-        val effects = Effects()
-        val controls = GameControls(preference, effects)
-        controls.handle(HudAction.SETTINGS)
-        controls.handle(HudAction.PLAYER_VIEW)
-        assertEquals(ViewMode.PLAYER, controls.viewMode)
-        assertEquals(ViewMode.PLAYER, effects.selected)
-        assertEquals(2, effects.cancelled)
-        assertEquals(0, effects.restarts)
-        assertTrue(effects.paused)
-        val relaunched = GameControls(preference, Effects())
-        assertEquals(ViewMode.PLAYER, relaunched.viewMode)
-        controls.handle(HudAction.RESTART)
-        assertEquals(1, effects.restarts)
-        assertEquals(ViewMode.PLAYER, controls.viewMode)
-        assertFalse(controls.settingsOpen || controls.suspended)
-    }
-
-    @Test fun `saved preference defaults to top tolerates unknown values and flushes selection`() {
+    @Test fun `saved preferences ignore legacy modes and preserve aim and difficulty`() {
         val values = mutableMapOf<String, Any>()
         var flushes = 0
         val preferences = Proxy.newProxyInstance(Preferences::class.java.classLoader, arrayOf(Preferences::class.java)) { proxy, method, args ->
             when (method.name) {
                 "getString", "getBoolean" -> {
-                    check(args[0] != "play-mode")
+                    check(args[0] !in listOf("play-mode", "view-mode"))
                     values[args[0]] ?: args[1]
                 }
                 "putString", "putBoolean" -> { values[args[0] as String] = args[1]; proxy }
@@ -97,19 +73,13 @@ class GameControlsTest {
             }
         } as Preferences
         val store = SavedSettingsPreference(preferences)
-        assertEquals(ViewMode.TOP, store.loadViewMode())
         values["view-mode"] = "obsolete"
-        assertEquals(ViewMode.TOP, store.loadViewMode())
-        store.saveViewMode(ViewMode.PLAYER)
-        assertEquals(ViewMode.PLAYER, SavedSettingsPreference(preferences).loadViewMode())
         assertTrue(store.loadAidedAim())
         store.saveAidedAim(false)
         assertFalse(SavedSettingsPreference(preferences).loadAidedAim())
-        assertEquals(ViewMode.PLAYER, store.loadViewMode())
         for (legacy in listOf("SOLO", "COMPUTER", "obsolete")) {
             values["play-mode"] = legacy
             val controls = GameControls(SavedSettingsPreference(preferences), Effects())
-            assertEquals(ViewMode.PLAYER, controls.viewMode)
             assertFalse(controls.aidedAim)
             assertEquals(io.github.ffeltrinelli.pool.model.Player.HUMAN, io.github.ffeltrinelli.pool.model.GameSession().player)
         }
@@ -118,9 +88,8 @@ class GameControlsTest {
         assertEquals(OpponentDifficulty.MEDIUM, store.loadDifficulty())
         store.saveDifficulty(OpponentDifficulty.EASY)
         assertEquals(OpponentDifficulty.EASY, SavedSettingsPreference(preferences).loadDifficulty())
-        assertEquals(ViewMode.PLAYER, store.loadViewMode())
         assertFalse(store.loadAidedAim())
-        assertEquals(3, flushes)
+        assertEquals(2, flushes)
     }
 
     @Test fun `aided aim is enabled initially saved independently and retained by restart`() {
@@ -133,12 +102,10 @@ class GameControlsTest {
         assertFalse(controls.aidedAim)
         assertTrue(controls.suspended)
         assertEquals(0, effects.restarts)
-        controls.handle(HudAction.PLAYER_VIEW)
         controls.handle(HudAction.RESTART)
         assertFalse(controls.aidedAim)
         val relaunched = GameControls(preference, Effects())
         assertFalse(relaunched.aidedAim)
-        assertEquals(ViewMode.PLAYER, relaunched.viewMode)
     }
 
     @Test fun `difficulty persists without restarting resuming or saving duplicate selections`() {
@@ -171,7 +138,7 @@ class GameControlsTest {
         assertEquals(0, effects.restarts)
     }
 
-    @Test fun `HUD routes gear modes results and outside modal taps at multiple sizes`() {
+    @Test fun `HUD routes settings results and outside modal taps at multiple sizes`() {
         for ((width, height) in listOf(1080 to 2400, 420 to 933, 540 to 1200)) {
             val layout = HudLayout(width, height)
             fun hit(rect: com.badlogic.gdx.math.Rectangle, open: Boolean = false, finished: Boolean = false) =
@@ -180,15 +147,13 @@ class GameControlsTest {
             assertTrue(layout.gear.width >= 48f && layout.gear.height >= 48f)
             assertEquals(HudAction.SETTINGS, hit(layout.gear))
             assertEquals(HudAction.SETTINGS, hit(layout.gear, finished = true))
-            assertEquals(HudAction.TOP_VIEW, hit(layout.top, true))
-            assertEquals(HudAction.PLAYER_VIEW, hit(layout.player, true))
             assertEquals(HudAction.CLOSE, hit(layout.close, true))
             assertEquals(HudAction.TOGGLE_AIM, hit(layout.aidedAim, true))
             assertEquals(HudAction.EXIT, hit(layout.exit, true))
-            assertTrue(layout.top.y > layout.aidedAim.y && layout.aidedAim.y > layout.restart.y && layout.restart.y == layout.exit.y)
+            assertTrue(layout.aidedAim.y > layout.restart.y && layout.restart.y == layout.exit.y)
             assertTrue(layout.close.x > layout.panel.x + layout.panel.width / 2)
-            assertTrue(layout.close.y > layout.top.y)
-            for (rect in listOf( layout.close, layout.top, layout.player, layout.aidedAim, layout.restart, layout.exit)) {
+            assertTrue(layout.close.y > layout.aidedAim.y + layout.aidedAim.height)
+            for (rect in listOf( layout.close, layout.aidedAim, layout.restart, layout.exit)) {
                 assertTrue(rect.width >= 48f && rect.height >= 48f)
                 assertTrue(layout.panel.contains(rect))
             }

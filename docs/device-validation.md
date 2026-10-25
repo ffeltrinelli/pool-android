@@ -339,3 +339,30 @@ Added a clickable video preview alongside the README's player-view screenshot. T
 Verified 900 frames at 30 fps, 540 × 1200 H.264 video and AAC sound, duration 30.0 seconds, 478,619 bytes. The clip contains 3 cue, 24 ball, 37 cushion, and 2 pocket playback events; mixed peak is 0.528 full scale with no clipping. Inspected a contact sheet across the full clip. Two signal-fixture tests verify onsets, overlap, gain, early stops, silence, and clipping rejection. Audio source attribution is retained in the README, refresh documentation, and MP4 metadata. The poster is committed; the MP4 is hosted as a GitHub PR attachment. GitHub Markdown rendering was checked: it converts the linked preview into a native inline video player beside the screenshot, initially muted with sound available on unmute. Refresh guidance and the PR checklist cover the video when relevant appearance, gameplay, or sound becomes outdated.
 
 Full verification for this recording update: **173 unit/native tests passed**, one opt-in calibration skipped; **141 rendered scenarios passed**; audio decoding/playback lifecycle passed; Android lint **0 errors / 6 existing warnings** and debug APK assembly passed. Both Python soundtrack tests passed. No new device validation or physics change is claimed.
+
+
+## Automatic cameras and 70 cm cue — 25 October 2026
+
+Camera selection now follows turn ownership and placement: human aiming and ball motion use Player view, while placement and the entire computer turn use Top view. Human shots retain their animated pullback. Results keep the last shooter's view. The overhead projection fits outer table dimensions plus an 80 mm total margin. Settings no longer selects or saves camera views; old view preferences are ignored. The displayed cue cap is 0.70 m, subject to camera clipping.
+
+Desktop verification on macOS ARM64 with JDK 21:
+
+- Core suite: 177 tests, 176 passed and the opt-in difficulty calibration skipped; no failures. Coverage includes ownership during motion, retained computer turns, handoff, placement confirmation, alternating restart, suspension, legacy preferences, cue clipping, and overhead projection at portrait, square and landscape sizes.
+- Android lint and debug APK assembly passed. Desktop audio smoke passed decoding, playback allocation and production lifecycle checks.
+- All 113 deterministic rendered scenarios passed. Manual image inspection covered compact settings, full-table overhead framing, placement, player aiming, results, and withdrawn human/computer cues beside rails. Updated the current gallery; removed obsolete manual-view fixture combinations.
+- Re-recorded the production gameplay demo: 900 frames, 30 seconds, 540 × 1200, H.264/AAC, 473,252 bytes. Audio verification reported peak 0.528, RMS 0.0148, and cue/ball/cushion/pocket events. One-second samples across the clip show the human pullback and overhead computer planning, strokes and motion. The MP4 and detailed reports remain in ignored `build/reports/`; the refreshed poster is updated alongside the gallery.
+
+The initial desktop pass did not include a physical-device run or performance soak; the real-device follow-up below supersedes that limitation for the listed checks. Subjective touch comfort and uninterrupted audiovisual playback remain hands-on checks. The device smoke script now uses automatic cameras and the compact settings Restart position; only its CLI was checked in this session. The refreshed video is [attached to PR #16](https://github.com/user-attachments/assets/527ce3f0-ee9c-42dd-b021-9526481f66fe); the README preview links to that upload.
+
+
+### Real-device follow-up — 25 October 2026
+
+Detected an authorized, unlocked OnePlus 8T (KB2003), API 34, 1080 × 2400 over wireless adb. Rebuilt the current debug APK and installed it successfully with `install -r`. Cold launch completed in **633 ms**. APK SHA-256: `4144473f9032271baab33c1de3bb06acdb02959a0d3e185e1edcefaf98038361`.
+
+- Inspected overhead initial placement with every rail/pocket visible; Confirm placement switched to close Player view. The longer cue rendered correctly. Settings showed Aided aim, Difficulty, Restart and Exit game without camera controls.
+- A scripted human break retained the perspective pullback during motion and returned behind the settled cue ball after a retained turn.
+- Opened Settings during that shot: screenshots 0.5 seconds apart had identical decoded game pixels. Home/resume retained PID 1258, kept Settings open, and preserved those same pixels. Comparison excluded the top 103-pixel cutout and leftmost 20 columns occupied by the phone's gaming overlay.
+- Restart from compact Settings selected the computer as the alternating breaker. Twenty sampled screenshots showed overhead planning, the cue stroke, and moving balls, followed by close Player view when control passed to the human. All rails and pockets remained visible during overhead play.
+- App-specific logs contained no PoolPhysics, PoolAudio, or AndroidRuntime errors or fatal exception/signal. The observed computer break used 12 evaluations at the five-second budget without fallback.
+
+Evidence, screenshot contact sheets, process/frame comparisons, app logs, and `verification.json` are under `build/reports/device-automatic-cameras/`. Left the updated app foregrounded for the human turn, with the existing Aided aim Off and Medium difficulty preserved. These are scripted smoke checks, not a full rack, ten-minute soak, subjective touch evaluation, or speaker/audio acceptance.

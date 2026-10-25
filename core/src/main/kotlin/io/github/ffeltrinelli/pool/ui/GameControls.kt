@@ -1,24 +1,20 @@
 package io.github.ffeltrinelli.pool.ui
 
 import io.github.ffeltrinelli.pool.opponent.OpponentDifficulty
-import io.github.ffeltrinelli.pool.view.ViewMode
 
-enum class HudAction { SETTINGS, CLOSE, RESTART, TOP_VIEW, PLAYER_VIEW, TOGGLE_AIM, EXIT, EASY, MEDIUM, HARD, BLOCK }
+enum class HudAction { SETTINGS, CLOSE, RESTART, TOGGLE_AIM, EXIT, EASY, MEDIUM, HARD, BLOCK }
 
 interface ControlEffects {
     fun cancelGesture()
     fun pauseGame()
     fun resumeGame()
     fun restartGame()
-    fun selectView(mode: ViewMode)
     fun exitGame()
 }
 
 /** Settings and OS suspension are independent: closing one must not resume the other. */
 class GameControls(private val preference: SettingsPreference, private val effects: ControlEffects) {
     var difficulty = preference.loadDifficulty()
-        private set
-    var viewMode = preference.loadViewMode()
         private set
     var aidedAim = preference.loadAidedAim()
         private set
@@ -39,8 +35,6 @@ class GameControls(private val preference: SettingsPreference, private val effec
                 settingsOpen = false
                 updateSuspension()
             }
-            HudAction.TOP_VIEW -> selectView(ViewMode.TOP)
-            HudAction.PLAYER_VIEW -> selectView(ViewMode.PLAYER)
             HudAction.TOGGLE_AIM -> { aidedAim = !aidedAim; preference.saveAidedAim(aidedAim) }
             HudAction.EXIT -> { effects.cancelGesture(); effects.pauseGame(); effects.exitGame() }
             HudAction.EASY -> selectDifficulty(OpponentDifficulty.EASY)
@@ -54,14 +48,6 @@ class GameControls(private val preference: SettingsPreference, private val effec
         if (this.difficulty == difficulty) return
         this.difficulty = difficulty
         preference.saveDifficulty(difficulty)
-    }
-
-    private fun selectView(mode: ViewMode) {
-        if (viewMode == mode) return
-        effects.cancelGesture()
-        viewMode = mode
-        preference.saveViewMode(mode)
-        effects.selectView(mode)
     }
 
     fun pause() { backgrounded = true; effects.cancelGesture(); updateSuspension() }

@@ -17,32 +17,23 @@ class GameInputTest {
     private class Settings : SettingsPreference {
         override fun loadDifficulty() = OpponentDifficulty.MEDIUM
         override fun saveDifficulty(difficulty: OpponentDifficulty) = Unit
-        override fun loadViewMode() = ViewMode.TOP
-        override fun saveViewMode(mode: ViewMode) = Unit
         override fun loadAidedAim() = true
         override fun saveAidedAim(enabled: Boolean) = Unit
     }
 
     private class Effects : ControlEffects {
         var cancellations = 0
-        var viewChanges = 0
         override fun cancelGesture() { cancellations++ }
         override fun pauseGame() = Unit
         override fun resumeGame() = Unit
         override fun restartGame() = Unit
-        override fun selectView(mode: ViewMode) { viewChanges++ }
         override fun exitGame() = Unit
     }
 
     @Test fun `settings construction reads preferences without triggering game commands`() {
         val effects = Effects()
-        val controls = GameControls(Settings(), effects)
-        assertEquals(ViewMode.TOP, controls.viewMode)
+        GameControls(Settings(), effects)
         assertEquals(0, effects.cancellations)
-        assertEquals(0, effects.viewChanges)
-        controls.handle(HudAction.PLAYER_VIEW)
-        assertEquals(1, effects.viewChanges)
-        assertEquals(1, effects.cancellations)
     }
 
     @Test fun `input routes modal and Back before gameplay and ignores background touches`() = withInput { input, controls, gesture, _, _ ->
@@ -96,9 +87,9 @@ class GameInputTest {
             assertEquals(CuePhase.IDLE, gesture.phase)
             input.touchDown(210, 104, 0, Input.Buttons.LEFT)
             assertNotNull(session.placement)
-            input.touchDown(210, 630, 0, Input.Buttons.LEFT)
-            input.touchDragged(240, 680, 0)
-            input.touchUp(240, 680, 0, Input.Buttons.LEFT)
+            input.touchDown(210, 700, 0, Input.Buttons.LEFT)
+            input.touchDragged(240, 740, 0)
+            input.touchUp(240, 740, 0, Input.Buttons.LEFT)
             assertNotNull(session.placement)
             input.touchDown(210, 104, 0, Input.Buttons.LEFT)
             assertNull(session.placement)
@@ -129,13 +120,13 @@ class GameInputTest {
             val shots = mutableListOf<ShotCommand>()
             val views = GameViews().apply { resize(420, HudLayout(420, 933, placing).gameHeight) }
             val placement = io.github.ffeltrinelli.pool.input.CueBallPlacement()
-            views.placing = placing
+            views.follow(session)
             val input = GameInput(controls, session, { HudLayout(420, 933, placing) }, views, physics, gesture, { session.humanTurn }, shots::add, placement) {
                 val region = session.placement
                 if (region != null && placement.invalidReason(physics.snapshot(), region) == null) {
                     physics.placeBall(0, placement.point)
                     session.confirmPlacement()
-                    views.placing = false
+                    views.follow(session)
                 }
             }
             check(input, controls, gesture, session, shots)
