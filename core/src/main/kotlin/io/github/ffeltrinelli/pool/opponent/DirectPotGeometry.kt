@@ -6,6 +6,8 @@ import io.github.ffeltrinelli.pool.physics.TableSnapshot
 import kotlin.math.abs
 import kotlin.math.sqrt
 
+internal data class DirectPotSeeds(val centered: List<ShotCandidate>, val offCenter: List<ShotCandidate>)
+
 /** One definition of a clear ghost-ball pot, shared by fixed-cue and placement search. */
 internal class DirectPotGeometry(private val table: TableSnapshot) {
     private val predictor = AimPredictor()
@@ -14,17 +16,24 @@ internal class DirectPotGeometry(private val table: TableSnapshot) {
     private val targets = table.rulesContext().targets
     private val obstacles = mutableMapOf<Int, List<AimBall>>()
 
-    fun generate(checkBudget: () -> Unit): List<ShotCandidate> = buildList {
+    fun generate(checkBudget: () -> Unit): DirectPotSeeds {
+        val centered = mutableListOf<ShotCandidate>()
+        val offCenter = mutableListOf<ShotCandidate>()
         for (ball in table.balls.filter { it.id in targets }) for (pocket in PocketGeometry.pockets) {
-            checkBudget()
-            candidate(ball.id, pocket)?.let(::add)
+            for ((index, outgoing) in DirectPocketRoutes.directions(ball.point, pocket).withIndex()) {
+                checkBudget()
+                val candidate = candidate(ball.id, pocket, outgoing) ?: continue
+                if (index == 0) centered += candidate else offCenter += candidate
+            }
         }
-    }.sortedBy { it.rankingCost }
+        return DirectPotSeeds(centered.sortedBy { it.rankingCost }, offCenter.sortedBy { it.rankingCost })
+    }
 
-    fun candidate(target: Int, pocket: PocketDefinition): ShotCandidate? {
+    fun candidate(target: Int, pocket: PocketDefinition, direction: Point? = null): ShotCandidate? {
         if (target !in targets) return null
         val ball = table.balls.firstOrNull { it.id == target } ?: return null
-        val outgoing = (pocket.center - ball.point).normalized()
+        val outgoing = direction ?: (pocket.center - ball.point).normalized()
+        val mouthDistance = DirectPocketRoutes.mouthDistance(ball.point, outgoing, pocket) ?: return null
         val ghost = ball.point - outgoing * (2 * TableGeometry.BALL_RADIUS)
         if (abs(ghost.x) > TableGeometry.HALF_WIDTH - TableGeometry.BALL_RADIUS ||
             abs(ghost.z) > TableGeometry.HALF_LENGTH - TableGeometry.BALL_RADIUS) return null
@@ -35,7 +44,7 @@ internal class DirectPotGeometry(private val table: TableSnapshot) {
             balls.filter { it.id != ball.id }.map { if (it.id == 0) AimBall(99, it.position) else it }
         }
         val objectPath = predictor.predict(ball.point, outgoing, objectObstacles)
-        if ((objectPath.end - ball.point).length() + 0.005f < (pocket.mouthCenter - ball.point).length()) return null
+        if ((objectPath.end - ball.point).length() + 0.005f < mouthDistance) return null
         val cueDistance = (ghost - cue).length()
         val objectDistance = (pocket.center - ball.point).length()
         val impulse = (0.18f + 0.16f * sqrt(cueDistance + objectDistance / (cut * cut))).coerceIn(0.08f, OpponentTuning.MAX_IMPULSE)

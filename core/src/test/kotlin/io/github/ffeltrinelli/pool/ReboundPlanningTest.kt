@@ -175,6 +175,19 @@ class ReboundPlanningTest {
         } finally { simulation.close() }
     }
 
+    @Test fun `a contact pot does not block intended pot preference during refinement`() {
+        val table = PlanningBenchmarkTest.layouts().getValue("direct")
+        val candidate = ShotCandidates().generate(table).first()
+        val simulation = ShotSimulation()
+        try {
+            val search = ShotSearch(table, candidate.shot, simulation, 2, Long.MAX_VALUE, { false })
+            search.evaluate(candidate.shot, targetBallId = candidate.targetBallId, kind = ShotKind.CONTACT)
+            search.evaluate(candidate.shot, targetBallId = candidate.targetBallId, origin = TrialOrigin.REFINEMENT)
+            assertEquals(ShotKind.DIRECT_POT, search.result().kind)
+            assertEquals(candidate.targetBallId, search.result().targetBallId)
+        } finally { simulation.close() }
+    }
+
     @Test fun `direct attempt quota and interrupted rollout retain the completed legal shot`() {
         val table = PlanningBenchmarkTest.layouts().getValue("direct")
         val candidate = ShotCandidates().generate(table).first()

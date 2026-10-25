@@ -63,6 +63,7 @@ class BulletShotPlanner(
         val setupMillis = (System.nanoTime() - started) / 1_000_000.0
         var geometryNanos = 0L
         val direct = mutableListOf<Seed>()
+        val offCenter = mutableListOf<Seed>()
         try {
             val geometryStarted = System.nanoTime()
             val placements: List<PlanningPosition>
@@ -70,8 +71,14 @@ class BulletShotPlanner(
                 placements = PlanningPositions.shortlist(table, search::checkBudget)
                 for (placement in placements) {
                     search.checkBudget()
-                    val candidates = placement.directPot?.let { listOf(it) }
-                        ?: geometry.generate(table.withCue(placement.point), search::checkBudget).take(if (table.placement == null) 4 else 1)
+                    val positioned = table.withCue(placement.point)
+                    val limit = if (table.placement == null) 4 else 1
+                    val candidates = if (table.rulesContext().breaking) geometry.generate(positioned, search::checkBudget)
+                    else {
+                        val pots = geometry.directSeeds(positioned, search::checkBudget)
+                        offCenter += pots.offCenter.take(limit).map { Seed(it, placement.point) }
+                        placement.directPot?.let { listOf(it) } ?: pots.centered.take(limit)
+                    }
                     direct += candidates.map { Seed(it, placement.point) }
                 }
             } finally { geometryNanos += System.nanoTime() - geometryStarted }
@@ -91,7 +98,12 @@ class BulletShotPlanner(
                 }.take(if (table.placement == null) 4 else 2).toList()
                 val opening = if (table.placement != null) direct + contacts else direct.take(1) + contacts + direct.drop(1)
                 ShotOptimizer.evaluateSeeds(opening, search)
-                if (direct.isNotEmpty()) ShotOptimizer.refine(direct, search, seed)
+                // Keep established centered pots; otherwise try direct pocket entries before rebounds.
+                val refinement = if (search.directPotFound) direct else {
+                    ShotOptimizer.evaluateSeeds(offCenter, search)
+                    direct + offCenter
+                }
+                if (refinement.isNotEmpty()) ShotOptimizer.refine(refinement, search, seed)
             } catch (_: ShotSearch.DirectPhaseEnded) { /* Reserve the second phase for rebounds. */ }
             if (!search.directPotFound && !table.rulesContext().breaking && search.remaining > 0) {
                 search.startRebounds()

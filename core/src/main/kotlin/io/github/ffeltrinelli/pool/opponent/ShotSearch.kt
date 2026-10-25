@@ -110,10 +110,10 @@ internal class ShotSearch(
     /** A secondary score improvement is not evidence that a proven pot became more robust. */
     private fun preserveSuccessfulSeed(evaluation: ShotEvaluation, target: Int?, origin: TrialOrigin): Boolean {
         val previous = bestEvaluation ?: return false
-        return origin == TrialOrigin.REFINEMENT && bestOrigin == TrialOrigin.SEED && target != null && target == bestTarget &&
+        return origin == TrialOrigin.REFINEMENT && bestOrigin == TrialOrigin.SEED && bestKind?.isPot == true && target != null &&
             previous.foul == null && evaluation.foul == null && !previous.lost && !evaluation.lost &&
             previous.won == evaluation.won && previous.objectBalls == evaluation.objectBalls &&
-            target in previous.pocketedTargets && target in evaluation.pocketedTargets
+            bestTarget in previous.pocketedTargets && target in evaluation.pocketedTargets
     }
 
     fun result() = PlanningResult(

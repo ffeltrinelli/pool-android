@@ -15,11 +15,18 @@ data class ShotCandidate(val shot: ShotCommand, val rankingCost: Float, val targ
 /** Ghost-ball geometry only seeds the search; Bullet decides whether a pot actually works. */
 class ShotCandidates {
     private val predictor = AimPredictor()
+    private val directByPosition = mutableMapOf<TableSnapshot, DirectPotSeeds>()
     fun generate(table: TableSnapshot, checkBudget: () -> Unit = {}): List<ShotCandidate> {
         val cue = table.balls.first { it.id == 0 }.point
         if (table.rulesContext().breaking) return listOf(ShotCandidate(
             ShotCommand((Point(0f, TableGeometry.FOOT_SPOT) - cue).normalized(), 1.10f), 0f, kind = ShotKind.BREAK))
-        return DirectPotGeometry(table).generate(checkBudget)
+        val pots = directSeeds(table, checkBudget)
+        return pots.centered + pots.offCenter
+    }
+
+    internal fun directSeeds(table: TableSnapshot, checkBudget: () -> Unit): DirectPotSeeds {
+        checkBudget()
+        return directByPosition.getOrPut(table) { DirectPotGeometry(table).generate(checkBudget) }
     }
 
     /** Broaden the search beyond pots: a firm legal contact can satisfy the rail rule. */
