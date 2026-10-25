@@ -99,3 +99,7 @@ desktop,placement-followup,placement,fixed,cold,259,31,false,null,,9,9
 desktop,placement-followup,placement,fixed,warm,131,31,false,null,,9,9
 desktop,placement-followup,placement,deadline,cold,2113,250,false,null,,9,9
 desktop,placement-followup,placement,deadline,warm,1820,250,false,null,,9,9
+oneplus,placement-followup,placement,fixed,cold,938,31,false,null,null,9,9
+oneplus,placement-followup,placement,fixed,warm,539,31,false,null,null,9,9
+oneplus,placement-followup,placement,deadline,cold,5000,207,false,null,null,9,9
+oneplus,placement-followup,placement,deadline,warm,5000,219,false,null,null,9,9
