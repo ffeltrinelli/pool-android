@@ -1,39 +1,8 @@
 # Agent instructions
 
-## OBEY Clean Code by Robert C. Martin
+## Clean code
 
-Source: https://github.com/ciembor/agent-rules-books/blob/main/clean-code/clean-code.nano.md
-
-### When to use
-
-Use when you need a small always-on bias toward readable, low-surprise code.
-
-### Primary bias to correct
-
-Working code is not automatically clean code.
-
-### Decision rules
-
-- Preserve behavior, write for the next reader, and leave touched code cleaner within scope.
-- Write for local reasoning and use precise names with one term per concept.
-- Split boolean flags, mixed abstraction levels, and hidden side effects out of functions.
-- Separate commands from queries and keep parameters small and meaningful.
-- Keep the happy path readable; make invalid states, errors, and cleanup explicit instead of implicit.
-- Use comments only for rationale or contracts, not to explain confusing code.
-- When touching code, remove the smell most likely to make the next change risky or unclear.
-
-### Trigger rules
-
-- When a function both mutates and answers, split it.
-- When a comment explains the flow, simplify the code first.
-- When async, concurrency, or framework quirks spread the change, reduce shared mutable state and add the right boundary instead of more branching.
-
-### Final checklist
-
-- Local reasoning preserved?
-- Clear names?
-- Clear mutation boundaries?
-- One smell removed?
+Use the `clean-code` skill. Preserve behavior and local reasoning, name concepts precisely, separate mutation from queries, and keep resource cleanup explicit. [Source guidance](https://github.com/ciembor/agent-rules-books/blob/main/clean-code/clean-code.nano.md).
 
 ## Repository orientation
 
@@ -72,9 +41,11 @@ Use the committed Gradle wrapper with JDK 21. Follow [build setup](README.md#bui
 - Use shared `TableGeometry`/`PocketGeometry` definitions for visible geometry, colliders, placement validation, and prediction. Keep tuning centralized; avoid incidental physics, camera, or AI tuning changes during unrelated work.
 - Keep both standard and round Android launcher icons adaptive. Verify branding in the actual launcher drawer/search as well as App info; follow [branding asset guidance](assets/branding/README.md).
 - Render contact shadows as translucent cloth-level planes after opaque geometry, with depth testing and no depth writes; avoid raised solid shadow meshes. See [rendering notes](README.md#architecture-and-tuning).
-- Generate UI fonts through `UiFonts` at the actual render-target pixel width; do not enlarge the small default bitmap font. Keep font generation outside drawing queries and dispose replaced atlases. See [font ownership and attribution](assets/fonts/README.md).
+- Generate UI fonts through `UiFonts` at the actual render-target pixel width; do not enlarge the small default bitmap font. Keep font generation outside drawing queries and dispose replaced atlases. See [font attribution](assets/fonts/README.md).
 
 ## Pull request descriptions
+
+Keep docs and PR descriptions focused on concepts, rationale, and evidence that source does not explain. Briefly explain unfamiliar concepts and expand specialized acronyms on first use; preserve navigation aids. Keep external-resource credits in the README and linked asset notices; replay share text and video metadata should link to the repository.
 
 Include screenshots of the game in PR descriptions when relevant to the changes. For changes to existing visuals, include before-and-after screenshots where practical. Briefly caption screenshots to identify what they demonstrate. Screenshots are optional for changes without a relevant visual effect. Use accessible image attachments or links, not local filesystem paths.
 

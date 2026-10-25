@@ -190,6 +190,7 @@ object VisualSmoke {
             gesture.resetForRack(TableGeometry.CUE_START, Point(0f, TableGeometry.FOOT_SPOT))
             if (name == "gallery-top") session = readyMatch(Player.COMPUTER)
             if (name == "gallery-settings") hudPresentation = hudPresentation.copy(settingsOpen = true)
+            if (name == "gallery-help") hudPresentation = hudPresentation.copy(settingsOpen = true, helpOpen = true)
             if (name == "gallery-result") {
                 finishMatch(Player.HUMAN)
                 physics.reset(listOf(0 to Point(0f, 0.58f)) + (9..15).map { id ->

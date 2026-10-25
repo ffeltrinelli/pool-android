@@ -158,6 +158,20 @@ class GameControlsTest {
         assertEquals(0, effects.restarts)
     }
 
+    @Test fun `help close hit regions block underlying settings at multiple sizes`() {
+        for ((width, height) in listOf(1080 to 2400, 420 to 933, 540 to 1200)) {
+            val layout = HudLayout(width, height)
+            fun hit(rect: com.badlogic.gdx.math.Rectangle) = layout.hit(
+                ((rect.x + rect.width / 2) * width / 420).toInt(),
+                ((layout.uiHeight - rect.y - rect.height / 2) * height / layout.uiHeight).toInt(),
+                settingsOpen = true, finished = false, helpOpen = true)
+            assertEquals(HudAction.CLOSE, hit(layout.helpClose))
+            for (rect in listOf(layout.difficulty, layout.aidedAim, layout.restart, layout.exit, layout.close)) {
+                assertEquals(HudAction.BLOCK, hit(rect))
+            }
+        }
+    }
+
     @Test fun `HUD routes settings results and outside modal taps at multiple sizes`() {
         for ((width, height) in listOf(1080 to 2400, 420 to 933, 540 to 1200)) {
             val layout = HudLayout(width, height)
@@ -168,6 +182,7 @@ class GameControlsTest {
             assertEquals(HudAction.SETTINGS, hit(layout.gear))
             assertEquals(HudAction.SETTINGS, hit(layout.gear, finished = true))
             assertEquals(HudAction.CLOSE, hit(layout.close, true))
+            assertEquals(HudAction.HELP, hit(layout.info, true))
             assertEquals(HudAction.TOGGLE_AIM, hit(layout.aidedAim, true))
             assertEquals(HudAction.EXIT, hit(layout.exit, true))
             assertTrue(layout.aidedAim.y > layout.restart.y && layout.restart.y == layout.exit.y)

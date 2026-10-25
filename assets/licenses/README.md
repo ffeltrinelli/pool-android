@@ -1,6 +1,6 @@
 # Third-party software
 
-Apache Commons Math 3.6.1 (`org.apache.commons:commons-math3:3.6.1`) provides CMA-ES optimization.
+Apache Commons Math 3.6.1 (`org.apache.commons:commons-math3:3.6.1`) provides CMA-ES (Covariance Matrix Adaptation Evolution Strategy), an optimizer that improves shot direction and power by evaluating batches of variations.
 
 Source and project documentation: https://commons.apache.org/proper/commons-math/
 

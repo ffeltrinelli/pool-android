@@ -94,7 +94,14 @@ class ReplayExportDeviceTest {
                             assertNotNull(playback)
                             assertEquals(savedTime, playback!!.seconds, 0f)
                             assertEquals(liveSnapshot, physics.snapshot())
-                            if (++pausedFrames >= 5) { controls.handle(io.github.ffeltrinelli.pool.ui.HudAction.CLOSE); phase = 3 }
+                            if (++pausedFrames == 1) controls.handle(io.github.ffeltrinelli.pool.ui.HudAction.HELP)
+                            assertTrue(controls.helpOpen)
+                            if (pausedFrames >= 5) {
+                                controls.handle(io.github.ffeltrinelli.pool.ui.HudAction.CLOSE)
+                                assertTrue(controls.settingsOpen && controls.suspended)
+                                controls.handle(io.github.ffeltrinelli.pool.ui.HudAction.CLOSE)
+                                phase = 3
+                            }
                         }
                         3 -> if (playback != null && playback.seconds >= playback.clip.pocketSeconds) {
                             savedTime = playback.seconds

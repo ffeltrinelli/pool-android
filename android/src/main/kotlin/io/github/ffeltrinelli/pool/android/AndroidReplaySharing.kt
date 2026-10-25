@@ -58,7 +58,7 @@ class AndroidReplaySharing(private val activity: Activity) : ReplaySharing {
                 val send = Intent(Intent.ACTION_SEND).apply {
                     type = "video/mp4"
                     putExtra(Intent.EXTRA_STREAM, uri)
-                    putExtra(Intent.EXTRA_TEXT, CREDIT)
+                    putExtra(Intent.EXTRA_TEXT, REPOSITORY_URL)
                     clipData = ClipData.newRawUri("Feltri 8-Ball replay", uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
@@ -77,10 +77,6 @@ class AndroidReplaySharing(private val activity: Activity) : ReplaySharing {
     }
     companion object {
         const val SHARE_REQUEST = 8124
-        const val CREDIT = "Feltri 8-Ball. Game effects: Za-Games and Kenney (CC0). " +
-            "Pocket: Pool ball falling into pocket by freesman, Directory.Audio, CC BY 3.0 " +
-            "https://creativecommons.org/licenses/by/3.0/ . " +
-            "Source: https://directory.audio/sound-effects/sports/26410-pool-ball-falling-into-pocket . " +
-            "Edited: mono, resampling, trimming and fades; mixed at game playback gains."
+        const val REPOSITORY_URL = "https://github.com/ffeltrinelli/pool-android"
     }
 }

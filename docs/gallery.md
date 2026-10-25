@@ -1,6 +1,6 @@
 # Current screenshots and gameplay video
 
-The README embeds the player-view start and replay views and links to the [gallery folder](images/). Gallery captures use the production desktop renderer at 1080 × 2400; they are not Android device captures. Top view depicts a computer turn; placement uses the same overhead framing. Settings contains Aided aim, Replays, Difficulty, Restart and Exit game. Replay captures show the low cue camera, soft cloth-level ball shadows, and the full-table view after first contact. The start fixture confirms break placement and aims the resting cue toward the fresh rack before any shot.
+The [README](../README.md#screenshots) uses desktop captures from the production renderer at 1080 × 2400. They are not device screenshots. Settings includes a **?** help button opening the illustrated [how-to-play overlay](images/help.png).
 
 ## Refresh procedure
 
@@ -13,12 +13,15 @@ python3 tools/update_gallery.py
 
 On headless Linux, prefix the Gradle command with `xvfb-run -a`. Check `build/reports/visual/index.html` for a successful run, then visually inspect each copied image. The copy script checks capture presence; it does not establish freshness or visual correctness. Run the suite on the current checkout before copying.
 
+Each deterministic scenario uses a fixed test setup so its screenshot can be reproduced.
+
 | Gallery file | Deterministic source scenario |
 |---|---|
 | `splash.png` | `gallery-splash` |
 | `top-view.png` | `gallery-top` |
 | `player-view-start.png` | `gallery-player` |
 | `settings.png` | `gallery-settings` |
+| `help.png` | `gallery-help` |
 | `placement.png` | `gallery-placement` |
 | `result.png` | `gallery-result` |
 | `replay-close.png` | `replay-close` |
@@ -32,7 +35,7 @@ The table-concepts SVG remains a rules diagram, maintained against shared table 
 
 ## Gameplay video
 
-The gallery procedure produces a 30-second, normal-speed desktop recording (540 × 1200, 30 fps, H.264 video and AAC audio). It runs `PoolGame` with regular pointer gestures, production physics, rules, camera transitions, and the real computer planning worker. It is not an Android device capture. The procedure is repeatable; rack shuffling and worker timing mean recordings need not be identical.
+The gallery procedure produces a 30-second, normal-speed desktop recording (540 × 1200, 30 frames per second, H.264 video compression and AAC audio compression). It runs `PoolGame` with regular pointer gestures, production physics, rules, camera transitions, and the real computer planning worker. It is not an Android device capture. The procedure is repeatable; rack shuffling and worker timing mean recordings need not be identical.
 
 With JDK 21, a working OpenGL context, Python 3, `ffmpeg`, and `ffprobe` on PATH:
 
@@ -40,11 +43,9 @@ With JDK 21, a working OpenGL context, Python 3, `ffmpeg`, and `ffprobe` on PATH
 python3 tools/record_gameplay_demo.py
 ```
 
-The opt-in `:lwjgl3:gameplayDemo` task captures 900 frames with a fixed frame interval, confirms placement, and performs a human break through the normal input handler. It requires at least one human and one computer shot. Preferences are isolated under the report directory. Capture stays in test tooling; no production setup controls or wall-clock sleeps are added. On headless Linux, prefix the Python command with `xvfb-run -a`.
+The recording must include human and computer shots with production sound timing. Preferences and capture controls stay in test tooling. On headless Linux, prefix the command with `xvfb-run -a`. See the [repository credits](../README.md#assets-and-attribution); new video metadata links there.
 
-Replays play at 75% speed while their five-second decision hold remains in real time. The soundtrack uses the actual production `SoundPlayer` playback commands and bundled PCM samples, preserving event timing, gain, overlapping voices, and stop times. It does not record microphones or unrelated system audio. There is no music or narration. Cue/ball/cushion sounds are CC0; “Pool ball falling into pocket” by freesman, Directory.Audio, is CC BY 3.0, edited with downmixing, resampling, trimming, and fades. See [full audio credits and source links](../assets/audio/README.md); attribution is also embedded in the MP4 metadata.
-
-Outputs are `build/reports/gameplay-demo/gameplay.mp4`, `audio-events.json`, and `verification.json`. The script rejects missing meaningful audio, clipping, unexpected codecs/frame count, duration other than 30 seconds, or size above 10 MB. It copies the five-second poster to `docs/images/gameplay-preview.png`. The ten-image screenshot refresh above does not overwrite that poster. `--reuse-capture` remuxes an already fresh capture from the current checkout without replaying gameplay.
+Outputs are `build/reports/gameplay-demo/gameplay.mp4`, `audio-events.json`, and `verification.json`. The script rejects missing meaningful audio, clipping, unexpected codecs/frame count, duration other than 30 seconds, or size above 10 MB. It copies the five-second poster to `docs/images/gameplay-preview.png`. The screenshot refresh above does not overwrite that poster. `--reuse-capture` combines fresh video and audio from the current checkout into a new MP4 without replaying gameplay.
 
 Watch the entire clip with sound: check natural pacing, readable HUD, cue and camera motion, computer turns, and synchronized impacts. Upload the verified clip to the current PR, and use its accessible attachment URL in the PR description:
 
@@ -64,7 +65,7 @@ With one unlocked, authorized device connected, build and run the test APK:
 ./gradlew :android:connectedDebugAndroidTest
 ```
 
-`ReplayExportDeviceTest` exercises a deterministic legal pot through production replay coordination, verifies Settings suspension and frozen live physics, checks the five-second Skip countdown, taps Share during the final hold, dismisses the Android chooser, and verifies automatic return. A separate export test covers cancellation followed by a new export, video/audio tracks, the cache URI, and full playback by a separate test-APK recipient with temporary read permission. The diagonal export-depth test also checks the production framebuffer precision and compares four oblique views against a 16-bit reference to catch depth fighting. Fixture setup and the recipient Activity exist only in `androidTest`.
+The test APK (Android application package) runs fixed fixtures—saved test setups—on the phone. Device acceptance covers replay/Settings suspension, the five-second hold, Share/return, cancellation/retry, recipient playback, and oblique export depth. Fixtures and the recipient activity stay in `androidTest`; no personal sharing target is used.
 
 The test saves `files/replay-device-test.mp4` and `files/replay-real-shot.mp4` inside the debug app. With multiple devices, target the intended serial explicitly when retrieving evidence:
 
@@ -73,4 +74,4 @@ adb -s SERIAL exec-out run-as io.github.ffeltrinelli.pool cat files/replay-devic
 python3 tools/verify_replay_video.py build/reports/replay/device-export.mp4 --replay-seconds 3.3466667
 ```
 
-The verifier requires FFmpeg/ffprobe. It checks H.264/AAC, portrait dimensions and frame rate, the 60-frame static splash followed by replay, silent intro, meaningful unclipped replay audio, attribution metadata, and the expected duration without the five-second decision hold. Share-sheet screenshots may contain private Android suggestions; keep them in local build reports rather than the committed gallery.
+The verifier requires FFmpeg/ffprobe. It checks H.264/AAC, portrait dimensions and frame rate, the 60-frame static splash followed by replay, silent intro, meaningful unclipped replay audio, repository-link metadata, and the expected duration without the five-second decision hold. Share-sheet screenshots may contain private Android suggestions; keep them in local build reports rather than the committed gallery.

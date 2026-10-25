@@ -80,12 +80,7 @@ def main():
                     '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'copy', '-c:a', 'aac',
                     '-b:a', '128k', '-t', '30', '-movflags', '+faststart',
                     '-metadata', 'title=Feltri 8-Ball — 30-second desktop gameplay',
-                    '-metadata', 'comment=Game effects: Za-Games and Kenney (CC0). '
-                    'Pocket: Pool ball falling into pocket by freesman, Directory.Audio, CC BY 3.0 '
-                    '(https://creativecommons.org/licenses/by/3.0/). '
-                    'Source: https://directory.audio/sound-effects/sports/26410-pool-ball-falling-into-pocket. '
-                    'Edited: mono, resampling, trimming and fades; mixed at game playback gains. '
-                    'Full credits: https://github.com/ffeltrinelli/pool-android/blob/main/assets/audio/README.md',
+                    '-metadata', 'comment=https://github.com/ffeltrinelli/pool-android',
                     str(movie)], check=True)
     probe = json.loads(subprocess.check_output(['ffprobe', '-v', 'error', '-count_frames',
                       '-show_streams', '-show_format', '-of', 'json', str(movie)], text=True))

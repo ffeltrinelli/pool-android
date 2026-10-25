@@ -10,5 +10,6 @@ data class HudPresentation(
     val difficulty: OpponentDifficulty = OpponentDifficulty.MEDIUM,
     val notice: String? = null,
     val placementError: String? = null,
-    val replays: Boolean = true
+    val replays: Boolean = true,
+    val helpOpen: Boolean = false
 )

@@ -146,7 +146,16 @@ class PoolGame(
             placementValid = placementError() == null,
             activeSeconds = activeSeconds
         )
-        val hud = HudPresentation(controls.settingsOpen, computer.thinking, computer.foulPlayer, controls.difficulty, notice, placementError(), controls.replays)
+        val hud = HudPresentation(
+            settingsOpen = controls.settingsOpen,
+            computerThinking = computer.thinking,
+            foulPlayer = computer.foulPlayer,
+            difficulty = controls.difficulty,
+            notice = notice,
+            placementError = placementError(),
+            replays = controls.replays,
+            helpOpen = controls.helpOpen
+        )
         renderer.render(physics, session, gesture, viewDelta = delta, table = table, hudState = hud)
     }
 
@@ -174,7 +183,7 @@ class PoolGame(
         renderer.renderReplay(playback.clip, playback.seconds, Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight)
         replayHud.render(Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight, sharing.available, exportState(), export?.progress ?: 0f, playback.holdSecondsRemaining)
         if (controls.settingsOpen) renderer.hud.renderSettings(controls.aidedAim,
-            HudPresentation(settingsOpen = true, difficulty = controls.difficulty, replays = controls.replays), Gdx.graphics.backBufferWidth)
+            HudPresentation(settingsOpen = true, difficulty = controls.difficulty, replays = controls.replays, helpOpen = controls.helpOpen), Gdx.graphics.backBufferWidth)
         if (playback.finished && !controls.suspended && export == null && exportState() !is ShareState.Failed) endReplay()
     }
 

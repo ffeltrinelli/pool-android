@@ -48,6 +48,29 @@ class GameInputTest {
         assertEquals(CuePhase.IDLE, gesture.phase)
     }
 
+    @Test fun `help blocks settings and gameplay until dismissed and Back returns to settings`() = withInput { input, controls, gesture, _, shots ->
+        controls.handle(HudAction.SETTINGS)
+        input.touchDown(306, 298, 0, Input.Buttons.LEFT)
+        assertTrue(controls.helpOpen)
+        val difficulty = controls.difficulty
+        input.touchDown(100, 482, 0, Input.Buttons.LEFT)
+        input.touchDragged(350, 482, 0)
+        input.touchUp(350, 482, 0, Input.Buttons.LEFT)
+        input.touchDown(100, 387, 0, Input.Buttons.LEFT)
+        assertEquals(difficulty, controls.difficulty)
+        assertTrue(controls.aidedAim)
+        assertEquals(CuePhase.IDLE, gesture.phase)
+        assertTrue(shots.isEmpty())
+        controls.pause()
+        controls.resume()
+        assertTrue(controls.helpOpen && controls.suspended)
+        assertTrue(input.keyDown(Input.Keys.BACK))
+        assertFalse(controls.helpOpen)
+        assertTrue(controls.settingsOpen && controls.suspended)
+        assertTrue(input.keyDown(Input.Keys.BACK))
+        assertFalse(controls.suspended)
+    }
+
     @Test fun `computer turn blocks strokes while keeping settings accessible`() = withInput { input, controls, gesture, session, shots ->
         session.beginShot()
         session.accept(io.github.ffeltrinelli.pool.model.PhysicsEvent.Settled)

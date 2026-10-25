@@ -1,28 +1,12 @@
-# Recorded impact effects
+# Audio credits
 
-The three collision/cue effects are CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/).
-They are bundled locally: no network, account, or paid dependency is needed at runtime.
-The source recordings are not claimed as original work by this project.
+CC0 is a public-domain dedication; CC BY 3.0 is an attribution license.
 
-| Game file | Recording / creator | Source | Changes |
-| --- | --- | --- | --- |
-| `ball.wav` | “billiard ball clack”, Za-Games | https://freesound.org/people/Za-Games/sounds/539854/ | Use the public HQ MP3 preview from 0 seconds; mix down to mono; pad to 240 ms; normalize peak to 23000/32768; fade last 60 ms. |
-| `cushion.wav` | `impactSoft_medium_000.ogg`, Kenney, Impact Sounds 1.0 | https://kenney.nl/assets/impact-sounds | Trim initial silence at −45 dB; take up to 240 ms; fade from 180 ms; mono; normalize peak to 23000/32768; pad with silence to 240 ms. |
-| `cue.wav` | `impactWood_light_000.ogg`, Kenney, Impact Sounds 1.0 | https://kenney.nl/assets/impact-sounds | Trim initial silence at −45 dB; take 200 ms; fade last 60 ms; mono; normalize peak to 23000/32768. |
+| Asset | Creator and source | License | Edits |
+|---|---|---|---|
+| `ball.wav` | “billiard ball clack”, [Za-Games](https://freesound.org/people/Za-Games/sounds/539854/) | [CC0](CC0-1.0.txt) | HQ preview downmixed, normalized, padded, and faded. |
+| `cushion.wav` | `impactSoft_medium_000.ogg`, [Kenney Impact Sounds 1.0](https://kenney.nl/assets/impact-sounds) | [CC0](Kenney-LICENSE.txt) | Silence trimmed, downmixed, normalized, padded, and faded. |
+| `cue.wav` | `impactWood_light_000.ogg`, Kenney Impact Sounds 1.0 | CC0 | Trimmed, downmixed, normalized, and faded. |
+| `pocket.wav` | “Pool ball falling into pocket” by **freesman**, [Directory.Audio](https://directory.audio/sound-effects/sports/26410-pool-ball-falling-into-pocket) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) | Public MP3 preview downmixed, resampled, trimmed, and faded; no pitch change. |
 
-The three effects above use 44,100 Hz, signed 16-bit PCM WAV for short-effect decoding on Android and desktop. Edits by the Pool project; these edited files remain CC0. The pocket effect below is separately licensed under CC BY 3.0.
-
-Pool source download: https://cdn.freesound.org/previews/539/539854_12029332-hq.mp3
-
-Kenney source archive: https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip
-
-The Freesound source page explicitly labels its recording Creative Commons 0. Kenney's original license is included as `Kenney-LICENSE.txt`. `CC0-1.0.txt` contains the full CC0 legal text. Attribution is retained even though CC0 does not require it.
-
-## Pocket drop (sound C)
-
-`pocket.wav`: “Pool ball falling into pocket”, uploaded by **freesman**, Directory.Audio sound 26410.
-Source: https://directory.audio/sound-effects/sports/26410-pool-ball-falling-into-pocket
-Public preview used: https://directory.audio/media/fc_local_media/audio_preview/pool-ball-falling-into-pocket.mp3
-Licence: **Creative Commons Attribution 3.0 Unported**, https://creativecommons.org/licenses/by/3.0/ (this asset is not CC0).
-Required source credit: “Pool ball falling into pocket” by freesman, Directory.Audio, licensed under CC BY 3.0.
-Edits by the Pool project: decode the selected public MP3 preview; downmix to mono; resample to 44,100 Hz signed 16-bit PCM WAV; remove trailing silence after 680 ms; apply 2 ms fade-in and 20 ms fade-out. No pitch change or synthetic layers.
+Edits by the Pool project. Bundled effects are 44.1 kHz, signed 16-bit mono (single-channel), uncompressed PCM WAV. Edited CC0 effects remain CC0; the pocket recording retains its separate attribution license. Replay exports link to the repository’s [credits](../../README.md#assets-and-attribution).
