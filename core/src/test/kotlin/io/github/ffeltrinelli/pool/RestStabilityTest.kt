@@ -7,13 +7,13 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class RestStabilityTest {
-    @Test fun `submillimetre contact oscillation can settle despite velocity spikes`() {
+    @Test fun `bounded cushion rocking can settle despite velocity spikes`() {
         val rest = RestStability()
         repeat(37) { step ->
             val sign = if (step % 2 == 0) 1f else -1f
             rest.beginStep()
-            rest.observe(13, Vector3(-0.50158f + sign * 0.0001f, TableGeometry.BALL_RADIUS - 0.00008f, -0.93305f),
-                Quaternion(Vector3.Z, sign * 0.2f), 0.014f * 0.014f, 0.45f * 0.45f)
+            rest.observe(13, Vector3(-0.50158f + sign * 0.0004f, TableGeometry.BALL_RADIUS - 0.00008f, -0.93305f),
+                Quaternion(Vector3.Z, sign * 0.8f), 0.014f * 0.014f, 0.45f * 0.45f)
             rest.finishStep(PoolPhysics.STEP)
             if (step < 35) assertFalse(rest.settled)
         }

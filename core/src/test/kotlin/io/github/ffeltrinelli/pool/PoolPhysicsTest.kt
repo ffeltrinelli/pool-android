@@ -1,5 +1,8 @@
 package io.github.ffeltrinelli.pool
 
+import com.badlogic.gdx.math.Matrix4
+import com.badlogic.gdx.math.Quaternion
+import com.badlogic.gdx.math.Vector3
 import io.github.ffeltrinelli.pool.model.*
 import io.github.ffeltrinelli.pool.physics.PoolPhysics
 import org.junit.Assert.*
@@ -80,6 +83,40 @@ class PoolPhysicsTest {
             assertEquals(1, events.count { it == PhysicsEvent.Settled })
             assertEquals(0f, p.balls[0].body.linearVelocity.len(), 0.001f)
         } finally { p.dispose() }
+    }
+    @Test fun `oneplus corner cushion residual motion settles once`() {
+        val events = mutableListOf<PhysicsEvent>()
+        val physics = PoolPhysics(events::add)
+        try {
+            physics.reset(listOf(0 to Point(0.22541456f, -0.5845344f), 11 to Point(-0.49207595f, -1.0942622f)))
+            physics.strike(ShotCommand(Point(0f, -1f), 0.0001f))
+            val ball = physics.balls.first { it.id == 11 }
+            ball.body.worldTransform = Matrix4().set(
+                Vector3(-0.49207595f, 0.028532963f, -1.0942622f),
+                Quaternion(-0.539429f, 0.115831055f, 0.58890116f, 0.5905885f))
+            ball.body.linearVelocity = Vector3(-0.008917803f, -0.00047525018f, 0.000060406965f)
+            ball.body.angularVelocity = Vector3(-0.000084969666f, 0.0016494485f, 0.31223032f)
+            repeat(1200) { physics.step() }
+            assertEquals("Residual cushion motion must resolve the shot", 1, events.count { it == PhysicsEvent.Settled })
+            assertFalse(ball.pocketed)
+            assertEquals(0f, ball.body.angularVelocity.len(), 0.001f)
+            val settledPosition = ball.position.cpy()
+            repeat(120) { physics.step() }
+            assertEquals(settledPosition, ball.position)
+            assertEquals(1, events.count { it == PhysicsEvent.Settled })
+        } finally { physics.dispose() }
+    }
+    @Test fun `settled bodies wake for another strike and object ball collision`() {
+        val physics = PoolPhysics()
+        try {
+            physics.reset(listOf(0 to Point(0f, 0.4f), 1 to Point(0f, 0.1f)))
+            physics.strike(ShotCommand(Point(0f, -1f), 0.0001f))
+            repeat(120) { physics.step() }
+            assertTrue(physics.balls.none { it.body.isActive })
+            physics.strike(ShotCommand(Point(0f, -1f), 0.17f))
+            repeat(42) { physics.step() }
+            assertTrue(physics.balls[1].body.linearVelocity.z < -0.4f)
+        } finally { physics.dispose() }
     }
     @Test fun `repeated reset retains rack without duplicate bodies`() = physics { p ->
         repeat(20) { p.reset(); assertEquals(16, p.balls.size) }

@@ -19,6 +19,7 @@ class HudLayout(width: Int, height: Int, val placementVisible: Boolean = false, 
     val panel = Rectangle(30f, uiHeight / 2 - 195f, 360f, 390f)
     val close = Rectangle(336f, panel.y + panel.height - 54f, 48f, 48f)
     val aidedAim = Rectangle(60f, uiHeight / 2 + 55f, 146f, 48f)
+    val replays = Rectangle(214f, uiHeight / 2 + 55f, 146f, 48f)
     val difficulty = Rectangle(60f, uiHeight / 2 - 40f, 300f, 48f)
     val difficultyStops = OpponentDifficulty.entries.mapIndexed { index, _ ->
         Rectangle(difficulty.x + index * 100f, difficulty.y, 100f, 48f)
@@ -47,6 +48,7 @@ class HudLayout(width: Int, height: Int, val placementVisible: Boolean = false, 
                 OpponentDifficulty.MEDIUM -> HudAction.MEDIUM
                 OpponentDifficulty.HARD -> HudAction.HARD
             }
+            replays.contains(x, y) -> HudAction.TOGGLE_REPLAYS
             aidedAim.contains(x, y) -> HudAction.TOGGLE_AIM
             exit.contains(x, y) -> HudAction.EXIT
             restart.contains(x, y) -> HudAction.RESTART

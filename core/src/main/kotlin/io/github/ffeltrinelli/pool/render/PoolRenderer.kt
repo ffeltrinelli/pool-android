@@ -1,5 +1,6 @@
 package io.github.ffeltrinelli.pool.render
 
+import io.github.ffeltrinelli.pool.replay.*
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.*
 import com.badlogic.gdx.graphics.g2d.*
@@ -42,10 +43,9 @@ class PoolRenderer : Disposable {
     }
     private val ballModels: List<Model>
     private val ballInstances: List<ModelInstance>
-    private val shadowInstances: List<ModelInstance>
     private val cueInstance: ModelInstance
     private val tipInstance: ModelInstance
-    private val shadow: Model
+    private val ballShadows = BallShadows()
     private val cue: Model
     private val cueTip: Model
     private val position = Vector3()
@@ -70,11 +70,9 @@ class PoolRenderer : Disposable {
                 own(builder.createSphere(TableGeometry.BALL_RADIUS * 2, TableGeometry.BALL_RADIUS * 2, TableGeometry.BALL_RADIUS * 2, 32, 24, mat, attributes))
             }
         }
-        shadow = own(builder.createCylinder(0.067f, 0.001f, 0.067f, 24, material("125c50"), attributes))
         cue = own(builder.createCylinder(0.011f, 1f, 0.011f, 12, material("e6c28c"), attributes))
         cueTip = own(builder.createSphere(0.012f, 0.012f, 0.012f, 12, 8, material("76c7cd"), attributes))
         ballInstances = ballModels.map(::ModelInstance)
-        shadowInstances = (0..15).map { ModelInstance(shadow) }
         cueInstance = ModelInstance(cue)
         tipInstance = ModelInstance(cueTip)
         resize(420, 933)
@@ -124,19 +122,39 @@ class PoolRenderer : Disposable {
     }
 
     private fun renderTable(physics: PoolPhysics, preview: Point?) {
-        modelBatch.begin(views.active.camera)
-        modelBatch.render(scene, environment)
-        physics.balls.forEach { ball ->
-            if (ball.pocketed || (preview != null && ball.id == 0)) return@forEach
+        val poses = physics.balls.map { ball ->
             position.set(ball.previousPosition).lerp(ball.position, physics.interpolation)
             rotation.set(ball.previousRotation).slerp(ball.rotation, physics.interpolation)
-            if (position.y >= TableGeometry.BALL_RADIUS - 0.005f) modelBatch.render(shadowInstances[ball.id].apply { transform.setToTranslation(position.x + 0.006f, 0.008f, position.z + 0.007f) }, environment)
+            BallPose(ball.id, position.x, position.y, position.z, rotation.x, rotation.y, rotation.z, rotation.w, !ball.pocketed)
+        }
+        renderBalls(poses, views.active.camera, preview)
+    }
+
+    fun renderReplay(clip: ReplayClip, seconds: Float, width: Int, height: Int) {
+        Gdx.gl.glViewport(0, 0, width, height)
+        Gdx.gl.glClearColor(0.035f, 0.075f, 0.095f, 1f)
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
+        views.replay.update(clip, seconds, width, height)
+        val frame = clip.frameAt(seconds)
+        renderBalls(frame.balls, views.replay.camera, null)
+        val cue = frame.balls.firstOrNull { it.id == 0 && it.visible }
+        if (cue != null && frame.cue != null) renderCue(cue.point, frame.cue, views.replay.camera)
+    }
+
+    private fun renderBalls(balls: List<BallPose>, camera: Camera, preview: Point?) {
+        val visibleBalls = balls.filter { it.visible && (preview == null || it.id != 0) }
+        modelBatch.begin(camera)
+        modelBatch.render(scene, environment)
+        visibleBalls.forEach { ball ->
+            position.set(ball.x, ball.y, ball.z)
+            rotation.set(ball.qx, ball.qy, ball.qz, ball.qw)
             modelBatch.render(ballInstances[ball.id].apply { transform.set(position, rotation) }, ballEnvironment)
         }
         if (preview != null) modelBatch.render(ballInstances[0].apply {
             transform.setToTranslation(preview.x, TableGeometry.BALL_RADIUS, preview.z)
         }, ballEnvironment)
         modelBatch.end()
+        ballShadows.render(modelBatch, camera, visibleBalls)
     }
 
     private fun renderAidedAim(physics: PoolPhysics, cueBall: Point, direction: Point) {
@@ -148,15 +166,20 @@ class PoolRenderer : Disposable {
         }
     }
 
-    private fun renderCue(cueBall: Point, pose: CuePose) {
+    private fun renderCue(cueBall: Point, pose: CuePose, camera: Camera = views.active.camera) {
         val direction = pose.direction
         val tip = cueBall - direction * (TableGeometry.BALL_RADIUS + pose.tipGap)
-        val length = views.active.cueLength(tip, direction)
+        val front = camera.direction
+        val depth = Vector3(tip.x, TableGeometry.BALL_RADIUS, tip.z).sub(camera.position).dot(front)
+        val rearward = direction.x * front.x + direction.z * front.z
+        val length = if (camera === views.active.camera) views.active.cueLength(tip, direction)
+            else if (rearward > 0.001f) ((depth - camera.near - 0.02f) / rearward).coerceIn(0.04f, CueGeometry.DISPLAY_LENGTH)
+            else CueGeometry.DISPLAY_LENGTH
         val center = tip - direction * (length / 2)
         // Keep perspective and self-occlusion while making the cue visible through rails and balls.
         Gdx.gl.glDepthMask(true)
         Gdx.gl.glClear(GL20.GL_DEPTH_BUFFER_BIT)
-        modelBatch.begin(views.active.camera)
+        modelBatch.begin(camera)
         modelBatch.render(cueInstance.apply {
             transform.setToTranslation(center.x, TableGeometry.BALL_RADIUS, center.z)
             transform.rotate(Vector3.Y, Vector3(direction.x, 0f, direction.z))
@@ -167,6 +190,7 @@ class PoolRenderer : Disposable {
     }
 
     override fun dispose() {
+        ballShadows.dispose()
         placementGuide.dispose(); aimGuide.dispose(); modelBatch.dispose(); font.dispose(); hud.dispose()
         models.forEach { it.dispose() }
         textures.forEach { it.dispose() }

@@ -4,6 +4,8 @@ import com.badlogic.gdx.Preferences
 import io.github.ffeltrinelli.pool.opponent.OpponentDifficulty
 
 interface SettingsPreference {
+    fun loadReplays(): Boolean = true
+    fun saveReplays(enabled: Boolean) {}
     fun loadDifficulty(): OpponentDifficulty
     fun saveDifficulty(difficulty: OpponentDifficulty)
     fun loadAidedAim(): Boolean
@@ -11,6 +13,11 @@ interface SettingsPreference {
 }
 
 class SavedSettingsPreference(private val preferences: Preferences) : SettingsPreference {
+    override fun loadReplays() = preferences.getBoolean("replays", true)
+    override fun saveReplays(enabled: Boolean) {
+        preferences.putBoolean("replays", enabled)
+        preferences.flush()
+    }
     override fun loadDifficulty(): OpponentDifficulty {
         val saved = preferences.getString("opponent-difficulty", OpponentDifficulty.MEDIUM.name)
         return OpponentDifficulty.entries.firstOrNull { it.name == saved } ?: OpponentDifficulty.MEDIUM

@@ -2,7 +2,7 @@ package io.github.ffeltrinelli.pool.lwjgl3
 
 import io.github.ffeltrinelli.pool.opponent.OpponentDifficulty
 
-internal enum class ScenarioGroup { TABLE, VIEW, POCKET, AID, COMPUTER, DIFFICULTY, CUE_VISIBILITY, RULES, GALLERY }
+internal enum class ScenarioGroup { TABLE, VIEW, POCKET, AID, COMPUTER, DIFFICULTY, CUE_VISIBILITY, RULES, REPLAY, GALLERY }
 internal data class VisualScenario(val name: String, val group: ScenarioGroup)
 
 /** Fixtures exercise automatic camera selection; overhead shots belong to the computer. */
@@ -32,6 +32,7 @@ internal object VisualScenarios {
         difficultyScenarios.map { VisualScenario(it, ScenarioGroup.DIFFICULTY) } +
         cueVisibilityScenarios.map { VisualScenario(it, ScenarioGroup.CUE_VISIBILITY) } +
         rulesScenarios.map { VisualScenario(it, ScenarioGroup.RULES) } +
+        listOf("close", "withdrawn", "tracking", "transition", "overview", "diagonal", "hold", "export").map { VisualScenario("replay-$it", ScenarioGroup.REPLAY) } +
         listOf("splash", "top", "player", "settings", "placement", "result").map { VisualScenario("gallery-$it", ScenarioGroup.GALLERY) }
     private val byName = all.associateBy { it.name }
     fun named(name: String) = byName.getValue(name)

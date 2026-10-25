@@ -86,6 +86,7 @@ object GameplayDemo {
             Gdx.app.getPreferences("pool-settings").apply {
                 putString("opponent-difficulty", "MEDIUM")
                 putBoolean("aided-aim", true)
+                putBoolean("replays", true)
                 flush()
             }
             framebuffer = FrameBuffer(Pixmap.Format.RGBA8888, WIDTH, HEIGHT, true)

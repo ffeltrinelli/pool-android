@@ -31,7 +31,7 @@ internal class ShotSimulation : AutoCloseable {
         val decision = EightBallRules.resolve(table.rulesContext(), facts)
         val targets = table.rulesContext().targets
         return ShotEvaluation(facts.pocketed.count { it in targets }, decision.foul, closest, shot.impulse,
-            decision.won, decision.loss != null || decision.rerack)
+            decision.won, decision.loss != null || decision.rerack, facts.pocketed.filter { it in targets }.toSet())
     }
 
     private fun accept(event: PhysicsEvent) {

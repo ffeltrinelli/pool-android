@@ -13,6 +13,9 @@ class GameControlsTest {
         var difficultySaves = 0
         override fun loadDifficulty() = difficulty
         override fun saveDifficulty(difficulty: OpponentDifficulty) { this.difficulty = difficulty; difficultySaves++ }
+        var replays = true
+        override fun loadReplays() = replays
+        override fun saveReplays(enabled: Boolean) { replays = enabled }
         var aided = true
         override fun loadAidedAim() = aided
         override fun saveAidedAim(enabled: Boolean) { aided = enabled }
@@ -27,6 +30,20 @@ class GameControlsTest {
         override fun pauseGame() { paused = true }
         override fun resumeGame() { paused = false }
         override fun restartGame() { restarts++ }
+    }
+
+    @Test fun `replays default on and persist independently of rack restarts`() {
+        val preference = Preference()
+        val effects = Effects()
+        val controls = GameControls(preference, effects)
+        assertTrue(controls.replays)
+        controls.handle(HudAction.SETTINGS)
+        controls.handle(HudAction.TOGGLE_REPLAYS)
+        assertFalse(controls.replays)
+        assertTrue(controls.settingsOpen)
+        controls.handle(HudAction.RESTART)
+        assertFalse(controls.replays)
+        assertFalse(GameControls(preference, effects).replays)
     }
 
     @Test fun `settings blocks gameplay cancels stroke and pauses until closed`() {
@@ -74,6 +91,9 @@ class GameControlsTest {
         } as Preferences
         val store = SavedSettingsPreference(preferences)
         values["view-mode"] = "obsolete"
+        assertTrue(store.loadReplays())
+        store.saveReplays(false)
+        assertFalse(SavedSettingsPreference(preferences).loadReplays())
         assertTrue(store.loadAidedAim())
         store.saveAidedAim(false)
         assertFalse(SavedSettingsPreference(preferences).loadAidedAim())
@@ -89,7 +109,7 @@ class GameControlsTest {
         store.saveDifficulty(OpponentDifficulty.EASY)
         assertEquals(OpponentDifficulty.EASY, SavedSettingsPreference(preferences).loadDifficulty())
         assertFalse(store.loadAidedAim())
-        assertEquals(2, flushes)
+        assertEquals(3, flushes)
     }
 
     @Test fun `aided aim is enabled initially saved independently and retained by restart`() {

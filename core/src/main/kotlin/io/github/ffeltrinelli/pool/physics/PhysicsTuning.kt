@@ -18,7 +18,7 @@ internal object PhysicsTuning {
     const val LINEAR_SLEEP_SPEED = 0.012f
     const val ANGULAR_SLEEP_SPEED = 0.3f
     const val SETTLED_SECONDS = 0.3f
-    const val REST_POSITION_TOLERANCE = 0.0005f
+    const val REST_POSITION_TOLERANCE = 0.001f
     const val REST_ANGLE_TOLERANCE = 0.034906585f // Two degrees across the entire quiet interval.
     const val REST_HEIGHT_TOLERANCE = 0.001f
     const val CONTACT_LINEAR_LIMIT = 0.025f

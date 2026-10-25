@@ -1,6 +1,7 @@
 package io.github.ffeltrinelli.pool.lwjgl3
 
 import com.badlogic.gdx.*
+import io.github.ffeltrinelli.pool.replay.*
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.PixmapIO
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
@@ -83,7 +84,9 @@ object VisualSmoke {
             try {
                 fixture(name)
                 framebuffer.begin(); bound = true
-                if (name == "gallery-splash") {
+                if (name.startsWith("replay-")) {
+                    renderReplayFixture(name)
+                } else if (name == "gallery-splash") {
                     verifyTypography()
                     val splash = SplashScreen()
                     try { splash.resize(1080, 2400); splash.render(1080) }
@@ -91,7 +94,7 @@ object VisualSmoke {
                 } else {
                     renderer.render(physics, session, gesture, 1080, 2400, table = tablePresentation, hudState = hudPresentation)
                 }
-                if (name != "gallery-splash") {
+                if (name != "gallery-splash" && !name.startsWith("replay-")) {
                     val overhead = session.placement != null || session.player == Player.COMPUTER
                     check(if (overhead) renderer.views.active is TopView else renderer.views.active is PlayerView)
                 }
@@ -108,6 +111,28 @@ object VisualSmoke {
                 report.write()
             }
         }
+        private fun renderReplayFixture(name: String) {
+            val direction = if (name == "replay-diagonal" || name == "replay-export") Point(1f, -1f).normalized() else Point(0f, -1f)
+            val balls = physics.replayBalls()
+            fun frame(time: Float, gap: Float?, z: Float = TableGeometry.CUE_START.z) = ReplayFrame(time,
+                balls.map { if (it.id == 0) it.copy(z = z) else it }, gap?.let { CuePose(direction, it) })
+            val clip = ReplayClip(listOf(frame(0f, 0.05f), frame(0.5f, 0.12f), frame(1f, 0f),
+                frame(1.3f, null, 0.1f), frame(2f, null, 0.1f), frame(3f, null, 0.1f)), emptyList(), 1f, 1.3f, 3f)
+            val time = when (name.removePrefix("replay-")) {
+                "close" -> 0f
+                "withdrawn" -> 0.5f
+                "tracking" -> 1.15f
+                "transition" -> 1.625f
+                "overview", "diagonal" -> 2f
+                else -> 3f
+            }
+            renderer.renderReplay(clip, time, 1080, 2400)
+            if (name != "replay-export") {
+                val hud = ReplayHud()
+                try { hud.render(1080, 2400, true, ShareState.Idle, 0f, if (name == "replay-hold") 5 else null) } finally { hud.close() }
+            }
+        }
+
         private fun verifyTypography() {
             val fonts = UiFonts(TextStyle.BODY, TextStyle.SPLASH_TITLE)
             try {
@@ -151,6 +176,7 @@ object VisualSmoke {
                 ScenarioGroup.TABLE -> tableFixture(name)
                 ScenarioGroup.RULES -> rulesFixture(name)
                 ScenarioGroup.GALLERY -> galleryFixture(name)
+                ScenarioGroup.REPLAY -> Unit
             }
             if (session.placement != null && session.player == Player.HUMAN && tablePresentation.placement == null)
                 tablePresentation = tablePresentation.copy(humanCanAim = false, placement = TableGeometry.CUE_START,

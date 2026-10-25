@@ -187,6 +187,7 @@ class PlayerView(private val tuning: ViewTuning = ViewTuning()) : GameView {
 }
 
 class GameViews {
+    val replay = ReplayCamera()
     private val top = TopView()
     private val player = PlayerView()
     var active: GameView = top
