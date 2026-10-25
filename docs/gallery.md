@@ -28,7 +28,7 @@ The table-concepts SVG remains a rules diagram, maintained against shared table 
 
 ## Gameplay video
 
-The recording procedure produces a 30-second, normal-speed desktop recording (540 × 1200, 30 fps, H.264 video and AAC audio). It runs `PoolGame` with regular pointer gestures, production physics, rules, camera transitions, and the real computer planning worker. It is not an Android device capture. The procedure is repeatable; rack shuffling and worker timing mean recordings need not be identical.
+The README links a 30-second, normal-speed desktop recording (540 × 1200, 30 fps, H.264 video and AAC audio). It runs `PoolGame` with regular pointer gestures, production physics, rules, camera transitions, and the real computer planning worker. It is not an Android device capture. The procedure is repeatable; rack shuffling and worker timing mean recordings need not be identical.
 
 With JDK 21, a working OpenGL context, Python 3, `ffmpeg`, and `ffprobe` on PATH:
 
@@ -42,7 +42,7 @@ The soundtrack uses the actual production `SoundPlayer` playback commands and bu
 
 Outputs are `build/reports/gameplay-demo/gameplay.mp4`, `audio-events.json`, and `verification.json`. The script rejects missing meaningful audio, clipping, unexpected codecs/frame count, duration other than 30 seconds, or size above 10 MB. It copies the five-second poster to `docs/images/gameplay-preview.png`. The six-image screenshot refresh above does not overwrite that poster. `--reuse-capture` remuxes an already fresh capture from the current checkout without replaying gameplay.
 
-The current preview links here until the refreshed MP4 is attached to a PR; the earlier hosted clip depicts obsolete camera behavior. Watch the entire clip with sound: check natural pacing, readable HUD, cue and camera motion, computer turns, and synchronized impacts. Upload the verified clip to the current PR, then update the README preview link to the returned attachment URL:
+Watch the entire clip with sound: check natural pacing, readable HUD, cue and camera motion, computer turns, and synchronized impacts. Upload the verified clip to the current PR, then update the README preview link to the returned attachment URL:
 
 ```sh
 gh pr edit NUMBER --attach build/reports/gameplay-demo/gameplay.mp4

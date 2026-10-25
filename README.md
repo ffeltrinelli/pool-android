@@ -22,14 +22,14 @@ An offline 3D eight-ball game for Android. Play solids versus stripes against a 
 ## Screenshots
 
 <table>
-<tr><th>Player view before the break</th><th>Gameplay preview</th></tr>
+<tr><th>Player view before the break</th><th>30-second gameplay · sound on</th></tr>
 <tr>
 <td><img src="docs/images/player-view-start.png" width="300" alt="Player view at the start of a game, with the resting cue aimed toward the fresh rack before the break."></td>
-<td><a href="docs/gallery.md#gameplay-video"><img src="docs/images/gameplay-preview.png" width="300" alt="Preview from the current 30-second gameplay recording; see the recording and publication procedure."></a></td>
+<td><a href="https://github.com/user-attachments/assets/527ce3f0-ee9c-42dd-b021-9526481f66fe"><img src="docs/images/gameplay-preview.png" width="300" alt="Watch 30 seconds of Feltri 8-Ball gameplay with sound: the human break and overhead computer turns."></a></td>
 </tr>
 </table>
 
-The current 30-second gameplay recording is generated at `build/reports/gameplay-demo/gameplay.mp4`; attach it when preparing a PR, then link this preview to the uploaded video. The clip shows a human break and overhead computer turns, with cue, ball, cushion, and pocket sounds. Both captures use the production desktop game; the video uses scripted pointer gestures through normal input, with the real physics and computer opponent. No music or narration. [Audio credits](assets/audio/README.md), including the pocket effect by freesman (CC BY 3.0).
+Play the video and unmute it to watch a human break and overhead computer turns, with cue, ball, cushion, and pocket sounds. Both captures use the production desktop game; the video uses scripted pointer gestures through normal input, with the real physics and computer opponent. No music or narration. [Audio credits](assets/audio/README.md), including the pocket effect by freesman (CC BY 3.0).
 
 See the [screenshot gallery](docs/images/) and [media refresh procedure](docs/gallery.md).
 
