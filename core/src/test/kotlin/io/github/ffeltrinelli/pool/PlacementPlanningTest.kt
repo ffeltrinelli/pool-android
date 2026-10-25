@@ -17,6 +17,19 @@ class PlacementPlanningTest {
             assertEquals(ShotKind.DIRECT_POT, result.kind)
             assertNull(result.predictedFoul)
             assertTrue(result.targetBallId in result.predictedPockets)
+            assertEquals(0, result.metrics.reboundAttempts)
+            val facts = ShotFacts()
+            var settled = false
+            val world = PoolPhysics(events = { facts.accept(it); if (it == PhysicsEvent.Settled) settled = true })
+            try {
+                world.restore(table.withCue(result.cuePosition!!))
+                world.strike(result.shot)
+                repeat(3600) { if (!settled) world.step() }
+                val actual = EightBallRules.resolve(table.rulesContext(), facts)
+                assertTrue("actual=$actual pockets=${facts.pocketed}", result.targetBallId in facts.pocketed)
+                assertNull(actual.foul)
+                assertNull(actual.loss)
+            } finally { world.dispose() }
         } finally { planner.close() }
     }
 

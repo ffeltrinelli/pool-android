@@ -31,9 +31,12 @@ class PlacementPlanningDeviceTest {
             File(instrumentation.targetContext.filesDir, "placement-planning.txt").writeText("$result\nactual=$actual first=${facts.firstContacts} pots=${facts.pocketed}\n")
             assertEquals("$result", ShotKind.DIRECT_POT, result.kind)
             assertNull(result.predictedFoul)
+            assertEquals(0, result.metrics.reboundAttempts)
+            assertTrue("Deadline overrun: $result", result.elapsedMillis <= 5100)
             assertTrue(result.targetBallId in result.predictedPockets)
             assertTrue("actual=$actual pockets=${facts.pocketed}", result.targetBallId in facts.pocketed)
             assertNull(actual.foul)
+            assertNull(actual.loss)
         } finally { world.dispose(); planner.close() }
     }
 }
