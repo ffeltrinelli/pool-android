@@ -38,6 +38,14 @@ A route whose predicted cushion contact lies within one ball radius of an intend
 
 Tests cover the captured request, independent direct execution, a ball behind the conservative jaw stop, a distant cushion rejection and the earlier direct-rail/Medium/placement cases. The shared fixture remains in test assets only. Neither physics fidelity, difficulty errors nor the 5,000 ms deadline changed. Earlier benchmark rows describe their recorded revisions and are not new speed measurements for this change.
 
+## Captured green-ball pocket entry
+
+The next OnePlus report (log 21:39:05, seed 2) selected a firm `CONTACT` at the center of ball 6, not an explicit bank or kick candidate. The generator supplied no direct pots, and after four direct-contact trials and 32 rebound attempts it kept that contact's predicted incidental pot. The live result made no pocket and no foul. The exact request is `opponent/green-ball-direct-request.json`.
+
+The object-ball ray toward the corner pocket center met the side cushion well before its mouth. A different route through the usable mouth was clear. Independent desktop trials at an interior mouth entry potted ball 6 at 0.25 N·s without a target-ball cushion contact. Direct candidates now sample the mouth center and two interior lateral positions, in addition to pocket-center and table-axis routes. The lateral span subtracts ball radius; each added ray must cross the mouth, intersect the pocket opening, and pass the existing cue/object obstruction checks. Near-jaw allowances remain separately bounded.
+
+These entries remain supplemental: successful clear centered seeds keep priority, and the existing shortlists, phase deadline, 256-attempt cap and 5,000 ms request deadline are unchanged. The captured regression independently executes the selected pot and permits only pocket-throat target contacts, rejecting a cushion bounce before the ball reaches the mouth. Mirrored-corner tests cover the same route and reject an added blocking ball. Earlier rail, ball-2, placement, Medium and legality regressions remain unchanged.
+
 ## Measurement method
 
 Baseline: Git revision `3edd07e4f7210ee73946ef110ec937fa7d5d3881`, built in an isolated temporary directory with benchmark-only tests added. Both revisions use identical fixture coordinates and random seed 17. Device: connected OnePlus 8T, model KB2003, Android API 34. Desktop: local Apple Silicon Mac, JDK 21. Wall-clock samples are observations, not performance guarantees or hard-coded test expectations.
