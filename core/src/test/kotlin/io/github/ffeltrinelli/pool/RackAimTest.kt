@@ -7,15 +7,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class RackAimTest {
-    @Test fun `fresh rack clears pending strokes and aligns cue and both cameras with apex`() {
+    @Test fun `fresh rack clears pending strokes and aligns cue and player camera with apex`() {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
         val rack = TableGeometry.rack().toMap()
         val cue = rack.getValue(0)
         val gesture = CueGesture()
         val views = GameViews()
         views.resize(1080, 2400)
-        for (mode in ViewMode.entries) for (fired in listOf(false, true)) {
-            views.select(mode)
+        for (fired in listOf(false, true)) {
+            views.follow(GameSession().apply { confirmPlacement() })
             val start = cue + Point(-0.3f, 0f)
             gesture.begin(PointerSample(0, start, 0.0), cue)
             gesture.move(PointerSample(0, start + Point(-0.02f, 0f), 0.05))
@@ -29,11 +29,9 @@ class RackAimTest {
             assertEquals(CuePhase.IDLE, gesture.phase)
             assertEquals(0.05f, gesture.tipGap, 0.00001f)
             assertNull(gesture.move(PointerSample(0, Point(1f, 1f), 0.3)))
-            if (mode == ViewMode.PLAYER) {
-                assertEquals(0f, views.active.camera.direction.x, 0.00001f)
-                assertTrue(views.active.camera.direction.z < 0f)
-                assertEquals(cue.x, views.active.camera.position.x, 0.00001f)
-            }
+            assertEquals(0f, views.active.camera.direction.x, 0.00001f)
+            assertTrue(views.active.camera.direction.z < 0f)
+            assertEquals(cue.x, views.active.camera.position.x, 0.00001f)
             gesture.begin(PointerSample(0, cue + Point(0.3f, 0f), 1.0), cue)
             assertEquals(CuePhase.AIMING, gesture.phase)
             val aimed = gesture.direction

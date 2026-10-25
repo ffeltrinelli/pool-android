@@ -18,7 +18,7 @@ class GameViewsTest {
     @Test fun `top view retains overhead framing and touch mapping`() {
         val view = TopView()
         view.resize(1080, 2400)
-        assertEquals(1.92f / 1.15f, view.camera.viewportWidth, 0.0001f)
+        assertEquals(2 * TableGeometry.OUTER_HALF_WIDTH + 0.08f, view.camera.viewportWidth, 0.0001f)
         assertEquals(Vector3(0f, -1f, 0f), view.camera.direction)
         val center = view.beginInput(540, 1200, cue, forward)
         assertEquals(0f, center.x, 0.0001f)
@@ -27,7 +27,7 @@ class GameViewsTest {
     }
 
     @Test fun `top framing preserves outer rails across aspect ratios and HUD heights`() {
-        for ((width, height) in listOf(1080 to 2400, 1080 to 1920, 720 to 1600, 1600 to 1080)) {
+        for ((width, height) in listOf(1080 to 2400, 1080 to 1920, 720 to 1600, 1080 to 1080, 1600 to 1080)) {
             for (placing in listOf(false, true)) {
                 val layout = io.github.ffeltrinelli.pool.ui.HudLayout(width, height, placing)
                 val view = TopView().apply { resize(width, layout.gameHeight) }
@@ -119,16 +119,16 @@ class GameViewsTest {
         assertTrue(single.camera.position.epsilonEquals(paused, 0.0001f))
     }
 
-    @Test fun `rack restart resets overview without changing the selected view`() {
+    @Test fun `rack restart resets overview for human aiming`() {
         val views = GameViews()
         views.resize(1080, 2400)
-        views.select(ViewMode.PLAYER)
+        views.follow(GameSession().apply { confirmPlacement() })
         views.update(cue, forward, true)
         val aimPosition = views.active.camera.position.cpy()
         views.update(null, forward, false, 0.65f)
         assertTrue(views.active.camera.position.y > aimPosition.y)
         views.reset()
-        assertEquals(ViewMode.PLAYER, views.mode)
+        assertTrue(views.active is PlayerView)
         assertEquals(aimPosition, views.active.camera.position)
     }
 
@@ -199,17 +199,120 @@ class GameViewsTest {
         assertTrue(input.gesture.tipGap > 0.06f)
     }
 
-    @Test fun `equal world forward speeds yield same power across view input mappings`() {
+    @Test fun `player input retains world speed power independently of overhead zoom`() {
         val player = Input()
         val actual = listOf(20, 40, 60).mapNotNull { player.move(540, 1400 - it) }.single()
         val gesture = CueGesture()
-        val top = TopView().apply { resize(1080, 2400) }
-        val start = top.beginInput(540, 1600, cue, forward)
-        val ball = start + forward * 0.3f
-        gesture.begin(PointerSample(0, start, 0.0), ball)
-        val expected = listOf(23, 46, 69).mapIndexedNotNull { index, pixels ->
-            gesture.move(PointerSample(0, top.moveInput(540, 1600 - pixels, gesture.phase, gesture.direction), (index + 1) * 0.05))
+        val start = cue - forward * 0.30f
+        gesture.begin(PointerSample(0, start, 0.0), cue)
+        val expected = listOf(20, 40, 60).mapIndexedNotNull { index, pixels ->
+            val point = start + forward * (pixels * 1.92f / 1080)
+            gesture.move(PointerSample(0, point, (index + 1) * 0.05))
         }.single()
         assertEquals(expected.impulse, actual.impulse, 0.0001f)
+    }
+
+    @Test fun `automatic camera follows ownership through placement motion results and restart`() {
+        val session = GameSession()
+        val views = GameViews().apply { resize(1080, 2400) }
+        fun follow() = views.follow(session)
+        follow()
+        assertTrue(views.active is TopView)
+        session.confirmPlacement()
+        follow()
+        assertTrue(views.active is PlayerView)
+        session.beginShot()
+        follow()
+        assertFalse(session.humanTurn)
+        assertTrue(views.active is PlayerView)
+        session.accept(PhysicsEvent.Contacts(setOf(1), setOf(1, 2, 3, 4)))
+        session.accept(PhysicsEvent.Settled)
+        follow()
+        assertEquals(Player.COMPUTER, session.player)
+        assertTrue(views.active is TopView)
+        session.beginShot()
+        follow()
+        assertTrue(views.active is TopView)
+        session.accept(PhysicsEvent.Pocketed(8))
+        session.accept(PhysicsEvent.Settled)
+        follow()
+        assertTrue(session.finished)
+        assertTrue(views.active is TopView)
+        session.restart()
+        views.reset()
+        follow()
+        assertTrue(views.active is TopView)
+        session.confirmPlacement()
+        follow()
+        assertEquals(Player.COMPUTER, session.player)
+        assertTrue(views.active is TopView)
+        session.restart()
+        follow()
+        session.confirmPlacement()
+        follow()
+        assertTrue(views.active is PlayerView)
+    }
+
+    @Test fun `human foul placement returns directly to close player aim when confirmed`() {
+        val session = GameSession().apply { confirmPlacement() }
+        val views = GameViews().apply { resize(1080, 2400); follow(session) }
+        views.update(cue, forward, true)
+        val close = views.active.camera.position.cpy()
+        views.update(null, forward, false, 0.65f)
+        session.beginShot()
+        session.accept(PhysicsEvent.Contacts(setOf(1), setOf(1, 2, 3, 4)))
+        session.accept(PhysicsEvent.Settled)
+        session.beginShot()
+        session.accept(PhysicsEvent.Pocketed(0))
+        session.accept(PhysicsEvent.Settled)
+        views.follow(session)
+        assertEquals(Player.HUMAN, session.player)
+        assertNotNull(session.placement)
+        assertTrue(views.active is TopView)
+        session.confirmPlacement()
+        views.follow(session)
+        views.update(cue, forward, true)
+        assertTrue(views.active is PlayerView)
+        assertEquals(close, views.active.camera.position)
+    }
+
+    @Test fun `computer retained turn stays overhead and handoff uses settled human aim`() {
+        val session = GameSession().apply { confirmPlacement() }
+        val views = GameViews().apply { resize(1080, 2400); follow(session) }
+        views.update(cue, forward, true)
+        session.beginShot()
+        session.accept(PhysicsEvent.Contacts(setOf(1), setOf(1, 2, 3, 4)))
+        session.accept(PhysicsEvent.Settled)
+        views.follow(session)
+        val overhead = views.active
+        session.beginShot()
+        session.accept(PhysicsEvent.Contacts(setOf(1), emptySet()))
+        session.accept(PhysicsEvent.Pocketed(1))
+        session.accept(PhysicsEvent.Settled)
+        views.follow(session)
+        assertEquals(Player.COMPUTER, session.player)
+        assertSame(overhead, views.active)
+        session.beginShot()
+        session.accept(PhysicsEvent.Contacts(setOf(2), setOf(2)))
+        session.accept(PhysicsEvent.Settled)
+        views.follow(session)
+        assertEquals(Player.HUMAN, session.player)
+        val settled = Point(0.3f, -0.2f)
+        views.update(settled, forward, true)
+        assertTrue(views.active is PlayerView)
+        assertEquals(settled.x, views.active.camera.position.x, 0.0001f)
+        assertEquals(settled.z + 0.95f, views.active.camera.position.z, 0.0001f)
+        val paused = views.active.camera.position.cpy()
+        repeat(5) {
+            views.follow(session)
+            views.update(settled, forward, true, 0f)
+        }
+        assertEquals(paused, views.active.camera.position)
+    }
+
+    @Test fun `unclipped cues use seventy centimetres and still clip near rails`() {
+        val view = TopView().apply { resize(1080, 2400) }
+        assertEquals(0.70f, view.cueLength(Point(0f, 0f), forward), 0.0001f)
+        assertTrue(view.cueLength(Point(-0.7f, 0f), Point(1f, 0f)) < 0.70f)
     }
 }

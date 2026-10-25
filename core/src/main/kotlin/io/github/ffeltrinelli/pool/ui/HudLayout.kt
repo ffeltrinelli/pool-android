@@ -16,17 +16,15 @@ class HudLayout(width: Int, height: Int, val placementVisible: Boolean = false, 
     fun containsGame(screenX: Int, screenY: Int) = screenX in 0 until width && screenY in gameTop until height
     fun renderHeight(backBufferHeight: Int) = (backBufferHeight.toLong() * gameHeight / height).toInt().coerceAtLeast(1)
     val gear = Rectangle(348f, uiHeight - 50f, 48f, 48f)
-    val panel = Rectangle(30f, uiHeight / 2 - 237.5f, 360f, 475f)
+    val panel = Rectangle(30f, uiHeight / 2 - 195f, 360f, 390f)
     val close = Rectangle(336f, panel.y + panel.height - 54f, 48f, 48f)
-    val top = Rectangle(60f, uiHeight / 2 + 97.5f, 146f, 48f)
-    val player = Rectangle(214f, uiHeight / 2 + 97.5f, 146f, 48f)
-    val aidedAim = Rectangle(60f, uiHeight / 2 + 12.5f, 146f, 48f)
-    val difficulty = Rectangle(60f, uiHeight / 2 - 82.5f, 300f, 48f)
+    val aidedAim = Rectangle(60f, uiHeight / 2 + 55f, 146f, 48f)
+    val difficulty = Rectangle(60f, uiHeight / 2 - 40f, 300f, 48f)
     val difficultyStops = OpponentDifficulty.entries.mapIndexed { index, _ ->
         Rectangle(difficulty.x + index * 100f, difficulty.y, 100f, 48f)
     }
-    val restart = Rectangle(60f, uiHeight / 2 - 187.5f, 146f, 48f)
-    val exit = Rectangle(214f, uiHeight / 2 - 187.5f, 146f, 48f)
+    val restart = Rectangle(60f, uiHeight / 2 - 145f, 146f, 48f)
+    val exit = Rectangle(214f, uiHeight / 2 - 145f, 146f, 48f)
     val confirmPlacement = Rectangle(100f, uiHeight - headerHeight + 4f, 220f, 48f)
     fun confirmsPlacement(x: Int, y: Int) = confirmPlacement.contains(x * 420f / width, uiHeight - y * uiHeight / height)
     val playAgain = Rectangle(100f, uiHeight / 2 - 85f, 220f, 48f)
@@ -52,8 +50,6 @@ class HudLayout(width: Int, height: Int, val placementVisible: Boolean = false, 
             aidedAim.contains(x, y) -> HudAction.TOGGLE_AIM
             exit.contains(x, y) -> HudAction.EXIT
             restart.contains(x, y) -> HudAction.RESTART
-            top.contains(x, y) -> HudAction.TOP_VIEW
-            player.contains(x, y) -> HudAction.PLAYER_VIEW
             close.contains(x, y) -> HudAction.CLOSE
             else -> HudAction.BLOCK
         }

@@ -84,7 +84,6 @@ object GameplayDemo {
 
         private fun preparePreferencesAndFramebuffer() {
             Gdx.app.getPreferences("pool-settings").apply {
-                putString("view-mode", "PLAYER")
                 putString("opponent-difficulty", "MEDIUM")
                 putBoolean("aided-aim", true)
                 flush()

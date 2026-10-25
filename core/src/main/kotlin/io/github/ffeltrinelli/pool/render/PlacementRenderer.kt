@@ -10,7 +10,7 @@ import io.github.ffeltrinelli.pool.model.TableGeometry
 import io.github.ffeltrinelli.pool.rules.PlacementRegion
 import kotlin.math.sin
 
-/** Temporary placement guides use table coordinates, independent of the saved camera mode. */
+/** Placement guides use table coordinates projected by the automatic overhead camera. */
 internal class PlacementRenderer : Disposable {
     private val shapes = ShapeRenderer()
     fun render(camera: Camera, frame: TablePresentation) {

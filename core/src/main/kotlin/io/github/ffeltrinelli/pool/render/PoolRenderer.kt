@@ -109,8 +109,8 @@ class PoolRenderer : Disposable {
         Gdx.gl.glClearColor(0.035f, 0.075f, 0.095f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
         val cuePoint = physics.balls.firstOrNull { it.id == 0 && !it.pocketed }?.point
-        views.placing = table.placement != null
-        views.update(cuePoint, gesture.direction, session.canShoot && !table.holdOverview, viewDelta)
+        views.follow(session)
+        views.update(cuePoint, gesture.direction, session.humanTurn && !table.holdOverview, viewDelta)
         renderTable(physics, table.placement)
         if (table.placement != null) placementGuide.render(views.active.camera, table)
         val cueBall = physics.balls.firstOrNull { it.id == 0 && !it.pocketed }
@@ -120,7 +120,7 @@ class PoolRenderer : Disposable {
         val cuePose = if (session.humanTurn && table.humanCanAim) CuePose(gesture.direction, gesture.tipGap) else table.computerPose
         if (session.canShoot && cueBall != null && cuePose != null) renderCue(cueBall.point, cuePose)
         Gdx.gl.glViewport(0, 0, pixelWidth, pixelHeight)
-        hud.render(session, views.mode, table.aidedAim, hudState)
+        hud.render(session, table.aidedAim, hudState)
     }
 
     private fun renderTable(physics: PoolPhysics, preview: Point?) {

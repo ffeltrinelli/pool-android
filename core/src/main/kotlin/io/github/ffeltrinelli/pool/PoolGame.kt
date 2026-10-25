@@ -10,7 +10,6 @@ import io.github.ffeltrinelli.pool.opponent.*
 import io.github.ffeltrinelli.pool.render.PoolRenderer
 import io.github.ffeltrinelli.pool.render.TablePresentation
 import io.github.ffeltrinelli.pool.ui.*
-import io.github.ffeltrinelli.pool.view.ViewMode
 
 class PoolGame(
     private val session: GameSession = GameSession(),
@@ -46,9 +45,7 @@ class PoolGame(
             override fun resumeGame() { audio.resume(); skipDelta = true }
             override fun restartGame() = restart()
             override fun exitGame() { computer.reset(); Gdx.app.exit() }
-            override fun selectView(mode: ViewMode) { renderer.views.select(mode) }
         })
-        renderer.views.select(controls.viewMode)
         if (paused) controls.pause()
         Gdx.input.setCatchKey(Input.Keys.BACK, true)
         input = GameInput(controls, session, { renderer.hud.layout }, renderer.views, physics, gesture, ::humanCanShoot, ::strike, placement, ::confirmHumanPlacement)
@@ -83,6 +80,7 @@ class PoolGame(
         val rack = TableGeometry.rack().toMap()
         gesture.resetForRack(rack.getValue(0), Point(0f, TableGeometry.FOOT_SPOT))
         renderer.views.reset()
+        renderer.views.follow(session)
         renderer.views.update(rack.getValue(0), gesture.direction, true)
     }
 
@@ -141,7 +139,7 @@ class PoolGame(
         }
         session.confirmPlacement()
         cancelInput()
-        renderer.views.placing = false
+        renderer.views.follow(session)
         renderer.views.update(point, gesture.direction, session.player == Player.HUMAN)
     }
 
@@ -159,7 +157,7 @@ class PoolGame(
             BallPlacement.restrictedTargetToSpot(physics.snapshot(), session.context().targets)?.let(physics::spotBall)
         val point = physics.balls.firstOrNull { it.id == 0 && !it.pocketed }?.point ?: TableGeometry.CUE_START
         placement.begin(point)
-        renderer.views.placing = session.player == Player.HUMAN
+        renderer.views.follow(session)
     }
 
     private fun processPhysicsEvents() {

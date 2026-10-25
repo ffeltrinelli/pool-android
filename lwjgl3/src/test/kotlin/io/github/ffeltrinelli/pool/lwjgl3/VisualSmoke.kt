@@ -19,7 +19,8 @@ import io.github.ffeltrinelli.pool.ui.HudPresentation
 import io.github.ffeltrinelli.pool.ui.UiFonts
 import io.github.ffeltrinelli.pool.ui.TextStyle
 import java.io.File
-import io.github.ffeltrinelli.pool.view.ViewMode
+import io.github.ffeltrinelli.pool.view.TopView
+import io.github.ffeltrinelli.pool.view.PlayerView
 import io.github.ffeltrinelli.pool.startup.SplashScreen
 
 /** Test-only fixtures render through the same renderer as Android; no production test switches. */
@@ -90,6 +91,10 @@ object VisualSmoke {
                 } else {
                     renderer.render(physics, session, gesture, 1080, 2400, table = tablePresentation, hudState = hudPresentation)
                 }
+                if (name != "gallery-splash") {
+                    val overhead = session.placement != null || session.player == Player.COMPUTER
+                    check(if (overhead) renderer.views.active is TopView else renderer.views.active is PlayerView)
+                }
                 capture(name)
                 if (VisualScenarios.named(name).group == ScenarioGroup.CUE_VISIBILITY) verifyCueVisibility(name)
                 if (name.startsWith("rolling-markings-")) captureDetail(name)
@@ -157,7 +162,7 @@ object VisualSmoke {
             if (name == "gallery-placement" || name == "gallery-splash") return
             session.confirmPlacement()
             gesture.resetForRack(TableGeometry.CUE_START, Point(0f, TableGeometry.FOOT_SPOT))
-            if (name == "gallery-player") renderer.views.select(ViewMode.PLAYER)
+            if (name == "gallery-top") session = readyMatch(Player.COMPUTER)
             if (name == "gallery-settings") hudPresentation = hudPresentation.copy(settingsOpen = true)
             if (name == "gallery-result") {
                 finishMatch(Player.HUMAN)
@@ -166,7 +171,7 @@ object VisualSmoke {
                 })
                 check(session.finished && physics.balls.none { it.id in 1..8 })
             }
-            if (name == "gallery-player" || name == "gallery-top") {
+            if (name == "gallery-player") {
                 check(session.breaking && session.canShoot && physics.balls.size == 16)
                 check(gesture.direction == (Point(0f, TableGeometry.FOOT_SPOT) - TableGeometry.CUE_START).normalized())
                 check(gesture.tipGap == 0.05f)
@@ -203,24 +208,22 @@ object VisualSmoke {
             physics.reset(TableGeometry.rack(42))
             session = readyMatch()
             gesture.resetForRack(Point(0f, 0.58f), Point(0f, TableGeometry.FOOT_SPOT))
-            renderer.views.select(ViewMode.TOP)
             renderer.views.reset()
+            renderer.views.follow(session)
             tablePresentation = TablePresentation()
             hudPresentation = HudPresentation()
         }
 
         private fun difficultyFixture(name: String) {
-            renderer.views.select(if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP)
+            if (name.startsWith("top")) session = readyMatch(Player.COMPUTER)
             hudPresentation = hudPresentation.copy(
                 difficulty = OpponentDifficulty.entries.single { name.endsWith(it.name.lowercase()) },
                 settingsOpen = true
             )
             check(renderer.hud.layout.restart.y == renderer.hud.layout.exit.y)
-            check(renderer.hud.layout.aidedAim.width == renderer.hud.layout.top.width)
         }
 
         private fun rulesFixture(name: String) {
-            renderer.views.select(if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP)
             when {
                 "placement" in name -> {
                     session = GameSession()
@@ -256,7 +259,6 @@ object VisualSmoke {
                     check(session.group(Player.HUMAN) == null && session.humanTurn)
                 }
             }
-            check(renderer.views.mode == if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP)
         }
 
         private fun tableFixture(name: String) {
@@ -292,6 +294,7 @@ object VisualSmoke {
                     check(gesture.direction == direction && session.canShoot)
                 }
                 name.startsWith("rolling-markings-") -> {
+                    session = readyMatch(Player.COMPUTER)
                     val steps = name.substringAfterLast('-').toInt()
                     physics.reset(listOf(1 to Point(-0.16f, 0.35f), 9 to Point(0.16f, 0.35f)))
                     val initial = physics.balls.first().rotation.cpy()
@@ -335,7 +338,6 @@ object VisualSmoke {
             val direction = if (name.endsWith("ball-overlap")) Point(0f, -1f) else Point(-1f, 0f)
             val objectBall = if (name.endsWith("ball-overlap")) cue - direction * 0.2f else Point(0f, 0f)
             physics.reset(listOf(0 to cue, 1 to objectBall))
-            renderer.views.select(if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP)
             val start = cue - direction * 0.3f
             gesture.begin(PointerSample(0, start, 0.0), cue)
             if (name.endsWith("withdrawn") || name.endsWith("return")) {
@@ -346,13 +348,13 @@ object VisualSmoke {
                 val expectedGap = if (name.endsWith("withdrawn")) 0.15f else 0.03f
                 check(abs(gesture.tipGap - expectedGap) < 0.0001f)
             }
-            if (name.endsWith("computer")) {
+            if (name.startsWith("top")) {
                 session = readyMatch(Player.COMPUTER)
-                check(session.player == Player.COMPUTER)
-                tablePresentation = tablePresentation.copy(humanCanAim = false)
-                tablePresentation = tablePresentation.copy(computerPose = CuePose(direction, 0.05f))
+                tablePresentation = tablePresentation.copy(humanCanAim = false,
+                    computerPose = CuePose(direction, gesture.tipGap))
             }
             hudPresentation = hudPresentation.copy(settingsOpen = name.endsWith("settings"))
+            renderer.views.follow(session)
             renderer.views.update(cue, direction, true)
             check(gesture.direction == direction && session.canShoot)
         }
@@ -393,8 +395,6 @@ object VisualSmoke {
 
         private fun computerFixture(name: String) {
             session = readyMatch()
-            val playerView = name.startsWith("player")
-            renderer.views.select(if (playerView) ViewMode.PLAYER else ViewMode.TOP)
             renderer.views.update(Point(0f, 0.58f), gesture.direction, true)
             fun shot(ids: List<Int>) {
                 if (session.placement != null) session.confirmPlacement()
@@ -428,11 +428,10 @@ object VisualSmoke {
                 val expected = if (name.endsWith("withdrawn")) 0.12f else if (name.endsWith("contact")) 0f else 0.05f
                 check(abs(stroke.pose.tipGap - expected) < 0.0001f)
             }
-            if (playerView && tablePresentation.holdOverview) renderer.views.update(Point(0f, 0.58f), gesture.direction, false, 1f)
         }
 
         private fun recordComputerMotion() {
-            fixture("player-computer-cue-aim")
+            fixture("computer-cue-aim")
             val stroke = ComputerStroke(ShotCommand(Point(0f, -1f), 0.65f))
             val directory = File(report.directory, "computer-motion").apply { mkdirs() }
             for (frame in 0 until 150) {
@@ -451,6 +450,7 @@ object VisualSmoke {
         }
 
         private fun pocketFixture(name: String) {
+            session = readyMatch(if (name.startsWith("top")) Player.COMPUTER else Player.HUMAN)
             val pocket = if ("corner" in name) PocketGeometry.pockets[3] else PocketGeometry.pockets[5]
             val cue = pocket.mouthCenter - pocket.outward * 0.24f
             val start = when {
@@ -459,7 +459,6 @@ object VisualSmoke {
                 else -> pocket.mouthCenter - pocket.outward * 0.06f
             }
             physics.reset(listOf(0 to cue, 1 to start))
-            renderer.views.select(if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP)
             gesture.begin(PointerSample(0, cue - pocket.outward * 0.3f, 0.0), cue)
             renderer.views.update(cue, pocket.outward, true)
             session.beginShot()
@@ -490,8 +489,6 @@ object VisualSmoke {
         }
 
         private fun aidFixture(name: String) {
-            val mode = if (name.startsWith("player")) ViewMode.PLAYER else ViewMode.TOP
-            renderer.views.select(mode)
             tablePresentation = tablePresentation.copy(aidedAim = !name.endsWith("disabled") && !name.endsWith("settings-off"))
             hudPresentation = hudPresentation.copy(settingsOpen = name.endsWith("settings-off"))
             val cue = Point(0f, 0.58f)
@@ -515,17 +512,17 @@ object VisualSmoke {
                 }
             }
             if (!name.endsWith("reset")) gesture.begin(PointerSample(0, cue - direction * 0.3f, 0.0), cue)
+            renderer.views.follow(session)
             renderer.views.update(cue, gesture.direction, true)
             val path = AimPredictor().predict(cue, direction, physics.balls.filter { !it.pocketed }.map { AimBall(it.id, it.point) })
             if (name.endsWith("enabled") || name.endsWith("glancing") || name.endsWith("reset")) check(path.targetBallId == 1)
             if (name.endsWith("rail") || name.endsWith("blocked") || name.endsWith("pocket")) check(path.targetBallId == null)
             if (name.endsWith("rail") || name.endsWith("blocked")) check(abs(path.end.z + TableGeometry.HALF_LENGTH - radius) < 0.0001f)
-            if (mode == ViewMode.PLAYER) check(abs(renderer.views.active.camera.direction.x - direction.x * 0.70710677f) < 0.0001f)
+            check(abs(renderer.views.active.camera.direction.x - direction.x * 0.70710677f) < 0.0001f)
         }
 
         private fun viewFixture(name: String) {
-            if (name == "settings-top") { hudPresentation = hudPresentation.copy(settingsOpen = true); return }
-            renderer.views.select(ViewMode.PLAYER)
+            if (name == "settings-top") { session = readyMatch(Player.COMPUTER); hudPresentation = hudPresentation.copy(settingsOpen = true); return }
             val cue = if (name.startsWith("player-rail-")) {
                 val pocket = TableGeometry.pockets[name.substringAfterLast('-').toInt() - 1]
                 pocket * 0.85f
