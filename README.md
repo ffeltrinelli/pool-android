@@ -2,6 +2,19 @@
 
 An offline 3D eight-ball game for Android. Play solids versus stripes against a local computer opponent, with simplified WPA rules, physical pockets, and continuous touch aiming and strokes.
 
+## Table of contents
+
+- [Screenshots](#screenshots)
+- [Build and run](#build-and-run)
+- [Rules of this game](#rules-of-this-game)
+- [Controls](#controls)
+- [Pocket replays and sharing](#pocket-replays-and-sharing)
+- [Architecture and tuning](#architecture-and-tuning)
+- [Automated verification](#automated-verification)
+- [OnePlus 8T validation](#oneplus-8t-validation)
+- [Assets and attribution](#assets-and-attribution)
+- [Playing against the computer](#playing-against-the-computer)
+
 ## Screenshots
 
 <table>
