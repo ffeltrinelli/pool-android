@@ -95,3 +95,7 @@ oneplus,after,placement,fixed,cold,819,31,false,null,null,9,9
 oneplus,after,placement,fixed,warm,784,31,false,null,null,9,9
 oneplus,after,placement,deadline,cold,5000,140,false,null,null,9,9
 oneplus,after,placement,deadline,warm,5000,144,false,null,null,9,9
+desktop,placement-followup,placement,fixed,cold,259,31,false,null,,9,9
+desktop,placement-followup,placement,fixed,warm,131,31,false,null,,9,9
+desktop,placement-followup,placement,deadline,cold,2113,250,false,null,,9,9
+desktop,placement-followup,placement,deadline,warm,1820,250,false,null,,9,9

@@ -26,6 +26,7 @@ tasks.register('planningBenchmark', Test) {
     classpath = sourceSets.test.runtimeClasspath
     filter { includeTestsMatching '*PlanningBenchmarkTest'; includeTestsMatching '*PhysicsThroughputBenchmarkTest' }
     systemProperty 'pool.benchmark', 'true'
+    systemProperty 'pool.benchmarkLayout', project.findProperty('planningLayout') ?: ''
     systemProperty 'pool.benchmarkOutput', rootProject.file("build/reports/planning/${project.findProperty('planningReport') ?: 'benchmark'}.csv").absolutePath
     outputs.upToDateWhen { false }
 }

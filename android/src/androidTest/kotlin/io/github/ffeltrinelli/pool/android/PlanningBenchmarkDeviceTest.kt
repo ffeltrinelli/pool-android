@@ -24,7 +24,10 @@ class PlanningBenchmarkDeviceTest {
         report.writeText("layout,mode,run,elapsedMs,evaluations,fallback,predictedFoul,actualFoul,target,pockets\n")
         details.writeText("device=${android.os.Build.MODEL} sdk=${android.os.Build.VERSION.SDK_INT}\n")
         try {
-            for ((name, table) in layouts()) for (mode in listOf("fixed", "deadline")) {
+            val requested = arguments.getString("poolBenchmarkLayout")
+            val selected = layouts().filterKeys { requested == null || it == requested }
+            require(selected.isNotEmpty()) { "Unknown planning layout: $requested" }
+            for ((name, table) in selected) for (mode in listOf("fixed", "deadline")) {
                 val planner = if (mode == "fixed") BulletShotPlanner(32, Long.MAX_VALUE) else BulletShotPlanner()
                 var facts = ShotFacts()
                 var settled = false
@@ -50,6 +53,7 @@ class PlanningBenchmarkDeviceTest {
 
     @Test fun measureIdenticalRollouts() {
         assumeTrue(InstrumentationRegistry.getArguments().getString("poolBenchmark") == "true")
+        assumeTrue(InstrumentationRegistry.getArguments().getString("poolBenchmarkLayout") == null)
         val report = File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir, "planning-benchmark-physics.csv")
         report.parentFile?.mkdirs()
         report.writeText("layout,run,rollouts,steps,restoreMs,simulationMs\n")

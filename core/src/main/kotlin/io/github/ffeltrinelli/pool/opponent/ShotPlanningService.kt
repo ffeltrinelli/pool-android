@@ -22,8 +22,11 @@ class WorkerShotPlanningService(
     private val generation = AtomicLong()
     private data class Request(val future: Future<PlanningResult>, val fallback: PlanningResult)
     private var pending: Request? = null
+    // Retain one immutable request for read-only diagnostics even when replay recording is disabled.
+    private var lastRequest: TableSnapshot? = null
     override fun start(table: TableSnapshot, seed: Long) {
         cancel()
+        lastRequest = table
         val fallback = PlanningPositions.fallback(table)
         val token = generation.get()
         val future = executor.submit<PlanningResult> { planner.plan(table, seed) { generation.get() != token } }

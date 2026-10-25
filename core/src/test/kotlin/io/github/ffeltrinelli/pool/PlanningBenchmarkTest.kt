@@ -15,7 +15,10 @@ class PlanningBenchmarkTest {
         val report = File(System.getProperty("pool.benchmarkOutput", "build/reports/planning/benchmark.csv"))
         report.parentFile.mkdirs()
         report.writeText("layout,mode,run,elapsedMs,evaluations,fallback,foul,target,pockets,attempts,rejected,cacheHits,restoreMs,simulationMs,physicsSteps,geometryMs,setupMs,kind\n")
-        for ((name, table) in layouts()) for (mode in listOf("fixed", "deadline")) {
+        val requested = System.getProperty("pool.benchmarkLayout", "")
+        val selected = layouts().filterKeys { requested.isEmpty() || it == requested }
+        require(selected.isNotEmpty()) { "Unknown planning layout: $requested" }
+        for ((name, table) in selected) for (mode in listOf("fixed", "deadline")) {
             val planner = if (mode == "fixed") BulletShotPlanner(32, Long.MAX_VALUE) else BulletShotPlanner()
             try {
                 repeat(2) { run ->

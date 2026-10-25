@@ -14,6 +14,14 @@ Code responsibilities separate mirror geometry, rebound construction, optimizer 
 
 Restoration profiling found native ball reconstruction accounts for less than one percent of representative timed requests on the phone. Body pooling was therefore not introduced: its contact-cache, activation and ownership risks were not justified by that small share. Simulation and native collision/settling work remain the dominant cost. Material, solver, settling and simulation-duration tuning are unchanged.
 
+## Ball-in-hand follow-up
+
+A subsequent live OnePlus shot used all five seconds: 21 attempts in the direct phase and 20 in rebound search, with 38 completed simulations. It ultimately selected a 1.00 N·s contact on ball 2, predicting an incidental pot of ball 1. Read-only debugger inspection confirmed the actual result was no pot and no foul, on a computer solids turn. Replays were disabled and no original request remained reachable; the committed fixture is explicitly the settled **post-miss** table, not a reconstruction of the original shot.
+
+Placement selection previously shortlisted merely valid cue positions before checking the actual pot lanes. It could also evaluate up to 32 contact alternatives before refining placement pots, consuming the direct phase. Clear placement routes now use the same ghost-ball validation as ordinary direct shots, retain their exact target seed, and cover different legal targets first. Multiple cue distances allow tighter placements near cushions. Clear routes precede unchecked aligned positions and grid fallbacks, preserving native coverage around jaws where the predictor is conservative. With clear direct seeds, only two contact fallbacks precede refinement; without them, one contact per placement still gets a chance.
+
+One immutable `WorkerShotPlanningService.lastRequest` is retained for debugger inspection even with replays off, and logs include the chosen cue position. Shared test geometry lives in `core/src/test/resources/opponent`; Android includes it only in test assets. The post-miss regression checks an intended direct pot within the production deadline and replays it in an independent native world.
+
 ## Measurement method
 
 Baseline: Git revision `3edd07e4f7210ee73946ef110ec937fa7d5d3881`, built in an isolated temporary directory with benchmark-only tests added. Both revisions use identical fixture coordinates and random seed 17. Device: connected OnePlus 8T, model KB2003, Android API 34. Desktop: local Apple Silicon Mac, JDK 21. Wall-clock samples are observations, not performance guarantees or hard-coded test expectations.
@@ -26,7 +34,7 @@ A separate throughput test repeats identical commands 16 times in four rounds on
 
 [Search samples](benchmarks/ai-planning-2026-10-25.csv) retain both cold and warm runs on both machines. [Identical-rollout samples](benchmarks/ai-physics-2026-10-25.csv) retain restoration/simulation times and step counts. Detailed request-stage diagnostics remain in local `build/reports/planning/*-details.txt` and desktop planner CSV files.
 
-Warm OnePlus production searches:
+Warm OnePlus production searches before the ball-in-hand follow-up:
 
 | Layout | Before: evaluations / ms | After: evaluations / ms | Native outcome before → after |
 |---|---:|---:|---|
@@ -52,11 +60,15 @@ Identical-rollout warm medians (16 rollouts per round):
 
 The desktop observations were about 10% and 8% faster. An earlier OnePlus sample was about 16% and 6% faster, but the final phone repeat was about 9% and 6% slower than baseline. These runs were not thermally/governor controlled, so they do **not** establish a consistent per-step speed improvement on the phone. The repeatable practical result is more completed useful evaluations within the existing deadline, better blocked-layout legality, and less work wasted on known illegal directions. Physics step counts for the identical commands match across revisions on each machine.
 
+The focused desktop placement follow-up completed 250 evaluations in 1,820 ms on the warm timed request, compared with 237 in 2,368 ms in the initial implementation. Its fixed 32-attempt run completed 31 simulations in 131 ms, selecting an intended direct pot. These additional rows are labeled `placement-followup` in the search CSV; the earlier before/after rows remain as historical measurements. Physical-device follow-up validation is pending permission to restart the live rack.
+
 ## Reproduction
 
 ```sh
 ./gradlew :core:planningBenchmark -PplanningReport=after
 ```
+
+Use `-PplanningLayout=placement -PplanningReport=placement-followup` for a focused placement rerun. On Android, add `-e poolBenchmarkLayout placement` to the instrumentation command.
 
 This opt-in task writes `build/reports/planning/after.csv` and `after-physics.csv`; ordinary core tests skip benchmark work. The planner CSV includes stage timings, attempts, completed evaluations, rejections, cache hits, physics steps and outcome diagnostics.
 
@@ -74,4 +86,4 @@ adb -s SERIAL exec-out run-as io.github.ffeltrinelli.pool cat files/planning-ben
 
 The benchmark owns its worlds on the instrumentation thread and creates no production fixture controls. Regular device tests skip its two measurement methods. `OpponentLegalityDeviceTest` separately asserts production-budget legal kick contacts around a solid or premature eight. Existing replay, Settings, sharing, export and residual-settling tests remain part of device acceptance. The real-shot replay fixture enables replays in memory rather than assuming the player has enabled the saved setting; it never writes that preference.
 
-The refreshed 30-second gameplay recording lives at `build/reports/gameplay-demo/gameplay.mp4`; its poster is committed. Static gallery images still represent the unchanged rendering and controls. Upload the recording as an accessible attachment when publishing a PR; the earlier README video attachment is explicitly historical.
+The refreshed 30-second gameplay recording lives at `build/reports/gameplay-demo/gameplay.mp4`; its poster is committed. Static gallery images still represent the unchanged rendering and controls. The recording is attached to [PR #18](https://github.com/ffeltrinelli/pool-android/pull/18) and linked from README.

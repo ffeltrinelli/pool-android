@@ -57,29 +57,38 @@ class BulletShotPlanner(
         val world = simulation ?: ShotSimulation().also { simulation = it }
         world.resetMetrics()
         val geometry = ShotCandidates()
-        val positions = PlanningPositions.candidates(table)
-        val initialTable = table.withCue(positions.first())
+        val fallbackPosition = PlanningPositions.fallbackPoint(table)
+        val initialTable = table.withCue(fallbackPosition)
         val search = ShotSearch(initialTable, geometry.fallback(initialTable), world, maxEvaluations, deadlineMillis, cancelled, started)
         val setupMillis = (System.nanoTime() - started) / 1_000_000.0
         var geometryNanos = 0L
         val direct = mutableListOf<Seed>()
         try {
             val geometryStarted = System.nanoTime()
+            val placements: List<PlanningPosition>
             try {
-                for (position in positions) {
+                placements = PlanningPositions.shortlist(table, search::checkBudget)
+                for (placement in placements) {
                     search.checkBudget()
-                    val candidates = geometry.generate(table.withCue(position), search::checkBudget)
-                    val limit = if (table.placement == null) 4 else 1
-                    direct += candidates.take(limit).map { Seed(it, position) }
+                    val candidates = placement.directPot?.let { listOf(it) }
+                        ?: geometry.generate(table.withCue(placement.point), search::checkBudget).take(if (table.placement == null) 4 else 1)
+                    direct += candidates.map { Seed(it, placement.point) }
                 }
             } finally { geometryNanos += System.nanoTime() - geometryStarted }
+            val positions = placements.map { it.point }
             if (!table.rulesContext().breaking) search.limitDirectPhase()
             try {
-                val contacts = positions.flatMap { position ->
-                    geometry.contactAlternatives(table.withCue(position)).map {
+                // Without a clear pot, cover one contact per placement before refining a rebound.
+                // Otherwise a pair of contact fallbacks leaves the phase available for direct-pot refinement.
+                val contacts = if (table.placement != null && direct.isEmpty()) {
+                    positions.mapNotNull { position -> geometry.contactAlternatives(table.withCue(position)).firstOrNull()?.let {
+                        Seed(ShotCandidate(it, 0f, kind = ShotKind.CONTACT), position)
+                    } }
+                } else positions.asSequence().flatMap { position ->
+                    geometry.contactAlternatives(table.withCue(position)).asSequence().map {
                         Seed(ShotCandidate(it, 0f, kind = ShotKind.CONTACT), position)
                     }
-                }
+                }.take(if (table.placement == null) 4 else 2).toList()
                 val opening = if (table.placement != null) direct + contacts else direct.take(1) + contacts + direct.drop(1)
                 ShotOptimizer.evaluateSeeds(opening, search)
                 if (direct.isNotEmpty()) ShotOptimizer.refine(direct, search, seed)

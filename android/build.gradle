@@ -21,6 +21,9 @@ android {
       assets.setSrcDirs(['../assets'])
       jniLibs.setSrcDirs(['libs'])
     }
+    androidTest {
+      assets.srcDir '../core/src/test/resources'
+    }
   }
   packagingOptions {
 		resources {

@@ -10,6 +10,7 @@ import java.io.File
 class PhysicsThroughputBenchmarkTest {
     @Test fun measureIdenticalRollouts() {
         assumeTrue(java.lang.Boolean.getBoolean("pool.benchmark"))
+        assumeTrue(System.getProperty("pool.benchmarkLayout", "").isEmpty())
         val report = File(System.getProperty("pool.benchmarkOutput").removeSuffix(".csv") + "-physics.csv")
         report.parentFile.mkdirs()
         report.writeText("layout,run,rollouts,steps,restoreMs,simulationMs\n")
