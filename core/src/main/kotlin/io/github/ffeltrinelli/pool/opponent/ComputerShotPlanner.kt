@@ -63,7 +63,7 @@ class BulletShotPlanner(
         val setupMillis = (System.nanoTime() - started) / 1_000_000.0
         var geometryNanos = 0L
         val direct = mutableListOf<Seed>()
-        val offCenter = mutableListOf<Seed>()
+        val supplemental = mutableListOf<Seed>()
         try {
             val geometryStarted = System.nanoTime()
             val placements: List<PlanningPosition>
@@ -76,7 +76,7 @@ class BulletShotPlanner(
                     val candidates = if (table.rulesContext().breaking) geometry.generate(positioned, search::checkBudget)
                     else {
                         val pots = geometry.directSeeds(positioned, search::checkBudget)
-                        offCenter += pots.offCenter.take(limit).map { Seed(it, placement.point) }
+                        supplemental += pots.supplemental.take(limit).map { Seed(it, placement.point) }
                         placement.directPot?.let { listOf(it) } ?: pots.centered.take(limit)
                     }
                     direct += candidates.map { Seed(it, placement.point) }
@@ -100,8 +100,8 @@ class BulletShotPlanner(
                 ShotOptimizer.evaluateSeeds(opening, search)
                 // Keep established centered pots; otherwise try direct pocket entries before rebounds.
                 val refinement = if (search.directPotFound) direct else {
-                    ShotOptimizer.evaluateSeeds(offCenter, search)
-                    direct + offCenter
+                    ShotOptimizer.evaluateSeeds(supplemental, search)
+                    direct + supplemental
                 }
                 if (refinement.isNotEmpty()) ShotOptimizer.refine(refinement, search, seed)
             } catch (_: ShotSearch.DirectPhaseEnded) { /* Reserve the second phase for rebounds. */ }

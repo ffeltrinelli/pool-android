@@ -8,6 +8,19 @@ data class AimPath(val end: Point, val targetBallId: Int?, val contactPoint: Poi
 
 /** Direct cue-centre travel, without advancing Bullet or predicting rebounds. */
 class AimPredictor {
+    /** Object-lane occlusion must still be checked when a nearby jaw needs native evaluation. */
+    internal fun firstBallBefore(origin: Point, direction: Point, balls: List<AimBall>, maximumDistance: Float): Int? {
+        val forward = direction.normalized()
+        var distance = maximumDistance
+        var target: Int? = null
+        for (ball in balls) {
+            if (ball.id == 0) continue
+            val contact = circleContact(origin, forward, ball.position, TableGeometry.BALL_RADIUS * 2f)
+            if (contact <= distance) { distance = contact; target = ball.id }
+        }
+        return target
+    }
+
     fun predict(origin: Point, direction: Point, balls: List<AimBall>): AimPath {
         val forward = direction.normalized()
         val radius = TableGeometry.BALL_RADIUS

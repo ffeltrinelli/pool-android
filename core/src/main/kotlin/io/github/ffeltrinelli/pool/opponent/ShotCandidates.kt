@@ -21,7 +21,7 @@ class ShotCandidates {
         if (table.rulesContext().breaking) return listOf(ShotCandidate(
             ShotCommand((Point(0f, TableGeometry.FOOT_SPOT) - cue).normalized(), 1.10f), 0f, kind = ShotKind.BREAK))
         val pots = directSeeds(table, checkBudget)
-        return pots.centered + pots.offCenter
+        return pots.centered + pots.supplemental
     }
 
     internal fun directSeeds(table: TableSnapshot, checkBudget: () -> Unit): DirectPotSeeds {

@@ -92,6 +92,7 @@ internal class ShotSearch(
             return REJECTED_SCORE
         if (kind.isKick && evaluation.firstContacts.isNotEmpty() && evaluation.cueRailsBeforeContact != 1)
             return REJECTED_SCORE
+        if (kind == ShotKind.DIRECT_POT && evaluation.cueRailsBeforeContact != 0) return REJECTED_SCORE
         if (kind == ShotKind.DIRECT_POT && evaluation.foul == null && !evaluation.lost && targetBallId in evaluation.pocketedTargets)
             directPotFound = true
         val score = evaluation.scoreFor(targetBallId.takeIf { kind.isPot })

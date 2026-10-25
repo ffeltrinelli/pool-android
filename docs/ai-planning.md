@@ -30,6 +30,14 @@ Aiming only at the pocket center pointed that object-ball route into the cushion
 
 The existing Medium fixture exposed a refinement that switched intended targets merely for proximity/power. Successful starting pots now survive these same-outcome refinements across targets as well. Wins, legal pot count and foul/loss avoidance still take precedence; execution errors are unchanged. Core coverage includes the exact request with independent execution, mirrored rail routes, blocked object lanes, and actual mouth crossings. The original Medium and winning-eight assertions remain unchanged.
 
+## Captured ball-2 jaw route
+
+The next retained request (OnePlus log 19:07:31, seed 11) had a direct pot on ball 2 into the nearby corner. The old generator returned no direct candidates because its planar object ray met the cushion shortly before the pocket mouth. Independent native trials potted ball 2 at 0.18, 0.25, 0.35 and 0.50 N·s; the 0.25 N·s regression also verifies no object-ball cushion contact. The live planner instead selected a kick pot on ball 1, predicting a pot; the actual result was no pocket and no foul. The exact pre-shot fixture is `opponent/ball-two-direct-request.json`.
+
+A route whose predicted cushion contact lies within one ball radius of an intended jaw endpoint, and no more than one diameter short of its mouth, is now a supplemental direct seed. A separate ball-only query still rejects obstructed object lanes, including a ball hidden behind the earlier predicted cushion contact. Distant cushion routes remain rejected. Clear centered seeds retain priority; supplemental routes share the direct phase and request budgets. Bullet decides the result, and a native cue rebound before first contact cannot count as a direct shot. Direct success does not require zero object-rail contacts: an along-rail shot can graze the cushion, and a pocket can rattle within its throat.
+
+Tests cover the captured request, independent direct execution, a ball behind the conservative jaw stop, a distant cushion rejection and the earlier direct-rail/Medium/placement cases. The shared fixture remains in test assets only. Neither physics fidelity, difficulty errors nor the 5,000 ms deadline changed. Earlier benchmark rows describe their recorded revisions and are not new speed measurements for this change.
+
 ## Measurement method
 
 Baseline: Git revision `3edd07e4f7210ee73946ef110ec937fa7d5d3881`, built in an isolated temporary directory with benchmark-only tests added. Both revisions use identical fixture coordinates and random seed 17. Device: connected OnePlus 8T, model KB2003, Android API 34. Desktop: local Apple Silicon Mac, JDK 21. Wall-clock samples are observations, not performance guarantees or hard-coded test expectations.
