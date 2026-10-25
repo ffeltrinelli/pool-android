@@ -10,7 +10,10 @@ data class ShotEvaluation(
     val impulse: Float,
     val won: Boolean = false,
     val lost: Boolean = false,
-    val pocketedTargets: Set<Int> = emptySet()
+    val pocketedTargets: Set<Int> = emptySet(),
+    val firstContacts: Set<Int> = emptySet(),
+    val bankedTargets: Set<Int> = emptySet(),
+    val cueRailsBeforeContact: Int = 0
 ) {
     fun scoreFor(targetBallId: Int?): Double = score +
         if (foul == null && !lost && targetBallId in pocketedTargets) OpponentTuning.INTENDED_POT_BONUS else 0.0

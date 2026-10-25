@@ -57,7 +57,7 @@ class ExecutionAccuracyTest {
 
     @Test fun `search effort and visible thinking retain shared tuning`() {
         assertEquals(5000L, OpponentTuning.DEADLINE_MILLIS)
-        assertEquals(64, OpponentTuning.EVALUATIONS)
+        assertEquals(256, OpponentTuning.EVALUATIONS)
         assertEquals(1f, OpponentTuning.THINK_SECONDS, 0f)
     }
 }

@@ -49,7 +49,7 @@ class PoolGame(
             physicsEvents.add(event)
         }, audio::queue, audio::queue, { if (recorder.recording) recorder.step(PoolPhysics.STEP, physics.replayBalls()) })
         computer = ComputerTurn(WorkerShotPlanningService(reportFailure = { Gdx.app.error("PoolAI", "Planning failed; using fallback", it) })) {
-            Gdx.app.log("PoolAI", "${it.evaluations} evaluations in ${it.elapsedMillis} ms; fallback=${it.usedFallback}; predictedFoul=${it.predictedFoul}; target=${it.targetBallId}; predictedPockets=${it.predictedPockets}; shot=${it.shot}")
+            Gdx.app.log("PoolAI", "${it.evaluations} evaluations in ${it.elapsedMillis} ms; fallback=${it.usedFallback}; kind=${it.kind}; first=${it.predictedFirstContacts}; metrics=${it.metrics}; predictedFoul=${it.predictedFoul}; target=${it.targetBallId}; predictedPockets=${it.predictedPockets}; shot=${it.shot}")
         }
         renderer = PoolRenderer()
         resetRackAim()
