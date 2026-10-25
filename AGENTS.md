@@ -45,7 +45,7 @@ Use the committed Gradle wrapper with JDK 21. Follow [build setup](README.md#bui
 
 ## Pull request descriptions
 
-Keep docs and PR descriptions focused on concepts, rationale, and evidence that source does not explain. Keep external-resource credits in the README and linked asset notices; replay share text and video metadata should link to the repository.
+Keep docs and PR descriptions focused on concepts, rationale, and evidence that source does not explain. Briefly explain unfamiliar concepts and expand specialized acronyms on first use; preserve navigation aids. Keep external-resource credits in the README and linked asset notices; replay share text and video metadata should link to the repository.
 
 Include screenshots of the game in PR descriptions when relevant to the changes. For changes to existing visuals, include before-and-after screenshots where practical. Briefly caption screenshots to identify what they demonstrate. Screenshots are optional for changes without a relevant visual effect. Use accessible image attachments or links, not local filesystem paths.
 

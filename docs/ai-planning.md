@@ -1,14 +1,16 @@
 # Opponent planning
 
-The search balances useful alternatives against a five-second turn budget. Direct pots come first; if none succeeds, single-cushion banks and kicks receive the remaining budget. Geometry proposes routes, while native simulation and shared rules decide their outcome. A fallback may be unevaluated and cannot guarantee a legal shot.
+The planner uses CMA-ES (Covariance Matrix Adaptation Evolution Strategy), an optimizer that samples batches of shot variations and uses better outcomes to choose which directions and powers to explore next. Bullet, the game’s physics engine, simulates each candidate.
 
-Captured failures exposed two recurring weaknesses: a geometrically conservative pocket model can hide valid rail/jaw entries, and an incidental lower-power pot can displace a more reliable intended pot. The planner therefore tests several usable mouth entries, bounds near-jaw exceptions, checks ball occlusion independently, and preserves intended targets through refinement. Additional legal pots and better rack outcomes still take precedence.
+The search balances useful alternatives against a five-second turn budget. Direct pots come first; if none succeeds, single-cushion banks (object ball rebounds) and kicks (cue ball rebounds before contact) receive the remaining budget. Geometry proposes routes, while native simulation and shared rules decide their outcome. A fallback may be unevaluated and cannot guarantee a legal shot.
 
-Ball-in-hand candidates prioritize clear pot lanes and different targets before duplicate routes. Contact alternatives must not consume the entire direct phase. Restored native contacts remain approximate; exact Hard execution can still differ from prediction. Retaining a successful seed against an equally scoring refinement is a reliability choice, not proof of optimal play.
+Captured failures exposed two recurring weaknesses: a conservative geometric model can reject valid entries near rails or jaws (the angled cushion ends beside a pocket opening), and an incidental lower-power pot can displace a more reliable intended pot. The planner therefore tests several usable mouth entries, bounds near-jaw exceptions, checks independently whether other balls block the route, and preserves intended targets through refinement. Additional legal pots and better rack outcomes still take precedence.
+
+Ball in hand allows cue-ball placement after a foul; its candidates prioritize clear pot lanes and different targets before duplicate routes. Contact alternatives must not consume the entire direct phase. Restored native contacts remain approximate; exact Hard execution can still differ from prediction. Retaining a successful seed (an initial candidate shot) against an equally scoring refinement is a reliability choice, not proof of optimal play.
 
 ## Captured failures
 
-Fixtures in `core/src/test/resources/opponent` retain immutable geometry for independent native execution. They are bundled only in Android test assets. Inspect the worker’s retained `lastRequest` before resetting a reported shot; replay preferences do not control its availability.
+Fixtures—saved test layouts—in `core/src/test/resources/opponent` retain immutable geometry for independent native execution. They are bundled only in Android test assets. Inspect the worker’s retained `lastRequest` before resetting a reported shot; replay preferences do not control its availability.
 
 | Fixture | Evidence and lesson |
 |---|---|
@@ -19,15 +21,15 @@ Fixtures in `core/src/test/resources/opponent` retain immutable geometry for ind
 
 Device reruns reproduced missing candidates or indirect choices, but some independently potted when the live shot missed. These fixtures establish specific regressions, not universal accuracy. Detailed build-specific observations are in [device validation](device-validation.md).
 
-Native reconstruction measured below one percent of representative phone requests. Body pooling was rejected because contact-cache and ownership risks outweighed that small potential saving. Simulation remains the dominant cost.
+Recreating Bullet’s ball bodies from saved poses measured below one percent of representative phone requests. Reusing those bodies instead (body pooling) was rejected because stale collision history and resource-lifetime risks outweighed that small potential saving. Simulation remains the dominant cost.
 
 ## Measurement method
 
 Baseline: Git revision `3edd07e4f7210ee73946ef110ec937fa7d5d3881`, built in an isolated temporary directory with benchmark-only tests added. Both revisions use identical fixture coordinates and random seed 17. Device: connected OnePlus 8T, model KB2003, Android API 34. Desktop: local Apple Silicon Mac, JDK 21. Wall-clock samples are observations, not performance guarantees or hard-coded test expectations.
 
-Each of six layouts runs a fixed 32-attempt search and the production deadline/cap search twice with one planner instance: a cold world followed by a warm reuse. "Cold" is the first request on that world, not a fresh process, filesystem cache or thermally controlled device. Each selected device command is replayed in a separate native world at exact Hard accuracy and resolved by shared rules. Layout names describe their purpose, not a requirement that the selected shot have that kind; e.g. a bank fixture can select a better kick or contact.
+Each of six layouts runs a fixed 32-attempt search and the production search with its time and attempt limits twice with one planner instance: a cold world followed by a warm reuse. "Cold" is the first request on that world, not a fresh process, filesystem cache or thermally controlled device. Each selected device command is replayed in a separate native world at exact Hard accuracy and resolved by shared rules. Layout names describe their purpose, not a requirement that the selected shot have that kind; e.g. a bank fixture can select a better kick or contact.
 
-A separate throughput test repeats identical commands 16 times in four rounds on sparse and full-rack snapshots. Compare the median simulation time of the last three rounds, and check matching step counts. This isolates efficiency from different search choices and the larger cap. Restoration is measured separately. Timing and native contact differences can change how many candidates complete by the deadline. The fixtures sample specific situations, not match win rates or an exhaustive quality benchmark.
+A separate throughput test measures simulation work per unit time by repeating identical commands 16 times in four rounds on sparse and full-rack snapshots. Compare the median simulation time of the last three rounds, and check matching step counts. This isolates efficiency from different search choices and the larger cap. Restoration is measured separately. Timing and native contact differences can change how many candidates complete by the deadline. The fixtures sample specific situations, not match win rates or an exhaustive quality benchmark.
 
 ## Results
 
@@ -44,11 +46,11 @@ Warm OnePlus production searches before the ball-in-hand follow-up:
 | Kick layout | 64 / 3,208 | 106 / 5,000 | Wrong first contact → legal kick pot |
 | Ball in hand | 64 / 2,276 | 144 / 5,000 | Legal pot → legal pot |
 
-Every final cold/warm timed phone request reported 5,000 ms, with 93–206 completed evaluations, no fallback and no predicted or independently replayed foul. The clock is checked between native steps and geometry operations; scheduling/GC/native-call overhead can overrun the boundary slightly (one desktop gameplay capture reported 5,013 ms), rather than extending the configured budget.
+Every final cold/warm timed phone request reported 5,000 ms, with 93–206 completed evaluations, no fallback and no predicted or independently replayed foul. The clock is checked between native steps and geometry operations; thread scheduling, garbage collection, and calls into Bullet can overrun the boundary slightly (one desktop gameplay capture reported 5,013 ms), rather than extending the configured budget.
 
 At the same 32-attempt limit, warm OnePlus direct/open/blocked/bank/kick layouts took 828/1,161/1,144/1,235/1,213 ms versus 915/1,854/1,523/1,703/1,678 ms before. Completed counts differ because illegal directions are rejected before simulation and exact trials are cached. Placement now uses 31 completed evaluations instead of leaving the old optimizer's small per-position budget unused at eight; its fixed-budget request consequently takes longer, 784 ms versus 243 ms, while evaluating more alternatives.
 
-Identical-rollout warm medians (16 rollouts per round):
+Identical-rollout warm medians (16 simulated shots per round):
 
 | Machine / layout | Before simulation ms | Final after simulation ms |
 |---|---:|---:|
@@ -57,7 +59,7 @@ Identical-rollout warm medians (16 rollouts per round):
 | OnePlus / sparse | 862.1 | 942.7 |
 | OnePlus / rack | 3,809.1 | 4,026.6 |
 
-The desktop observations were about 10% and 8% faster. An earlier OnePlus sample was about 16% and 6% faster, but the final phone repeat was about 9% and 6% slower than baseline. These runs were not thermally/governor controlled, so they do **not** establish a consistent per-step speed improvement on the phone. The repeatable practical result is more completed useful evaluations within the existing deadline, better blocked-layout legality, and less work wasted on known illegal directions. Physics step counts for the identical commands match across revisions on each machine.
+The desktop observations were about 10% and 8% faster. An earlier OnePlus sample was about 16% and 6% faster, but the final phone repeat was about 9% and 6% slower than baseline. Phone temperature and CPU clock policies were not controlled during these runs, so they do **not** establish a consistent per-step speed improvement on the phone. The repeatable practical result is more completed useful evaluations within the existing deadline, better blocked-layout legality, and less work wasted on known illegal directions. Physics step counts for the identical commands match across revisions on each machine.
 
 The focused desktop placement follow-up completed 250 evaluations in 1,820 ms on the warm timed request, compared with 237 in 2,368 ms in the initial implementation. Its fixed 32-attempt run completed 31 simulations in 131 ms, selecting an intended direct pot. These additional rows are labeled `placement-followup` in the search CSV; the earlier before/after rows remain as historical measurements.
 
