@@ -18,3 +18,15 @@ tasks.register('difficultyCalibration', Test) {
     systemProperty 'pool.calibrationOutput', rootProject.file('build/reports/difficulty/calibration.csv').absolutePath
     outputs.upToDateWhen { false }
 }
+
+tasks.register('planningBenchmark', Test) {
+    group = 'verification'
+    description = 'Opt-in fixed-budget and five-second opponent measurements; writes CSV.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    filter { includeTestsMatching '*PlanningBenchmarkTest'; includeTestsMatching '*PhysicsThroughputBenchmarkTest' }
+    systemProperty 'pool.benchmark', 'true'
+    systemProperty 'pool.benchmarkLayout', project.findProperty('planningLayout') ?: ''
+    systemProperty 'pool.benchmarkOutput', rootProject.file("build/reports/planning/${project.findProperty('planningReport') ?: 'benchmark'}.csv").absolutePath
+    outputs.upToDateWhen { false }
+}

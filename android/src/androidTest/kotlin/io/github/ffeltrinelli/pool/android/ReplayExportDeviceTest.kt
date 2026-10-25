@@ -65,6 +65,8 @@ class ReplayExportDeviceTest {
                     if (phase == 4 && sharingShown.count == 0L) phase = 5
                     when (phase) {
                         0 -> {
+                            // Isolate this replay fixture from the player's saved toggle without writing preferences.
+                            controls.javaClass.getDeclaredField("replays").apply { isAccessible = true }.setBoolean(controls, true)
                             // Fixtures stay in test code; production exposes no setup controls.
                             session.restart()
                             while (session.player != Player.HUMAN) session.restart()

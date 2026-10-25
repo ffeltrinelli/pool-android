@@ -20,7 +20,7 @@ class Ball internal constructor(val id: Int, val body: btRigidBody) {
 /** Owns every Bullet allocation. All calls and event delivery stay on the owning thread. */
 class PoolPhysics(
     private val events: (PhysicsEvent) -> Unit = {},
-    private val impacts: (Impact) -> Unit = {},
+    private val impacts: ((Impact) -> Unit)? = null,
     private val pocketDrops: (PocketDrop) -> Unit = {},
     private val afterStep: () -> Unit = {}
 ) : Disposable {
@@ -33,14 +33,16 @@ class PoolPhysics(
     private val table: TablePhysics
     private val ownedBalls = mutableListOf<Ball>()
     val balls: List<Ball> get() = ownedBalls
-    private val contactImpacts = ContactImpacts(impacts)
+    private val contactImpacts = impacts?.let(::ContactImpacts)
     private val transform = Matrix4()
     private val velocity = Vector3()
     private var accumulator = 0f
     private val restStability = RestStability()
     private var quietSeconds = 0f
     private var wasSettled = true
-    private var ruleContacts = emptySet<Pair<Int, Int>>()
+    private var ruleContacts = mutableSetOf<Int>()
+    private var nextRuleContacts = mutableSetOf<Int>()
+    private val contactPosition = Vector3()
     var interpolation = 0f
         private set
 
@@ -69,8 +71,9 @@ class PoolPhysics(
     }
 
     fun reset(layout: List<Pair<Int, Point>> = TableGeometry.rack()) {
-        contactImpacts.reset()
-        ruleContacts = emptySet()
+        contactImpacts?.reset()
+        ruleContacts.clear()
+        nextRuleContacts.clear()
         balls.forEach(::disposeBall)
         ownedBalls.clear()
         layout.forEach { (id, point) -> addBall(id, point) }
@@ -122,8 +125,9 @@ class PoolPhysics(
             disposeBall(it)
             ownedBalls.remove(it)
         }
-        contactImpacts.reset()
-        ruleContacts = emptySet()
+        contactImpacts?.reset()
+        ruleContacts.clear()
+        nextRuleContacts.clear()
         addBall(id, point)
         interpolation = 0f
     }
@@ -142,7 +146,7 @@ class PoolPhysics(
         quietSeconds = 0f
         restStability.reset()
         wasSettled = false
-        impacts(Impact(ImpactKind.CUE, shot.impulse))
+        impacts?.invoke(Impact(ImpactKind.CUE, shot.impulse))
     }
 
     fun advance(delta: Float) {
@@ -212,37 +216,58 @@ class PoolPhysics(
     }
 
     private fun collectImpactContacts() {
-        val touching = mutableSetOf<Pair<Int, Int>>()
-        val targets = mutableSetOf<Int>()
-        val rails = mutableSetOf<Int>()
+        val touching = nextRuleContacts
+        touching.clear()
+        var targets: MutableSet<Int>? = null
+        var rails: MutableSet<Int>? = null
         for (index in 0 until dispatcher.numManifolds) {
             val manifold = dispatcher.getManifoldByIndexInternal(index)
             val first = manifold.body0.userValue
             val second = manifold.body1.userValue
+            val cueTarget = when {
+                first == 0 && second in 1..15 -> second
+                second == 0 && first in 1..15 -> first
+                else -> null
+            }
+            val railBall = when {
+                first in CollisionIds.BALLS && second in CollisionIds.CUSHIONS -> first
+                second in CollisionIds.BALLS && first in CollisionIds.CUSHIONS -> second
+                else -> null
+            }
+            val audible = (first in CollisionIds.BALLS && second in CollisionIds.BALLS) || railBall != null
+            // Cloth/support manifolds contribute neither rule contacts nor impact sounds.
+            if (cueTarget == null && railBall == null && (contactImpacts == null || !audible)) continue
+            val pair = (minOf(first, second) shl 16) or (maxOf(first, second) and 0xffff)
             for (contactIndex in 0 until manifold.numContacts) {
                 val point = manifold.getContactPoint(contactIndex)
                 // CCD can resolve an impact while a small positive separation remains.
                 if (point.distance <= 0f || point.appliedImpulse > 0f) {
-                    contactImpacts.contact(first, second, point.appliedImpulse)
-                    val pair = minOf(first, second) to maxOf(first, second)
+                    contactImpacts?.contact(first, second, point.appliedImpulse)
+                    if (cueTarget == null && railBall == null) continue
                     touching.add(pair)
                     if (pair !in ruleContacts && point.appliedImpulse > 0.000001f) {
-                        if (first == 0 && second in 1..15) targets.add(second)
-                        if (second == 0 && first in 1..15) targets.add(first)
-                        if (first in CollisionIds.BALLS && second in CollisionIds.CUSHIONS) rails.add(first)
-                        if (second in CollisionIds.BALLS && first in CollisionIds.CUSHIONS) rails.add(second)
+                        if (cueTarget != null) {
+                            val contacts = targets ?: mutableSetOf<Int>().also { targets = it }
+                            contacts.add(cueTarget)
+                        }
+                        if (railBall != null) {
+                            val contacts = rails ?: mutableSetOf<Int>().also { rails = it }
+                            contacts.add(railBall)
+                        }
                     }
                 }
             }
         }
+        nextRuleContacts = ruleContacts
         ruleContacts = touching
-        contactImpacts.finishStep()
+        contactImpacts?.finishStep()
         val cue = balls.firstOrNull { it.id == 0 && !it.pocketed }
-        val cueZ = cue?.body?.worldTransform?.getTranslation(Vector3())?.z
+        val cueZ = cue?.body?.worldTransform?.getTranslation(contactPosition)?.z
         val crossed = cue != null && cueZ != null && cue.previousPosition.z > TableGeometry.HEAD_STRING && cueZ <= TableGeometry.HEAD_STRING
-        if (targets.isNotEmpty() || rails.isNotEmpty() || crossed) {
-            val behind = targets.all { id -> balls.first { it.id == id }.body.worldTransform.getTranslation(Vector3()).z > TableGeometry.HEAD_STRING }
-            events(PhysicsEvent.Contacts(targets, rails, crossed, behind))
+        if (targets != null || rails != null || crossed) {
+            val targetIds = targets.orEmpty()
+            val behind = targetIds.all { id -> balls.first { it.id == id }.body.worldTransform.getTranslation(contactPosition).z > TableGeometry.HEAD_STRING }
+            events(PhysicsEvent.Contacts(targetIds, rails.orEmpty(), crossed, behind))
         }
     }
 
