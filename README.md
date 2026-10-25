@@ -31,7 +31,7 @@ An offline 3D eight-ball game for Android. Play solids versus stripes against a 
 </tr>
 </table>
 
-See the [screenshot gallery](docs/images/), including the [diagonal replay view](docs/images/replay-diagonal.png), and [media refresh procedure](docs/gallery.md). The current 30-second gameplay recording is generated at `build/reports/gameplay-demo/gameplay.mp4` with synchronized game sounds; its [preview](docs/images/gameplay-preview.png) is committed. Video files remain build artifacts and can be attached to a PR using the gallery procedure. [Audio credits](assets/audio/README.md).
+See the [screenshot gallery](docs/images/), including the [diagonal replay view](docs/images/replay-diagonal.png), and [media refresh procedure](docs/gallery.md). The current [30-second gameplay video with synchronized game sounds](https://github.com/user-attachments/assets/25860a3e-243c-4f8a-ae71-89dbbb1dcaa3) is attached to [PR #17](https://github.com/ffeltrinelli/pool-android/pull/17); its [preview](docs/images/gameplay-preview.png) is committed. Regenerate it at `build/reports/gameplay-demo/gameplay.mp4` using the gallery procedure. [Audio credits](assets/audio/README.md).
 
 ## Build and run
 
