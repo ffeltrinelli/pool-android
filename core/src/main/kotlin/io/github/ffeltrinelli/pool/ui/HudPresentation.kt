@@ -9,5 +9,6 @@ data class HudPresentation(
     val foulPlayer: Player? = null,
     val difficulty: OpponentDifficulty = OpponentDifficulty.MEDIUM,
     val notice: String? = null,
-    val placementError: String? = null
+    val placementError: String? = null,
+    val replays: Boolean = true
 )

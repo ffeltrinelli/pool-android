@@ -22,6 +22,8 @@ internal class GameInput(
     private val canShoot: () -> Boolean,
     private val deliverShot: (ShotCommand) -> Unit,
     private val placement: CueBallPlacement = CueBallPlacement(),
+    private val modalTouch: (Int, Int) -> Boolean = { _, _ -> false },
+    private val modalBack: () -> Boolean = { false },
     private val confirmPlacement: () -> Unit = {}
 ) : InputAdapter() {
     private val difficultySlider = DifficultySliderInput()
@@ -29,7 +31,7 @@ internal class GameInput(
 
     override fun keyDown(keycode: Int): Boolean {
         if (keycode != Input.Keys.BACK && keycode != Input.Keys.ESCAPE) return false
-        if (!controls.settingsOpen) return false
+        if (!controls.settingsOpen) return modalBack()
         controls.handle(HudAction.CLOSE)
         return true
     }
@@ -37,6 +39,7 @@ internal class GameInput(
     override fun touchDown(x: Int, y: Int, pointer: Int, button: Int): Boolean {
         if (!controls.acceptsInput) return false
         if (pointer != 0 || button != Input.Buttons.LEFT) return controls.settingsOpen
+        if (!controls.settingsOpen && modalTouch(x, y)) return true
         if (controls.settingsOpen) {
             difficultySlider.begin(layout(), x, y, pointer)
             difficultySlider.selection(layout(), x, pointer)?.let {

@@ -2,7 +2,7 @@ package io.github.ffeltrinelli.pool.ui
 
 import io.github.ffeltrinelli.pool.opponent.OpponentDifficulty
 
-enum class HudAction { SETTINGS, CLOSE, RESTART, TOGGLE_AIM, EXIT, EASY, MEDIUM, HARD, BLOCK }
+enum class HudAction { SETTINGS, CLOSE, RESTART, TOGGLE_AIM, TOGGLE_REPLAYS, EXIT, EASY, MEDIUM, HARD, BLOCK }
 
 interface ControlEffects {
     fun cancelGesture()
@@ -15,6 +15,8 @@ interface ControlEffects {
 /** Settings and OS suspension are independent: closing one must not resume the other. */
 class GameControls(private val preference: SettingsPreference, private val effects: ControlEffects) {
     var difficulty = preference.loadDifficulty()
+        private set
+    var replays = preference.loadReplays()
         private set
     var aidedAim = preference.loadAidedAim()
         private set
@@ -35,6 +37,7 @@ class GameControls(private val preference: SettingsPreference, private val effec
                 settingsOpen = false
                 updateSuspension()
             }
+            HudAction.TOGGLE_REPLAYS -> { replays = !replays; preference.saveReplays(replays) }
             HudAction.TOGGLE_AIM -> { aidedAim = !aidedAim; preference.saveAidedAim(aidedAim) }
             HudAction.EXIT -> { effects.cancelGesture(); effects.pauseGame(); effects.exitGame() }
             HudAction.EASY -> selectDifficulty(OpponentDifficulty.EASY)

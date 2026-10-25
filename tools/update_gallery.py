@@ -11,6 +11,10 @@ SCENARIOS = {
     "gallery-settings": "settings.png",
     "gallery-placement": "placement.png",
     "gallery-result": "result.png",
+    "replay-close": "replay-close.png",
+    "replay-overview": "replay-overview.png",
+    "replay-diagonal": "replay-diagonal.png",
+    "replay-hold": "replay-hold.png",
 }
 
 

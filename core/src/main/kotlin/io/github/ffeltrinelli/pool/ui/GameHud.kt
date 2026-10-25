@@ -71,7 +71,15 @@ class GameHud : Disposable {
         }
         if (session.finished) drawResult(session)
         drawGear()
-        if (presentation.settingsOpen) drawSettings(aidedAim, presentation.difficulty)
+        if (presentation.settingsOpen) drawSettings(aidedAim, presentation.difficulty, presentation.replays)
+        sprites.end()
+    }
+
+    fun renderSettings(aidedAim: Boolean, presentation: HudPresentation, pixelWidth: Int) {
+        fonts.resize(pixelWidth)
+        sprites.projectionMatrix = camera.combined
+        sprites.begin()
+        drawSettings(aidedAim, presentation.difficulty, presentation.replays)
         sprites.end()
     }
 
@@ -112,13 +120,15 @@ class GameHud : Disposable {
         sprites.draw(gearIcon, layout.gear.x + 8f, layout.gear.y + 8f, 32f, 32f)
     }
 
-    private fun drawSettings(aidedAim: Boolean, difficulty: OpponentDifficulty) {
+    private fun drawSettings(aidedAim: Boolean, difficulty: OpponentDifficulty, replays: Boolean) {
         shade()
         rectangle(layout.panel, "163039")
         text("SETTINGS", 60f, layout.panel.y + layout.panel.height - 35f, TextStyle.HEADING, "f2e5c8")
         button(layout.close, "X")
         text("Aided aim", 60f, layout.aidedAim.y + 66f, TextStyle.BODY, "b8ccca")
         button(layout.aidedAim, if (aidedAim) "On" else "Off", aidedAim)
+        text("Replays", 214f, layout.replays.y + 66f, TextStyle.BODY, "b8ccca")
+        button(layout.replays, if (replays) "On" else "Off", replays)
         drawDifficulty(difficulty)
         button(layout.restart, "Restart")
         button(layout.exit, "Exit game")

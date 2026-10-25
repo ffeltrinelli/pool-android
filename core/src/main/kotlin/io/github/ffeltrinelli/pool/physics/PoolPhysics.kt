@@ -21,7 +21,8 @@ class Ball internal constructor(val id: Int, val body: btRigidBody) {
 class PoolPhysics(
     private val events: (PhysicsEvent) -> Unit = {},
     private val impacts: (Impact) -> Unit = {},
-    private val pocketDrops: (PocketDrop) -> Unit = {}
+    private val pocketDrops: (PocketDrop) -> Unit = {},
+    private val afterStep: () -> Unit = {}
 ) : Disposable {
     private val configuration: btDefaultCollisionConfiguration
     private val dispatcher: btCollisionDispatcher
@@ -160,6 +161,7 @@ class PoolPhysics(
         collectImpactContacts()
         observeBalls()
         updateSettling()
+        afterStep()
     }
 
     private fun savePreviousTransforms() {
@@ -203,6 +205,7 @@ class PoolPhysics(
         balls.filter { !it.pocketed }.forEach {
             it.body.linearVelocity = Vector3.Zero
             it.body.angularVelocity = Vector3.Zero
+            it.body.activationState = Collision.ISLAND_SLEEPING
         }
         wasSettled = true
         events(PhysicsEvent.Settled)

@@ -366,3 +366,85 @@ Detected an authorized, unlocked OnePlus 8T (KB2003), API 34, 1080 × 2400 over 
 - App-specific logs contained no PoolPhysics, PoolAudio, or AndroidRuntime errors or fatal exception/signal. The observed computer break used 12 evaluations at the five-second budget without fallback.
 
 Evidence, screenshot contact sheets, process/frame comparisons, app logs, and `verification.json` are under `build/reports/device-automatic-cameras/`. Left the updated app foregrounded for the human turn, with the existing Aided aim Off and Medium difficulty preserved. These are scripted smoke checks, not a full rack, ten-minute soak, subjective touch evaluation, or speaker/audio acceptance.
+
+
+## 25 October 2026 — pocket replay and Android export
+
+Tested the current debug APK on the authorized OnePlus 8T (KB2003), API 34, 1080 × 2400, ARM64. The app was installed with `adb -s SERIAL install -r`, launched normally, and a scripted touch break produced a visible replay with the square Share button. Historical results above do not cover this change.
+
+### Verified
+
+- Core tests passed (186 tests, one opt-in calibration skipped), including native physics and replay tests; Android lint and debug APK assembly passed. Difficulty calibration remains opt-in and was skipped.
+- Replay tests cover legal scoring eligibility for both players, winning/losing eights and fouls, a three-second lead-in, first cue contact, multiple pockets producing one clip, interpolated visibility, recorded audio gains/stops and slow-frame pocket-audio flushing, full-table camera fit, and the complete two-second final hold.
+- Two Android instrumentation tests passed on the physical device. A deterministic legal side-pocket shot exercised the production recorder and playback coordinator. Settings froze the replay clock and live physics. Share was tapped during the final hold; the Android chooser opened, Back dismissed it, and the remaining hold completed before play resumed.
+- The encoder test cancelled an in-progress export, successfully started a new one, generated H.264 video and AAC audio with the production offscreen renderer/EGL/MediaCodec path, verified the cache URI, and played the entire video in a separate test-APK Activity using temporary read permission. Only the test recipient was opened; no video was sent to personal sharing targets.
+- FFmpeg/ffprobe verification passed for the synthetic export and the real-shot export. The synthetic clip contains 141 frames at 720 × 1280 / 30 fps: exactly 60 static splash frames followed by the 2.68-second replay/audio tail rounded to video frames. MP4 duration is approximately 4.76 seconds including AAC padding. The silent intro, audible unclipped effects, and attribution metadata were verified. The two-second decision hold is absent from export.
+- The splash title/author and close cue view were inspected in device-generated video frames. Desktop captures of the close view, full-table view, and updated Settings were inspected and copied into the gallery. Replay overlays explicitly reset depth/texture state so their labels remain visible after the cue disappears.
+- A new 30-second desktop gameplay video was recorded: 900 frames, H.264/AAC, approximately 565 KB, with replay sounds, one human shot and two computer shots. Its preview is refreshed. The MP4 remains a local build artifact for review/PR attachment.
+
+Evidence is under `build/reports/replay/` and `build/reports/gameplay-demo/`. Share-sheet screenshots remain local because Android suggestions may contain private contact information. Test fixtures and the recipient Activity are confined to `androidTest`.
+
+### Limits of this run
+
+The desktop visual and audio suites passed earlier in this implementation session, including the replay gallery captures. A later final rerun failed during GLFW graphics initialization because macOS reported no available primary monitor (`glfwGetMonitorPos`); it did not reach scene rendering or audio playback. The subsequent core/Android checks and physical-device instrumentation passed. Other Android devices/codec implementations and subjective camera comfort beside every rail still need hands-on review.
+
+
+## 25 October 2026 — replay border depth correction
+
+The user's exported diagonal overview exposed cloth/cushion depth fighting that the initial straight-on fixtures missed. The exact MP4 was retrieved from the OnePlus cache and its decoded final frame showed the same defect as the player screenshot, confirming it was baked into the export.
+
+The replay camera now interpolates its near plane from 0.01 m in the cue closeup to 0.25 m in the overview, matching the live camera's depth-precision policy. Export explicitly requests a 24-bit depth renderbuffer on desktop, GLES 3, or GLES 2 with `GL_OES_depth24`; unsupported GLES 2 contexts keep a 16-bit fallback. Table geometry and encoding bitrate are unchanged.
+
+A deterministic 720 × 1280 diagonal fixture reproduced the stripes with the original settings on the physical OnePlus. After the fix, the same frame was visually inspected with clean cushion/cloth boundaries. The device reports **24 export depth bits**. Four oblique views (45°, 135°, 225°, 315°) each had fewer than 500 significantly different pixels between the production 24-bit image and a 16-bit reference using the corrected near plane, exercising the fallback as well. The test captures are in the debug app's `files/replay-diagonal-ANGLE.png`; local comparison evidence is under `build/reports/replay/depth-before.png` and `depth-after.png`.
+
+Core tests, Android lint/debug assembly, desktop visual tests (including the new diagonal gallery fixture), and desktop audio tests passed on this correction. The earlier unavailable-monitor limitation did not recur. The corrected debug build was installed on the OnePlus; all three device tests passed, covering four diagonal depth views, export cancellation/retry, the real-shot Share/return flow, and recipient playback. A newly encoded diagonal MP4 passed the video verifier and its decoded final frame was visually inspected with clean borders (`build/reports/replay/depth-fixed-export.mp4`). Existing MP4 files retain their old pixels and need to be exported again.
+
+The correction adds a near-plane regression test (187 core tests total, one opt-in calibration skipped) and refreshes the diagonal gallery and 30-second gameplay video (approximately 603 KB). The documentation recording logged one off-table ball during its break; physics tuning was not changed by this rendering fix.
+
+
+## 25 October 2026 — five-second replay decision countdown
+
+The final replay frame now remains visible for five active seconds. Skip shows no suffix during playback, then displays `Skip (5)` through `Skip (1)` before automatic return. Countdown values come from the playback clock, so Settings, background suspension, export, and the share sheet preserve the remaining time; export still shows Cancel. The five-second decision hold is excluded from the video, and the splash intro remains two seconds.
+
+Core tests passed (188 total, one opt-in calibration skipped), including exact countdown boundaries, pause preservation, export-cancel labeling, and unchanged clip duration. Android lint/debug assembly and desktop visual/audio suites passed. The deterministic `replay-hold` capture was visually inspected and added to the gallery; the current gameplay recording is refreshed for this behavior. The updated APK was installed on the OnePlus and all three device tests passed, including the five-second countdown remaining unchanged during export and sharing, then completing on return.
+
+
+## 25 October 2026 — 75%-speed replays
+
+Replay presentation now runs at 75% speed for both in-app playback and shared video. The immutable clip is retimed once: ball/cue frames, strike/contact/pocket markers, and audio starts share the same stretched timeline. Camera pullback uses the same time scale (approximately 0.87 seconds). Effects retain normal pitch and natural sample length; the five-second decision countdown and two-second splash intro remain in real time.
+
+Core tests passed (189 total, one opt-in calibration skipped), including retimed interpolation/events, synchronized sound starts, natural sound tails, the slowed camera transition, unchanged source data, and the complete five-second countdown. Android lint/debug assembly and desktop visual/audio suites passed. Documentation media was refreshed for the slower presentation. The synthetic export fixture now has approximately 3.3467 seconds of replay/audio tail before video frame rounding; the decision hold is excluded.
+
+The updated APK was installed on the OnePlus and all three device acceptance tests passed, including retimed real-shot playback, unchanged countdown through sharing, and recipient playback. The new synthetic slow-motion export passed `verify_replay_video.py --replay-seconds 3.3466667`: 161 frames at 30 fps with the 60-frame silent splash, synchronized effects, and no decision hold (`build/reports/replay/slow-motion-export.mp4`).
+
+
+## 25 October 2026 — soft ball contact shadows
+
+Replaced the opaque, raised green shadow cylinders with flat, feathered alpha shadows 0.4 mm above the cloth. The new `BallShadows` owner creates/disposes its radial texture and quad geometry. A separate pass after opaque table/balls uses depth testing without depth writes, preserving ball occlusion while allowing the cloth to show through. The shadow is closer to the ball centre and remains hidden once a ball starts dropping, as before. Physics, replay speed, countdown, and export encoding are unchanged.
+
+Core tests, Android lint/debug assembly, and desktop visual/audio suites passed. The current debug APK was installed on the OnePlus and all three device acceptance tests passed, including close/diagonal framebuffer rendering, Settings/share-sheet suspension, export, and recipient playback. A newly encoded 75%-speed sample passed the video verifier with its unchanged two-second intro and duration. Matching frames at 2.2 seconds from the previous/current export were visually inspected: the hard rim and raised-disc appearance are gone, replaced by a soft contact shadow. Evidence is local at `build/reports/replay/ball-shadow-before.png`, `ball-shadow-after.png`, `soft-shadows-device.png`, and `soft-shadows-export.mp4`.
+
+Affected gallery images and the 30-second gameplay recording/preview were refreshed. Before/after comparisons stay in local reports or PR attachments. The documentation recording again logged one ball leaving the table during its break; this visual change does not modify that existing physics fallback.
+
+
+## 25 October 2026 — residual cushion motion stalled a computer turn
+
+The connected OnePlus was responsive but its session remained `MOVING`, with no replay, settings, or sharing active. Debugger inspection found ball 11 rocking near the top-left cushion with residual spin around 0.31 rad/s. A native regression copied its pose and linear/angular velocities: with the previous settings the shot never settled after ten simulated seconds. Its bounded rocking spans approximately 0.6 mm, exceeding the previous 0.5 mm anchor tolerance.
+
+The pose-stability bound is now 1 mm across the same 0.3 s quiet interval, retaining the two-degree orientation bound, cloth-height check, and linear/angular speed caps. Settling zeroes velocities and puts the bodies into Bullet's sleeping state so persistent contact impulses cannot restart the jitter. Explicit cue activation and collision activation remain effective. Tests cover the captured fixture, one settlement event, stable resting positions, subsequent strikes/object-ball collisions, and rejection of continuous rolling/spin/falling.
+
+Core tests passed (191 total, one opt-in calibration skipped), along with Android lint/debug assembly and desktop visual/audio suites. The new physical-device cushion fixture passed on the OnePlus. The first broader device run exposed an existing test race: the chooser paused the graphics thread before its next-frame sharing observation, leaving the chooser open and blocking the following activity launch. The acceptance test now observes chooser launch through Android activity lifecycle callbacks rather than requiring another GL frame. No production sharing behavior was changed by this test correction.
+
+After correcting that observation race, all four physical-device tests passed in 37.7 seconds: residual cushion settling, four oblique export views, real-shot replay/Settings/share-return with the five-second hold, and export cancellation/retry plus recipient playback. The fixed debug APK remains installed on the OnePlus. The test APK was removed after validation. The existing gallery/gameplay media was reviewed; this settling correction does not change the depicted visuals or controls, so no media refresh was needed.
+
+## 25 October 2026 — open-table computer pot intent
+
+The user reported an apparently aimless computer shot after a completed break while both groups were unassigned. OnePlus logcat at 10:07:02.347 showed 31 completed evaluations in the five-second budget, no fallback, no predicted foul, and direction `(0.9877108, -0.15629272)` / impulse `0.2738702`. The match was paused in Settings during the shot. Read-only debugger inspection confirmed `breaking=false`, no group or placement restriction, and execution seed 1. The replay recorder still contained the shot's initial ball transforms, which were copied into deterministic desktop and Android test fixtures.
+
+Native reproduction found a direct candidate that hits and pockets ball 3. Optimization instead retained a weaker shot that hits ball 3 but predicts pocketing ball 1. Both scored one legal pot with the same proximity contribution, so the lower impulse won. The configured Medium error for seed 1 makes that incidental pot miss; the direct ball-3 seed still succeeds with the same error. This was a ranking problem, not an open-table target-filter or fallback problem.
+
+Pot seeds now retain their intended ball through optimization and cue-placement alternatives. A completed legal pot of that intended ball receives a two-point preference, behind rack outcomes, foul avoidance, and the 100-point contribution per legal target pocketed, but ahead of proximity and lower impulse. Contact alternatives retain their role when direct pots are unavailable. Difficulty error, search budget, physics, and group-assignment rules are unchanged. Planner logs now include intended target and predicted pocketed target IDs.
+
+Core tests passed (193 total, one opt-in calibration skipped), Android lint/debug assembly and desktop visual/audio suites passed. The captured-layout device fixture passed on the OnePlus using the production five-second budget: 30 completed evaluations selected target 3 with predicted pockets `[3]`; replaying the actual Medium execution pocketed ball 3 legally. Local evidence is in `build/reports/replay/open-table-logcat.txt` and `open-table-planning-device.txt`. Device screenshots and full logs stay local.
+
+All five physical-device tests passed in 45.3 seconds, including the new captured-layout planning check and the previous settling/replay/export/share lifecycle cases. The updated debug build is installed; the test APK was removed. The 30-second gameplay recording and preview were refreshed for the revised planner: 900 frames, H.264/AAC, approximately 563 KB, with actual cue, collision, cushion, and pocket audio. Existing static gallery scenes remain representative.
