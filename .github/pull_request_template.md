@@ -1,6 +1,6 @@
 ## Changes
 
-Describe the problem and resulting behavior.
+Briefly describe the problem, resulting behavior, and rationale. Omit code walkthroughs.
 
 ## Validation
 

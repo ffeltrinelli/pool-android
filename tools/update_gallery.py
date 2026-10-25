@@ -9,6 +9,7 @@ SCENARIOS = {
     "gallery-top": "top-view.png",
     "gallery-player": "player-view-start.png",
     "gallery-settings": "settings.png",
+    "gallery-help": "help.png",
     "gallery-placement": "placement.png",
     "gallery-result": "result.png",
     "replay-close": "replay-close.png",

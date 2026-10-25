@@ -24,7 +24,7 @@ def main():
         expected = 60 + math.ceil(args.replay_seconds * 30)
         assert int(video['nb_read_frames']) == expected, (video['nb_read_frames'], expected)
         assert abs(float(probe['format']['duration']) - expected / 30) < 0.12
-    assert 'freesman' in probe['format']['tags']['comment']
+    assert 'https://github.com/ffeltrinelli/pool-android' in probe['format']['tags']['comment']
     frames = subprocess.check_output(['ffmpeg', '-v', 'error', '-i', str(args.video),
         '-frames:v', '61', '-vf', 'scale=72:128', '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'])
     size = 72 * 128 * 3
@@ -44,7 +44,7 @@ def main():
     assert 0.001 < peak < 1, 'Replay audio missing or clipping'
     report = {'frames': int(video['nb_read_frames']), 'duration': float(probe['format']['duration']),
               'video': 'h264', 'audio': 'aac', 'intro_frames': 60, 'audio_peak': peak,
-              'credit': probe['format']['tags']['comment']}
+              'repository': probe['format']['tags']['comment']}
     print(json.dumps(report, indent=2))
 
 

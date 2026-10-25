@@ -40,14 +40,14 @@ internal class GameInput(
         if (!controls.acceptsInput) return false
         if (pointer != 0 || button != Input.Buttons.LEFT) return controls.settingsOpen
         if (!controls.settingsOpen && modalTouch(x, y)) return true
-        if (controls.settingsOpen) {
+        if (controls.settingsOpen && !controls.helpOpen) {
             difficultySlider.begin(layout(), x, y, pointer)
             difficultySlider.selection(layout(), x, pointer)?.let {
                 controls.selectDifficulty(it)
                 return true
             }
         }
-        val action = layout().hit(x, y, controls.settingsOpen, session.finished)
+        val action = layout().hit(x, y, controls.settingsOpen, session.finished, controls.helpOpen)
         if (action != null) { controls.handle(action); return true }
         if (controls.acceptsGameplay && session.placement != null && session.player == Player.HUMAN &&
             layout().confirmsPlacement(x, y)) {
@@ -70,7 +70,7 @@ internal class GameInput(
 
     override fun touchDragged(x: Int, y: Int, pointer: Int): Boolean {
         if (controls.settingsOpen) {
-            difficultySlider.selection(layout(), x, pointer)?.let(controls::selectDifficulty)
+            if (!controls.helpOpen) difficultySlider.selection(layout(), x, pointer)?.let(controls::selectDifficulty)
             return true
         }
         if (pointer != gameplayPointer || !controls.acceptsGameplay) return false

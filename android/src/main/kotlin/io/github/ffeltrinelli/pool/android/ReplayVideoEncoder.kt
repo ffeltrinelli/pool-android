@@ -20,7 +20,7 @@ internal class ReplayVideoEncoder(private val assets: AssetManager, private val 
             encodeVideo(frameCount, queue, video)
             encodeAudio(clip, frameCount, audio)
             mux(video, audio, destination)
-            appendCredit(destination)
+            appendRepositoryLink(destination)
         } finally { video.delete(); audio.delete() }
     }
 
@@ -130,13 +130,13 @@ internal class ReplayVideoEncoder(private val assets: AssetManager, private val 
     }
 
     /** Standard iTunes comment metadata; appending udta leaves existing chunk offsets intact. */
-    private fun appendCredit(file: File) {
+    private fun appendRepositoryLink(file: File) {
         fun box(type: ByteArray, data: ByteArray): ByteArray = ByteArrayOutputStream().also { bytes ->
             DataOutputStream(bytes).use { it.writeInt(8 + data.size); it.write(type); it.write(data) }
         }.toByteArray()
         fun box(type: String, data: ByteArray) = box(type.toByteArray(Charsets.ISO_8859_1), data)
         val value = ByteArrayOutputStream().also { bytes -> DataOutputStream(bytes).use {
-            it.writeInt(1); it.writeInt(0); it.write(AndroidReplaySharing.CREDIT.toByteArray(Charsets.UTF_8))
+            it.writeInt(1); it.writeInt(0); it.write(AndroidReplaySharing.REPOSITORY_URL.toByteArray(Charsets.UTF_8))
         } }.toByteArray()
         val comment = box(byteArrayOf(0xa9.toByte(), 0x63, 0x6d, 0x74), box("data", value))
         val handler = ByteBuffer.allocate(25).putInt(0).putInt(0).put("mdir".toByteArray()).put(ByteArray(13)).array()

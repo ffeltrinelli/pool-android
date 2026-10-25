@@ -33,7 +33,7 @@ internal object VisualScenarios {
         cueVisibilityScenarios.map { VisualScenario(it, ScenarioGroup.CUE_VISIBILITY) } +
         rulesScenarios.map { VisualScenario(it, ScenarioGroup.RULES) } +
         listOf("close", "withdrawn", "tracking", "transition", "overview", "diagonal", "hold", "export").map { VisualScenario("replay-$it", ScenarioGroup.REPLAY) } +
-        listOf("splash", "top", "player", "settings", "placement", "result").map { VisualScenario("gallery-$it", ScenarioGroup.GALLERY) }
+        listOf("splash", "top", "player", "settings", "help", "placement", "result").map { VisualScenario("gallery-$it", ScenarioGroup.GALLERY) }
     private val byName = all.associateBy { it.name }
     fun named(name: String) = byName.getValue(name)
 }
