@@ -18,7 +18,9 @@ class HudLayout(width: Int, height: Int, val placementVisible: Boolean = false, 
     val gear = Rectangle(348f, uiHeight - 50f, 48f, 48f)
     val panel = Rectangle(30f, uiHeight / 2 - 195f, 360f, 390f)
     val close = Rectangle(336f, panel.y + panel.height - 54f, 48f, 48f)
-    val info = Rectangle(close.x - 54f, close.y, 48f, 48f)
+    val stats = Rectangle(close.x - 54f, close.y, 48f, 48f)
+    val info = Rectangle(stats.x - 54f, close.y, 48f, 48f)
+    val statsReset = Rectangle(100f, panel.y + 30f, 220f, 48f)
     val helpPanel = Rectangle(30f, uiHeight / 2 - 305f, 360f, 610f)
     val helpClose = Rectangle(336f, helpPanel.y + helpPanel.height - 54f, 48f, 48f)
     val aidedAim = Rectangle(60f, uiHeight / 2 + 55f, 146f, 48f)
@@ -42,11 +44,17 @@ class HudLayout(width: Int, height: Int, val placementVisible: Boolean = false, 
     fun containsDifficulty(screenX: Int, screenY: Int): Boolean =
         difficulty.contains(screenX * 420f / width, uiHeight - screenY * uiHeight / height)
 
-    fun hit(screenX: Int, screenY: Int, settingsOpen: Boolean, finished: Boolean, helpOpen: Boolean = false): HudAction? {
+    fun hit(screenX: Int, screenY: Int, settingsOpen: Boolean, finished: Boolean, helpOpen: Boolean = false, statsOpen: Boolean = false): HudAction? {
         val x = screenX * 420f / width
         val y = uiHeight - screenY * uiHeight / height
+        if (statsOpen) return when {
+            close.contains(x, y) -> HudAction.CLOSE
+            statsReset.contains(x, y) -> HudAction.RESET_STATS
+            else -> HudAction.BLOCK
+        }
         if (helpOpen) return if (helpClose.contains(x, y)) HudAction.CLOSE else HudAction.BLOCK
         if (settingsOpen) return when {
+            stats.contains(x, y) -> HudAction.STATS
             info.contains(x, y) -> HudAction.HELP
             difficulty.contains(x, y) -> when (difficultyAt(screenX)) {
                 OpponentDifficulty.EASY -> HudAction.EASY

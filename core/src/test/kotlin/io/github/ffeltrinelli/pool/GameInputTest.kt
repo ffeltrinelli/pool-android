@@ -27,6 +27,7 @@ class GameInputTest {
         override fun pauseGame() = Unit
         override fun resumeGame() = Unit
         override fun restartGame() = Unit
+        override fun resetStatistics() = Unit
         override fun exitGame() = Unit
     }
 
@@ -50,7 +51,7 @@ class GameInputTest {
 
     @Test fun `help blocks settings and gameplay until dismissed and Back returns to settings`() = withInput { input, controls, gesture, _, shots ->
         controls.handle(HudAction.SETTINGS)
-        input.touchDown(306, 298, 0, Input.Buttons.LEFT)
+        input.touchDown(252, 298, 0, Input.Buttons.LEFT)
         assertTrue(controls.helpOpen)
         val difficulty = controls.difficulty
         input.touchDown(100, 482, 0, Input.Buttons.LEFT)
@@ -68,6 +69,29 @@ class GameInputTest {
         assertFalse(controls.helpOpen)
         assertTrue(controls.settingsOpen && controls.suspended)
         assertTrue(input.keyDown(Input.Keys.BACK))
+        assertFalse(controls.suspended)
+    }
+
+    @Test fun `stats blocks the slider and gameplay and Back returns through settings`() = withInput { input, controls, gesture, _, shots ->
+        controls.handle(HudAction.SETTINGS)
+        input.touchDown(306, 298, 0, Input.Buttons.LEFT)
+        assertTrue(controls.statsOpen)
+        val difficulty = controls.difficulty
+        input.touchDown(100, 482, 0, Input.Buttons.LEFT)
+        input.touchDragged(350, 482, 0)
+        input.touchUp(350, 482, 0, Input.Buttons.LEFT)
+        input.touchDown(100, 387, 0, Input.Buttons.LEFT)
+        assertEquals(difficulty, controls.difficulty)
+        assertTrue(controls.aidedAim)
+        assertEquals(CuePhase.IDLE, gesture.phase)
+        assertTrue(shots.isEmpty())
+        controls.pause()
+        controls.resume()
+        assertTrue(controls.statsOpen && controls.suspended)
+        assertTrue(input.keyDown(Input.Keys.BACK))
+        assertFalse(controls.statsOpen)
+        assertTrue(controls.settingsPageOpen && controls.suspended)
+        assertTrue(input.keyDown(Input.Keys.ESCAPE))
         assertFalse(controls.suspended)
     }
 

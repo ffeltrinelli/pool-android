@@ -86,3 +86,15 @@ Evidence: [committed benchmark CSVs](benchmarks/), plus local `build/reports/pla
 On the OnePlus, inspected the illustrated overlay, blocked underlying taps/slider drags, and returned to Settings using both X and Back. Home/resume retained the process and Help; saved Hard/replays Off/aided aim Off preferences stayed unchanged. Both replay device tests passed in 31.018 seconds, including Help suspension, chooser return, cancellation/retry, and recipient playback. FFmpeg verification passed for a 161-frame export with silent intro, unclipped sound, and the repository URL as its metadata comment. No personal share target was used. Evidence: `build/reports/device-help/`. No new full-match, listening, or soak acceptance is claimed.
 
 Button-symbol follow-up: enlarged and emboldened **?** and **X** within unchanged buttons; refreshed Settings/Help captures. Core/rendered checks and Android lint/APK passed. Installed on the OnePlus; Help navigation and Home/resume passed.
+
+## Persistent match statistics — 26 October 2026
+
+226 core tests passed (three opt-in calibration/benchmark tests skipped); 124 rendered scenarios, audio smoke, Android lint/APK assembly, and Android device-test compilation passed. Inspected Settings plus populated and empty Stats captures. Tests cover completion counting, duplicate protection after reset, difficulty attribution, persistence reload, rounding, modal input, and navigation. Initial validation had no connected device; the subsequent OnePlus checks below cover the device follow-up.
+
+Refreshed the Settings gallery image and added Stats with sample counters. Reviewed the existing gameplay contact sheet and recording gestures: they do not open Settings, so this change does not require a new gameplay video. Evidence: `build/reports/visual/`, `build/reports/audio/`, and `core/build/reports/tests/test/`.
+
+### OnePlus follow-up
+
+Installed the current debug APK on the OnePlus 8T. Both selected device tests passed in 27.712 seconds: deterministic live human-win/computer-win results survived closing and relaunching the activity; modal navigation, immediate Reset, persisted zero counters, and no recount after Reset passed. The real-shot replay test passed with Stats open, including frozen replay time/world state and sharing/return. Test fixtures restored the original statistics and did not overwrite saved difficulty or replay settings.
+
+Inspected the bar-chart button and empty Stats table on the phone. A force-stop/cold launch loaded the restored empty counters; Home/resume retained Stats and process 20344. Nonzero counters were checked across activity relaunch, rather than process death. Android lint and test APK assembly passed again. Evidence: `build/reports/device-stats/`. No new full-match or soak acceptance is claimed.

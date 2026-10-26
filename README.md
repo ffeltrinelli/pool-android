@@ -83,7 +83,8 @@ The head string lies one-quarter of the table length from the head end; the foot
 - **Aim:** drag left or right in Player view (behind the cue ball) to turn. The optional dashed guide shows the cue ball’s first contact, without predicting rebounds.
 - **Strike:** drag down to pull back, then push up until the cue touches the ball. Faster forward motion means more power. Practice strokes can stay under one finger; lift to re-aim or cancel before contact.
 - Wait for the balls to stop before shooting again. Views switch automatically between your shots, placement, and computer turns.
-- The **gear** opens Settings. **?** beside **X** shows illustrated instructions. X or Android Back returns one screen; play remains paused until Settings closes.
+- The **gear** opens Settings. **?** shows illustrated instructions; the **bar-chart** button between **?** and **X** opens [Stats](docs/images/stats.png). X or Android Back returns one screen; play remains paused until Settings closes.
+- Stats remembers completed matches, human wins, and the rounded whole-number win percentage for each difficulty. Results use the difficulty selected when the match finishes; abandoned matches and restarts do not count. **Reset** immediately clears all stats, including across app restarts.
 - Aided aim, replays, and difficulty are remembered. Restart alternates breakers; Exit closes the app. Racks are not saved.
 
 ## Pocket replays and sharing

@@ -17,6 +17,8 @@ import io.github.ffeltrinelli.pool.opponent.*
 import io.github.ffeltrinelli.pool.render.PoolRenderer
 import io.github.ffeltrinelli.pool.render.TablePresentation
 import io.github.ffeltrinelli.pool.ui.HudPresentation
+import io.github.ffeltrinelli.pool.stats.MatchStatistics
+import io.github.ffeltrinelli.pool.stats.MatchTotals
 import io.github.ffeltrinelli.pool.ui.UiFonts
 import io.github.ffeltrinelli.pool.ui.TextStyle
 import java.io.File
@@ -191,6 +193,13 @@ object VisualSmoke {
             if (name == "gallery-top") session = readyMatch(Player.COMPUTER)
             if (name == "gallery-settings") hudPresentation = hudPresentation.copy(settingsOpen = true)
             if (name == "gallery-help") hudPresentation = hudPresentation.copy(settingsOpen = true, helpOpen = true)
+            if (name.startsWith("gallery-stats")) {
+                val rows = if (name == "gallery-stats-empty") emptyMap() else mapOf(
+                    OpponentDifficulty.EASY to MatchTotals(12, 9),
+                    OpponentDifficulty.MEDIUM to MatchTotals(3, 2),
+                    OpponentDifficulty.HARD to MatchTotals(7, 0))
+                hudPresentation = hudPresentation.copy(settingsOpen = true, statsOpen = true, statistics = MatchStatistics(rows))
+            }
             if (name == "gallery-result") {
                 finishMatch(Player.HUMAN)
                 physics.reset(listOf(0 to Point(0f, 0.58f)) + (9..15).map { id ->

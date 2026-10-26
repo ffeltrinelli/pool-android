@@ -1,6 +1,6 @@
 # Current screenshots and gameplay video
 
-The [README](../README.md#screenshots) uses desktop captures from the production renderer at 1080 × 2400. They are not device screenshots. Settings includes a **?** help button opening the illustrated [how-to-play overlay](images/help.png).
+The [README](../README.md#screenshots) uses desktop captures from the production renderer at 1080 × 2400. They are not device screenshots. Settings includes a **?** help button opening the illustrated [how-to-play overlay](images/help.png) and a bar-chart button opening [Stats](images/stats.png). The Stats capture uses sample results to demonstrate the per-difficulty table and Reset button.
 
 ## Refresh procedure
 
@@ -22,6 +22,7 @@ Each deterministic scenario uses a fixed test setup so its screenshot can be rep
 | `player-view-start.png` | `gallery-player` |
 | `settings.png` | `gallery-settings` |
 | `help.png` | `gallery-help` |
+| `stats.png` | `gallery-stats` |
 | `placement.png` | `gallery-placement` |
 | `result.png` | `gallery-result` |
 | `replay-close.png` | `replay-close` |
