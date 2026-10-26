@@ -11,6 +11,7 @@ import io.github.ffeltrinelli.pool.opponent.*
 import io.github.ffeltrinelli.pool.render.PoolRenderer
 import io.github.ffeltrinelli.pool.render.TablePresentation
 import io.github.ffeltrinelli.pool.ui.*
+import io.github.ffeltrinelli.pool.stats.*
 
 class PoolGame(
     private val session: GameSession = GameSession(),
@@ -29,6 +30,7 @@ class PoolGame(
     private lateinit var audio: PoolAudio
     private lateinit var physics: PoolPhysics
     private lateinit var renderer: PoolRenderer
+    private lateinit var statistics: MatchStatisticsTracker
     private lateinit var controls: GameControls
     private lateinit var computer: ComputerTurn
     private val physicsEvents = mutableListOf<PhysicsEvent>()
@@ -53,11 +55,13 @@ class PoolGame(
         }
         renderer = PoolRenderer()
         resetRackAim()
+        statistics = MatchStatisticsTracker(SavedStatisticsPreference(Gdx.app.getPreferences("pool-statistics")))
         controls = GameControls(SavedSettingsPreference(Gdx.app.getPreferences("pool-settings")), object : ControlEffects {
             override fun cancelGesture() = cancelInput()
             override fun pauseGame() { audio.pause(); replay?.silence(); computer.suspend(); skipDelta = true }
             override fun resumeGame() { audio.resume(); skipDelta = true }
             override fun restartGame() = restart()
+            override fun resetStatistics() = statistics.reset()
             override fun exitGame() { computer.reset(); Gdx.app.exit() }
         })
         if (paused) controls.pause()
@@ -87,6 +91,7 @@ class PoolGame(
         audio.clear()
         physics.reset()
         session.restart()
+        statistics.beginRack()
         resetPlacement()
         resetRackAim()
         skipDelta = true
@@ -118,6 +123,7 @@ class PoolGame(
                     rerackPending = false
                     computer.reset(); audio.clear(); physics.reset()
                     session.rerackAfterInsufficientBreak()
+                    statistics.beginRack()
                     resetPlacement(); resetRackAim()
                 }
             }
@@ -146,18 +152,23 @@ class PoolGame(
             placementValid = placementError() == null,
             activeSeconds = activeSeconds
         )
-        val hud = HudPresentation(
-            settingsOpen = controls.settingsOpen,
+        val hud = settingsPresentation().copy(
             computerThinking = computer.thinking,
             foulPlayer = computer.foulPlayer,
-            difficulty = controls.difficulty,
             notice = notice,
-            placementError = placementError(),
-            replays = controls.replays,
-            helpOpen = controls.helpOpen
+            placementError = placementError()
         )
         renderer.render(physics, session, gesture, viewDelta = delta, table = table, hudState = hud)
     }
+
+    private fun settingsPresentation() = HudPresentation(
+        settingsOpen = controls.settingsOpen,
+        difficulty = controls.difficulty,
+        replays = controls.replays,
+        helpOpen = controls.helpOpen,
+        statsOpen = controls.statsOpen,
+        statistics = statistics.snapshot
+    )
 
     private fun currentCuePose(): CuePose? {
         if (!session.humanTurn) return computer.pose
@@ -183,7 +194,7 @@ class PoolGame(
         renderer.renderReplay(playback.clip, playback.seconds, Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight)
         replayHud.render(Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight, sharing.available, exportState(), export?.progress ?: 0f, playback.holdSecondsRemaining)
         if (controls.settingsOpen) renderer.hud.renderSettings(controls.aidedAim,
-            HudPresentation(settingsOpen = true, difficulty = controls.difficulty, replays = controls.replays, helpOpen = controls.helpOpen), Gdx.graphics.backBufferWidth)
+            settingsPresentation(), Gdx.graphics.backBufferWidth)
         if (playback.finished && !controls.suspended && export == null && exportState() !is ShareState.Failed) endReplay()
     }
 
@@ -281,7 +292,10 @@ class PoolGame(
             val outcome = session.outcome ?: continue
             pendingReplayOutcome = outcome
             val decision = outcome.decision
-            if (session.finished) continue
+            if (session.finished) {
+                statistics.recordCompletion(session.result, controls.difficulty)
+                continue
+            }
             if (decision.spotEight) { physics.spotBall(8); audio.ballReturnedToTable(8) }
             notice = when {
                 decision.rerack -> (decision.foul?.let { "Foul: ${it.message}. " } ?: "") + "Insufficient break - opponent breaks a fresh rack"

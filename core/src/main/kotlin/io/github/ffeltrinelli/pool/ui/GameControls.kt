@@ -2,13 +2,14 @@ package io.github.ffeltrinelli.pool.ui
 
 import io.github.ffeltrinelli.pool.opponent.OpponentDifficulty
 
-enum class HudAction { SETTINGS, HELP, CLOSE, RESTART, TOGGLE_AIM, TOGGLE_REPLAYS, EXIT, EASY, MEDIUM, HARD, BLOCK }
+enum class HudAction { SETTINGS, HELP, STATS, RESET_STATS, CLOSE, RESTART, TOGGLE_AIM, TOGGLE_REPLAYS, EXIT, EASY, MEDIUM, HARD, BLOCK }
 
 interface ControlEffects {
     fun cancelGesture()
     fun pauseGame()
     fun resumeGame()
     fun restartGame()
+    fun resetStatistics()
     fun exitGame()
 }
 
@@ -20,10 +21,12 @@ class GameControls(private val preference: SettingsPreference, private val effec
         private set
     var aidedAim = preference.loadAidedAim()
         private set
-    var settingsOpen = false
-        private set
-    var helpOpen = false
-        private set
+    private enum class SettingsPage { CLOSED, MENU, HELP, STATS }
+    private var settingsPage = SettingsPage.CLOSED
+    val settingsOpen: Boolean get() = settingsPage != SettingsPage.CLOSED
+    val helpOpen: Boolean get() = settingsPage == SettingsPage.HELP
+    val statsOpen: Boolean get() = settingsPage == SettingsPage.STATS
+    val settingsPageOpen: Boolean get() = settingsPage == SettingsPage.MENU
     private var backgrounded = false
     val acceptsInput: Boolean get() = !backgrounded
     val suspended: Boolean get() = backgrounded || settingsOpen
@@ -31,18 +34,26 @@ class GameControls(private val preference: SettingsPreference, private val effec
 
     fun handle(action: HudAction) {
         when (action) {
-            HudAction.SETTINGS -> { settingsOpen = true; effects.cancelGesture(); updateSuspension() }
-            HudAction.HELP -> { if (settingsOpen) helpOpen = true }
+            HudAction.SETTINGS -> {
+                if (!settingsOpen) settingsPage = SettingsPage.MENU
+                effects.cancelGesture()
+                updateSuspension()
+            }
+            HudAction.HELP -> openSettingsPage(SettingsPage.HELP)
+            HudAction.STATS -> openSettingsPage(SettingsPage.STATS)
+            HudAction.RESET_STATS -> { if (statsOpen) effects.resetStatistics() }
             HudAction.CLOSE -> {
                 effects.cancelGesture()
-                if (helpOpen) helpOpen = false else settingsOpen = false
+                settingsPage = when (settingsPage) {
+                    SettingsPage.HELP, SettingsPage.STATS -> SettingsPage.MENU
+                    else -> SettingsPage.CLOSED
+                }
                 updateSuspension()
             }
             HudAction.RESTART -> {
                 effects.cancelGesture()
                 effects.restartGame()
-                helpOpen = false
-                settingsOpen = false
+                settingsPage = SettingsPage.CLOSED
                 updateSuspension()
             }
             HudAction.TOGGLE_REPLAYS -> { replays = !replays; preference.saveReplays(replays) }
@@ -53,6 +64,12 @@ class GameControls(private val preference: SettingsPreference, private val effec
             HudAction.HARD -> selectDifficulty(OpponentDifficulty.HARD)
             HudAction.BLOCK -> Unit
         }
+    }
+
+    private fun openSettingsPage(page: SettingsPage) {
+        if (!settingsPageOpen) return
+        effects.cancelGesture()
+        settingsPage = page
     }
 
     fun selectDifficulty(difficulty: OpponentDifficulty) {

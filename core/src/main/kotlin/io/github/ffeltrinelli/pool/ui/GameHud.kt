@@ -6,6 +6,7 @@ import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.utils.Disposable
 import io.github.ffeltrinelli.pool.model.*
 import io.github.ffeltrinelli.pool.opponent.OpponentDifficulty
+import io.github.ffeltrinelli.pool.stats.MatchStatistics
 import kotlin.math.*
 
 class GameHud : Disposable {
@@ -77,6 +78,7 @@ class GameHud : Disposable {
         drawGear()
         if (presentation.settingsOpen) drawSettings(aidedAim, presentation.difficulty, presentation.replays)
         if (presentation.helpOpen) drawHelp()
+        if (presentation.statsOpen) drawStatistics(presentation.statistics)
         sprites.end()
     }
 
@@ -86,6 +88,7 @@ class GameHud : Disposable {
         sprites.begin()
         drawSettings(aidedAim, presentation.difficulty, presentation.replays)
         if (presentation.helpOpen) drawHelp()
+        if (presentation.statsOpen) drawStatistics(presentation.statistics)
         sprites.end()
     }
 
@@ -131,6 +134,7 @@ class GameHud : Disposable {
         rectangle(layout.panel, "163039")
         text("SETTINGS", 60f, layout.panel.y + layout.panel.height - 35f, TextStyle.HEADING, "f2e5c8")
         symbolButton(layout.info, "?")
+        drawStatisticsButton()
         symbolButton(layout.close, "X")
         text("Aided aim", 60f, layout.aidedAim.y + 66f, TextStyle.BODY, "b8ccca")
         button(layout.aidedAim, if (aidedAim) "On" else "Off", aidedAim)
@@ -139,6 +143,38 @@ class GameHud : Disposable {
         drawDifficulty(difficulty)
         button(layout.restart, "Restart")
         button(layout.exit, "Exit game")
+    }
+
+    private fun drawStatisticsButton() {
+        val rect = layout.stats
+        rectangle(rect, "32504f")
+        for ((index, height) in listOf(12f, 20f, 28f).withIndex()) {
+            rectangle(Rectangle(rect.x + 9f + index * 11f, rect.y + 10f, 8f, height), "f2e5c8")
+        }
+    }
+
+    private fun drawStatistics(statistics: MatchStatistics) {
+        shade()
+        rectangle(layout.panel, "163039")
+        val top = layout.panel.y + layout.panel.height
+        text("STATS", 60f, top - 35f, TextStyle.HEADING, "f2e5c8")
+        symbolButton(layout.close, "X")
+        val columns = listOf(58f, 183f, 262f, 334f)
+        text("Difficulty", columns[0], top - 101f, TextStyle.SMALL, "b8ccca")
+        for ((index, label) in listOf("Completed", "Won", "Win %").withIndex()) {
+            text(label, columns[index + 1], top - 101f, TextStyle.SMALL, "b8ccca", true)
+        }
+        text("Won = human wins", 210f, layout.statsReset.y + 77f, TextStyle.SMALL, "b8ccca", true)
+        for ((index, difficulty) in OpponentDifficulty.entries.withIndex()) {
+            val y = top - 147f - index * 48f
+            val totals = statistics[difficulty]
+            rectangle(Rectangle(58f, y + 17f, 304f, 1f), "32504f")
+            text(difficulty.label, columns[0], y, TextStyle.BODY, "f2e5c8")
+            for ((column, value) in listOf(totals.completed.toString(), totals.won.toString(), "${totals.winPercentage}%").withIndex()) {
+                text(value, columns[column + 1], y, TextStyle.BODY, "f2e5c8", true)
+            }
+        }
+        button(layout.statsReset, "Reset")
     }
 
     private fun drawHelp() {

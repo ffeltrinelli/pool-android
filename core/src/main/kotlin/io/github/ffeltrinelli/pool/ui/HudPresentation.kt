@@ -1,5 +1,6 @@
 package io.github.ffeltrinelli.pool.ui
 
+import io.github.ffeltrinelli.pool.stats.MatchStatistics
 import io.github.ffeltrinelli.pool.model.Player
 import io.github.ffeltrinelli.pool.opponent.OpponentDifficulty
 
@@ -11,5 +12,7 @@ data class HudPresentation(
     val notice: String? = null,
     val placementError: String? = null,
     val replays: Boolean = true,
-    val helpOpen: Boolean = false
+    val helpOpen: Boolean = false,
+    val statsOpen: Boolean = false,
+    val statistics: MatchStatistics = MatchStatistics()
 )

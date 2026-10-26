@@ -21,6 +21,8 @@ class GameControlsTest {
         override fun saveAidedAim(enabled: Boolean) { aided = enabled }
     }
     private class Effects : ControlEffects {
+        var resets = 0
+        override fun resetStatistics() { resets++ }
         var exits = 0
         override fun exitGame() { exits++ }
         var cancelled = 0
@@ -172,6 +174,59 @@ class GameControlsTest {
         }
     }
 
+    @Test fun `stats reset acts immediately only in stats and closing keeps settings paused`() {
+        val effects = Effects()
+        val controls = GameControls(Preference(), effects)
+        controls.handle(HudAction.RESET_STATS)
+        assertEquals(0, effects.resets)
+        controls.handle(HudAction.SETTINGS)
+        controls.handle(HudAction.STATS)
+        controls.handle(HudAction.RESET_STATS)
+        assertEquals(1, effects.resets)
+        assertTrue(controls.statsOpen && controls.suspended && effects.paused)
+        controls.handle(HudAction.CLOSE)
+        assertTrue(controls.settingsPageOpen && controls.suspended && effects.paused)
+        controls.handle(HudAction.CLOSE)
+        assertTrue(controls.acceptsGameplay)
+    }
+
+    @Test fun `nested pages stay exclusive and reopening settings preserves the current page`() {
+        for (page in listOf(HudAction.HELP, HudAction.STATS)) {
+            val controls = GameControls(Preference(), Effects())
+            controls.handle(page)
+            assertFalse(controls.settingsOpen)
+            controls.handle(HudAction.SETTINGS)
+            controls.handle(page)
+            controls.handle(HudAction.SETTINGS)
+            controls.handle(if (page == HudAction.HELP) HudAction.STATS else HudAction.HELP)
+            assertEquals(page == HudAction.HELP, controls.helpOpen)
+            assertEquals(page == HudAction.STATS, controls.statsOpen)
+            assertFalse(controls.settingsPageOpen)
+            controls.handle(HudAction.CLOSE)
+            assertTrue(controls.settingsPageOpen && controls.suspended)
+            controls.handle(page)
+            controls.handle(HudAction.RESTART)
+            assertFalse(controls.settingsOpen || controls.helpOpen || controls.statsOpen)
+        }
+    }
+
+    @Test fun `stats hit regions isolate reset and close at multiple sizes`() {
+        for ((width, height) in listOf(1080 to 2400, 420 to 933, 540 to 1200)) {
+            val layout = HudLayout(width, height)
+            fun hit(rect: com.badlogic.gdx.math.Rectangle) = layout.hit(
+                ((rect.x + rect.width / 2) * width / 420).toInt(),
+                ((layout.uiHeight - rect.y - rect.height / 2) * height / layout.uiHeight).toInt(),
+                settingsOpen = true, finished = false, statsOpen = true)
+            assertTrue(layout.info.x + layout.info.width < layout.stats.x)
+            assertTrue(layout.stats.x + layout.stats.width < layout.close.x)
+            assertEquals(HudAction.CLOSE, hit(layout.close))
+            assertEquals(HudAction.RESET_STATS, hit(layout.statsReset))
+            for (rect in listOf(layout.info, layout.stats, layout.aidedAim, layout.replays, layout.difficulty)) {
+                assertEquals(HudAction.BLOCK, hit(rect))
+            }
+        }
+    }
+
     @Test fun `HUD routes settings results and outside modal taps at multiple sizes`() {
         for ((width, height) in listOf(1080 to 2400, 420 to 933, 540 to 1200)) {
             val layout = HudLayout(width, height)
@@ -183,6 +238,7 @@ class GameControlsTest {
             assertEquals(HudAction.SETTINGS, hit(layout.gear, finished = true))
             assertEquals(HudAction.CLOSE, hit(layout.close, true))
             assertEquals(HudAction.HELP, hit(layout.info, true))
+            assertEquals(HudAction.STATS, hit(layout.stats, true))
             assertEquals(HudAction.TOGGLE_AIM, hit(layout.aidedAim, true))
             assertEquals(HudAction.EXIT, hit(layout.exit, true))
             assertTrue(layout.aidedAim.y > layout.restart.y && layout.restart.y == layout.exit.y)
