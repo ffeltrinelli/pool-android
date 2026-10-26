@@ -190,6 +190,26 @@ class GameControlsTest {
         assertTrue(controls.acceptsGameplay)
     }
 
+    @Test fun `nested pages stay exclusive and reopening settings preserves the current page`() {
+        for (page in listOf(HudAction.HELP, HudAction.STATS)) {
+            val controls = GameControls(Preference(), Effects())
+            controls.handle(page)
+            assertFalse(controls.settingsOpen)
+            controls.handle(HudAction.SETTINGS)
+            controls.handle(page)
+            controls.handle(HudAction.SETTINGS)
+            controls.handle(if (page == HudAction.HELP) HudAction.STATS else HudAction.HELP)
+            assertEquals(page == HudAction.HELP, controls.helpOpen)
+            assertEquals(page == HudAction.STATS, controls.statsOpen)
+            assertFalse(controls.settingsPageOpen)
+            controls.handle(HudAction.CLOSE)
+            assertTrue(controls.settingsPageOpen && controls.suspended)
+            controls.handle(page)
+            controls.handle(HudAction.RESTART)
+            assertFalse(controls.settingsOpen || controls.helpOpen || controls.statsOpen)
+        }
+    }
+
     @Test fun `stats hit regions isolate reset and close at multiple sizes`() {
         for ((width, height) in listOf(1080 to 2400, 420 to 933, 540 to 1200)) {
             val layout = HudLayout(width, height)
