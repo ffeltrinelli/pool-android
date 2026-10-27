@@ -29,7 +29,7 @@ A release is explicitly requested or agreed upon; ordinary PRs and local edits r
 
 Compatibility covers preferences, statistics, and documented external formats. A migration that preserves these contracts remains compatible. Assess all changes since the previous release, not just the last PR. Record release notes in `docs/release-notes.md`.
 
-Run the repository checks, merge through the PR workflow, then build from the clean merged commit:
+Run the repository checks and leave the PR open for the user’s merge decision. Never merge or enable auto-merge unless the user explicitly instructs you to merge that PR; release authorization and passing CI are not merge authorization. After the user merges it, or explicitly authorizes its merge, build from the clean merged commit:
 
 ```sh
 ./gradlew :core:test :android:lintDebug :android:assembleDebug :android:assembleRelease
