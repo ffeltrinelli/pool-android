@@ -21,6 +21,8 @@ class GameControlsTest {
         override fun saveAidedAim(enabled: Boolean) { aided = enabled }
     }
     private class Effects : ControlEffects {
+        var shares = 0
+        override fun shareApp() { shares++ }
         var resets = 0
         override fun resetStatistics() { resets++ }
         var exits = 0
@@ -252,6 +254,45 @@ class GameControlsTest {
             assertEquals(HudAction.RESTART, hit(layout.playAgain, finished = true))
             assertEquals(HudAction.BLOCK, layout.hit(0, 0, true, false))
             assertNull(layout.hit(0, 0, false, false))
+        }
+    }
+
+    @Test fun `sharing is restricted to active settings and does not restart or resume the match`() {
+        val effects = Effects()
+        val controls = GameControls(Preference(), effects)
+        controls.handle(HudAction.SHARE_APP)
+        assertEquals(0, effects.shares)
+        controls.handle(HudAction.SETTINGS)
+        controls.handle(HudAction.SHARE_APP)
+        assertEquals(1, effects.shares)
+        assertTrue(controls.settingsPageOpen && controls.suspended && effects.paused)
+        assertEquals(0, effects.restarts)
+        controls.pause()
+        controls.handle(HudAction.SHARE_APP)
+        assertEquals(1, effects.shares)
+        controls.resume()
+        assertTrue(controls.suspended && effects.paused)
+        controls.handle(HudAction.HELP)
+        controls.handle(HudAction.SHARE_APP)
+        assertEquals(1, effects.shares)
+    }
+
+    @Test fun `share button matches restart and is only actionable when available`() {
+        for ((width, height) in listOf(420 to 933, 1080 to 2400, 540 to 1200)) {
+            val layout = HudLayout(width, height, appSharingAvailable = true)
+            assertEquals(layout.restart.x, layout.shareApp.x, 0f)
+            assertEquals(layout.restart.width, layout.shareApp.width, 0f)
+            assertEquals(layout.restart.height, layout.shareApp.height, 0f)
+            assertEquals(layout.restart.y - 60f, layout.shareApp.y, 0f)
+            assertTrue(layout.settingsPanel.contains(layout.shareApp))
+            assertEquals(layout.panel.y + layout.panel.height,
+                layout.settingsPanel.y + layout.settingsPanel.height, 0f)
+            val x = ((layout.shareApp.x + 73f) * width / 420f).toInt()
+            val y = ((layout.uiHeight - layout.shareApp.y - 24f) * height / layout.uiHeight).toInt()
+            assertEquals(HudAction.SHARE_APP, layout.hit(x, y, true, false))
+            assertEquals(HudAction.BLOCK, layout.hit(x, y, true, false, helpOpen = true))
+            assertEquals(HudAction.BLOCK, layout.hit(x, y, true, false, statsOpen = true))
+            assertEquals(HudAction.BLOCK, HudLayout(width, height).hit(x, y, true, false))
         }
     }
 }

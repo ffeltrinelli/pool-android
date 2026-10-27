@@ -165,3 +165,8 @@ Thumbs.db
 
 ## Python tooling:
 __pycache__/
+
+## Private Android signing material:
+*.jks
+*.keystore
+signing.properties

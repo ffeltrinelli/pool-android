@@ -3,5 +3,7 @@
   <application>
     <activity android:name="io.github.ffeltrinelli.pool.android.ReplayRecipientActivity"
         android:exported="true" android:label="Replay video verification"/>
+    <activity android:name="io.github.ffeltrinelli.pool.android.ApkRecipientActivity"
+        android:exported="true" android:label="APK sharing verification"/>
   </application>
 </manifest>

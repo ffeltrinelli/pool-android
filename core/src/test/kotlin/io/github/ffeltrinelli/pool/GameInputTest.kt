@@ -22,6 +22,8 @@ class GameInputTest {
     }
 
     private class Effects : ControlEffects {
+        var shares = 0
+        override fun shareApp() { shares++ }
         var cancellations = 0
         override fun cancelGesture() { cancellations++ }
         override fun pauseGame() = Unit

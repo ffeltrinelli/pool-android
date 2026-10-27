@@ -45,6 +45,7 @@ class GameHud : Disposable {
 
     private var width = 420
     private var height = 933
+    private var appSharingAvailable = false
 
     fun resize(width: Int, height: Int) {
         this.width = width
@@ -53,11 +54,12 @@ class GameHud : Disposable {
     }
 
     private fun updateLayout(placementVisible: Boolean, notificationHeight: Float = 13f) {
-        layout = HudLayout(width, height, placementVisible, notificationHeight)
+        layout = HudLayout(width, height, placementVisible, notificationHeight, appSharingAvailable)
         camera.setToOrtho(false, 420f, layout.uiHeight)
     }
 
     fun prepare(session: GameSession, presentation: HudPresentation, pixelWidth: Int) {
+        setAppSharingAvailable(presentation.appSharingAvailable)
         fonts.resize(pixelWidth)
         val font = fonts[TextStyle.BODY]
         glyphs.setText(font, notification(session, presentation), Color.WHITE, 362f,
@@ -83,6 +85,7 @@ class GameHud : Disposable {
     }
 
     fun renderSettings(aidedAim: Boolean, presentation: HudPresentation, pixelWidth: Int) {
+        setAppSharingAvailable(presentation.appSharingAvailable)
         fonts.resize(pixelWidth)
         sprites.projectionMatrix = camera.combined
         sprites.begin()
@@ -90,6 +93,12 @@ class GameHud : Disposable {
         if (presentation.helpOpen) drawHelp()
         if (presentation.statsOpen) drawStatistics(presentation.statistics)
         sprites.end()
+    }
+
+    private fun setAppSharingAvailable(available: Boolean) {
+        if (appSharingAvailable == available) return
+        appSharingAvailable = available
+        updateLayout(layout.placementVisible)
     }
 
     private fun drawHeader(session: GameSession, presentation: HudPresentation) {
@@ -131,7 +140,7 @@ class GameHud : Disposable {
 
     private fun drawSettings(aidedAim: Boolean, difficulty: OpponentDifficulty, replays: Boolean) {
         shade()
-        rectangle(layout.panel, "163039")
+        rectangle(layout.settingsPanel, "163039")
         text("SETTINGS", 60f, layout.panel.y + layout.panel.height - 35f, TextStyle.HEADING, "f2e5c8")
         symbolButton(layout.info, "?")
         drawStatisticsButton()
@@ -142,6 +151,7 @@ class GameHud : Disposable {
         button(layout.replays, if (replays) "On" else "Off", replays)
         drawDifficulty(difficulty)
         button(layout.restart, "Restart")
+        if (layout.appSharingAvailable) button(layout.shareApp, "Share app")
         button(layout.exit, "Exit game")
     }
 

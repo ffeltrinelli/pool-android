@@ -19,6 +19,13 @@
         android:grantUriPermissions="true">
       <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/replay_paths"/>
     </provider>
+    <provider
+        android:name="io.github.ffeltrinelli.pool.android.ApkFileProvider"
+        android:authorities="${applicationId}.apk"
+        android:exported="false"
+        android:grantUriPermissions="true">
+      <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/apk_paths"/>
+    </provider>
     <activity
         android:name="io.github.ffeltrinelli.pool.android.AndroidLauncher"
         android:screenOrientation="portrait"

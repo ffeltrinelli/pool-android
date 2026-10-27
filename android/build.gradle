@@ -8,6 +8,27 @@ buildscript {
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
+// Secrets remain local; CI deliberately keeps the standard debug certificate.
+def signingOverride = System.getenv('POOL_SIGNING_PROPERTIES')
+def signingFile = file(signingOverride ?: "${System.getProperty('user.home')}/.android/pool-signing/signing.properties")
+def releaseCredentials = new Properties()
+if (signingOverride != null && !signingFile.isFile()) {
+  throw new GradleException('POOL_SIGNING_PROPERTIES does not point to a signing properties file')
+}
+if (signingFile.isFile()) {
+  signingFile.withInputStream { releaseCredentials.load(it) }
+  ['storeFile', 'storePassword', 'keyAlias', 'keyPassword'].each { name ->
+    if (!releaseCredentials.getProperty(name)?.trim()) {
+      throw new GradleException("Missing signing property: ${name}")
+    }
+  }
+  if (!file(releaseCredentials.getProperty('storeFile')).isFile()) {
+    throw new GradleException('Configured release keystore does not exist')
+  }
+}
+def hasReleaseSigning = !releaseCredentials.isEmpty()
+
+
 android {
   namespace = "io.github.ffeltrinelli.pool"
   compileSdk 36
@@ -37,8 +58,8 @@ android {
     applicationId 'io.github.ffeltrinelli.pool'
     minSdkVersion 26
     targetSdkVersion 34
-    versionCode 1
-    versionName "0.1.0"
+    versionCode 2
+    versionName "0.2.0"
     testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
   }
   compileOptions {
@@ -46,8 +67,22 @@ android {
     targetCompatibility "17"
     coreLibraryDesugaringEnabled = true
   }
+  signingConfigs {
+    if (hasReleaseSigning) {
+      stableRelease {
+        storeFile file(releaseCredentials.getProperty('storeFile'))
+        storePassword releaseCredentials.getProperty('storePassword')
+        keyAlias releaseCredentials.getProperty('keyAlias')
+        keyPassword releaseCredentials.getProperty('keyPassword')
+      }
+    }
+  }
   buildTypes {
+    debug {
+      if (hasReleaseSigning) signingConfig signingConfigs.stableRelease
+    }
     release {
+      if (hasReleaseSigning) signingConfig signingConfigs.stableRelease
       minifyEnabled true
       proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), 'proguard-rules.pro'
     }
@@ -117,4 +152,14 @@ tasks.register('copyAndroidNatives') {
 
 tasks.matching { it.name.contains("merge") && it.name.contains("JniLibFolders") }.configureEach { packageTask ->
   packageTask.dependsOn 'copyAndroidNatives'
+}
+
+// Check only when producing a release: configuration and debug verification remain usable on CI.
+def requireReleaseSigning = tasks.register('requireReleaseSigning') {
+  doLast {
+    if (!hasReleaseSigning) throw new GradleException('Release signing is required. See docs/releases.md.')
+  }
+}
+tasks.configureEach {
+  if (name == 'preReleaseBuild') dependsOn requireReleaseSigning
 }

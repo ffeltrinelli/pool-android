@@ -191,7 +191,7 @@ object VisualSmoke {
             session.confirmPlacement()
             gesture.resetForRack(TableGeometry.CUE_START, Point(0f, TableGeometry.FOOT_SPOT))
             if (name == "gallery-top") session = readyMatch(Player.COMPUTER)
-            if (name == "gallery-settings") hudPresentation = hudPresentation.copy(settingsOpen = true)
+            if (name == "gallery-settings") hudPresentation = hudPresentation.copy(settingsOpen = true, appSharingAvailable = true)
             if (name == "gallery-help") hudPresentation = hudPresentation.copy(settingsOpen = true, helpOpen = true)
             if (name.startsWith("gallery-stats")) {
                 val rows = if (name == "gallery-stats-empty") emptyMap() else mapOf(
