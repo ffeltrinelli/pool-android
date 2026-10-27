@@ -2,12 +2,13 @@ package io.github.ffeltrinelli.pool.ui
 
 import io.github.ffeltrinelli.pool.opponent.OpponentDifficulty
 
-enum class HudAction { SETTINGS, HELP, STATS, RESET_STATS, CLOSE, RESTART, TOGGLE_AIM, TOGGLE_REPLAYS, EXIT, EASY, MEDIUM, HARD, BLOCK }
+enum class HudAction { SETTINGS, HELP, STATS, RESET_STATS, CLOSE, RESTART, SHARE_APP, TOGGLE_AIM, TOGGLE_REPLAYS, EXIT, EASY, MEDIUM, HARD, BLOCK }
 
 interface ControlEffects {
     fun cancelGesture()
     fun pauseGame()
     fun resumeGame()
+    fun shareApp()
     fun restartGame()
     fun resetStatistics()
     fun exitGame()
@@ -50,6 +51,7 @@ class GameControls(private val preference: SettingsPreference, private val effec
                 }
                 updateSuspension()
             }
+            HudAction.SHARE_APP -> { if (settingsPageOpen && !backgrounded) effects.shareApp() }
             HudAction.RESTART -> {
                 effects.cancelGesture()
                 effects.restartGame()

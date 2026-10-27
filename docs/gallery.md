@@ -1,6 +1,6 @@
 # Current screenshots and gameplay video
 
-The [README](../README.md#screenshots) uses desktop captures from the production renderer at 1080 × 2400. They are not device screenshots. Settings includes a **?** help button opening the illustrated [how-to-play overlay](images/help.png) and a bar-chart button opening [Stats](images/stats.png). The Stats capture uses sample results to demonstrate the per-difficulty table and Reset button.
+The [README](../README.md#screenshots) uses desktop captures from the production renderer at 1080 × 2400. They are not device screenshots. Settings includes a **?** help button opening the illustrated [how-to-play overlay](images/help.png) and a bar-chart button opening [Stats](images/stats.png). The Settings capture enables the Android-only Share app capability in desktop test tooling; desktop gameplay itself hides that button. The Stats capture uses sample results to demonstrate the per-difficulty table and Reset button.
 
 ## Refresh procedure
 

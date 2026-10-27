@@ -11,6 +11,7 @@ import io.github.ffeltrinelli.pool.StartupGame
 
 class AndroidLauncher : AndroidApplication() {
     private lateinit var replaySharing: AndroidReplaySharing
+    private lateinit var appSharing: AndroidAppSharing
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,7 +23,8 @@ class AndroidLauncher : AndroidApplication() {
             }
         }
         replaySharing = AndroidReplaySharing(this)
-        initialize(StartupGame(gameFactory = { PoolGame(sharing = replaySharing) }), AndroidApplicationConfiguration().apply {
+        appSharing = AndroidAppSharing(this)
+        initialize(StartupGame(gameFactory = { PoolGame(sharing = replaySharing, appSharing = appSharing) }), AndroidApplicationConfiguration().apply {
             useImmersiveMode = true
             useAccelerometer = false
             useCompass = false
@@ -31,6 +33,11 @@ class AndroidLauncher : AndroidApplication() {
             r = 8; g = 8; b = 8; a = 8; depth = 24
         })
     }
+    override fun onDestroy() {
+        if (::appSharing.isInitialized) appSharing.close()
+        super.onDestroy()
+    }
+
     @Deprecated("Uses the platform chooser result supported by the libGDX Activity")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)

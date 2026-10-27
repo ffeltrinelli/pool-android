@@ -42,7 +42,7 @@ adb install -r android/build/outputs/apk/debug/android-debug.apk
 adb shell am start -n io.github.ffeltrinelli.pool/.android.AndroidLauncher
 ```
 
-Requires Android API 26 or newer. Install the APK (Android application package) directly; this demo is not distributed through an app store.
+Requires Android API 26 or newer. Install the APK (Android application package) directly; this demo is not distributed through an app store. Android Settings includes **Share app**, below Restart, to send the installed APK to another phone. The recipient opens the file and approves installation; preferences and statistics are not shared. See [signing, versioning, and GitHub releases](docs/releases.md) and [release notes](docs/release-notes.md).
 
 For desktop development:
 

@@ -4,7 +4,10 @@ import com.badlogic.gdx.math.Rectangle
 import io.github.ffeltrinelli.pool.opponent.OpponentDifficulty
 
 /** One layout supplies drawing and hit regions, including the modal input barrier. */
-class HudLayout(width: Int, height: Int, val placementVisible: Boolean = false, notificationHeight: Float = 13f) {
+class HudLayout(
+    width: Int, height: Int, val placementVisible: Boolean = false,
+    notificationHeight: Float = 13f, val appSharingAvailable: Boolean = false
+) {
     val width = width.coerceAtLeast(1)
     private val height = height.coerceAtLeast(1)
     val uiHeight = 420f * this.height / this.width
@@ -17,6 +20,8 @@ class HudLayout(width: Int, height: Int, val placementVisible: Boolean = false, 
     fun renderHeight(backBufferHeight: Int) = (backBufferHeight.toLong() * gameHeight / height).toInt().coerceAtLeast(1)
     val gear = Rectangle(348f, uiHeight - 50f, 48f, 48f)
     val panel = Rectangle(30f, uiHeight / 2 - 195f, 360f, 390f)
+    val settingsPanel = Rectangle(panel.x, panel.y - if (appSharingAvailable) 60f else 0f,
+        panel.width, panel.height + if (appSharingAvailable) 60f else 0f)
     val close = Rectangle(336f, panel.y + panel.height - 54f, 48f, 48f)
     val stats = Rectangle(close.x - 54f, close.y, 48f, 48f)
     val info = Rectangle(stats.x - 54f, close.y, 48f, 48f)
@@ -30,6 +35,7 @@ class HudLayout(width: Int, height: Int, val placementVisible: Boolean = false, 
         Rectangle(difficulty.x + index * 100f, difficulty.y, 100f, 48f)
     }
     val restart = Rectangle(60f, uiHeight / 2 - 145f, 146f, 48f)
+    val shareApp = Rectangle(restart.x, restart.y - 60f, restart.width, restart.height)
     val exit = Rectangle(214f, uiHeight / 2 - 145f, 146f, 48f)
     val confirmPlacement = Rectangle(100f, uiHeight - headerHeight + 4f, 220f, 48f)
     fun confirmsPlacement(x: Int, y: Int) = confirmPlacement.contains(x * 420f / width, uiHeight - y * uiHeight / height)
@@ -65,6 +71,7 @@ class HudLayout(width: Int, height: Int, val placementVisible: Boolean = false, 
             aidedAim.contains(x, y) -> HudAction.TOGGLE_AIM
             exit.contains(x, y) -> HudAction.EXIT
             restart.contains(x, y) -> HudAction.RESTART
+            appSharingAvailable && shareApp.contains(x, y) -> HudAction.SHARE_APP
             close.contains(x, y) -> HudAction.CLOSE
             else -> HudAction.BLOCK
         }

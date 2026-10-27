@@ -50,3 +50,9 @@
 # These two lines are used with mapping files; see https://developer.android.com/build/shrink-code#retracing
 -keepattributes LineNumberTable,SourceFile
 -renamesourcefileattribute SourceFile
+
+# Bullet's generated Java bindings are also called from native code by class/method name.
+# R8 cannot see those SWIG callbacks (for example btIDebugDraw's default colors).
+-keep class com.badlogic.gdx.physics.bullet.** { *; }
+# Bullet's JNI converters also access libGDX math fields (Vector3.x/y/z, matrix values).
+-keep class com.badlogic.gdx.math.** { *; }

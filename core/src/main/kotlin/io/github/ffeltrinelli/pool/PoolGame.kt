@@ -16,6 +16,7 @@ import io.github.ffeltrinelli.pool.stats.*
 class PoolGame(
     private val session: GameSession = GameSession(),
     private val sharing: ReplaySharing = NoReplaySharing,
+    private val appSharing: AppSharing = NoAppSharing,
     private val soundPlayer: () -> SoundPlayer = { LibGdxSoundPlayer() }
 ) : ApplicationAdapter() {
     private val recorder = ReplayRecorder()
@@ -61,6 +62,7 @@ class PoolGame(
             override fun pauseGame() { audio.pause(); replay?.silence(); computer.suspend(); skipDelta = true }
             override fun resumeGame() { audio.resume(); skipDelta = true }
             override fun restartGame() = restart()
+            override fun shareApp() = appSharing.share()
             override fun resetStatistics() = statistics.reset()
             override fun exitGame() { computer.reset(); Gdx.app.exit() }
         })
@@ -163,6 +165,7 @@ class PoolGame(
 
     private fun settingsPresentation() = HudPresentation(
         settingsOpen = controls.settingsOpen,
+        appSharingAvailable = appSharing.available,
         difficulty = controls.difficulty,
         replays = controls.replays,
         helpOpen = controls.helpOpen,
