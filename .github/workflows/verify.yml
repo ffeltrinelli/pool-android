@@ -49,3 +49,4 @@ jobs:
             build/reports/visual/
             build/reports/audio/
           if-no-files-found: error
+          retention-days: 1
